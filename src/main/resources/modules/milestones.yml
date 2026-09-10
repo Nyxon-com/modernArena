@@ -1,0 +1,17 @@
+# =============================================================================
+# Soglie per internal name Mythic. Reward = comandi, es. [console] kit / eco.
+# Placeholder: {player} {uuid} {name} {mob} {kills} {threshold}
+# =============================================================================
+
+mobs:
+  ExampleBoss:
+    10:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>."
+      sound: milestone
+      commands:
+        - "[console] kit starter {player}"
+    50:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>."
+      sound: milestone
+      commands:
+        - "[console] eco give {player} 1000"

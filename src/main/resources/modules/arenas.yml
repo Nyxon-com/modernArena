@@ -1,0 +1,58 @@
+# =============================================================================
+# Boss, template, spawners, slot, coda, uscita.
+# Mondi istanza: world-name-format (default arena_<boss>_<slot>).
+# Core: worlds.ignore-prefixes deve includere il prefisso (arena_).
+# Multiverse: non auto-importare i mondi arena_*.
+# =============================================================================
+
+settings:
+  world-prefix: arena_
+  world-name-format: "arena_{boss}_{slot}"
+  spawner-name-format: "arena_{boss}_{slot}_{spawner}"
+  max-instances-per-boss: 4
+  # 0 = nessun cap globale oltre al per-boss
+  max-instances-global: 0
+  kick-on-death: false
+  copy-exclude:
+    - uid.dat
+    - session.lock
+
+leave:
+  # Comando eseguito dal player, senza slash. Vuoto = teleport a location.
+  command: spawn
+  location:
+    world: world
+    x: 0.5
+    y: 64.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 0.0
+
+queue:
+  max-size: 20
+
+bosses:
+  example:
+    display-name: "<gradient:#5F22C3:#40099B>Esempio</gradient>"
+    template: arena_template_example
+    permission: ""
+    max-party-size: 4
+    # 0 = nessun timer di durata
+    duration-seconds: 0
+    spawn:
+      x: 0.5
+      y: 64.0
+      z: 0.5
+      yaw: 0.0
+      pitch: 0.0
+    spawners:
+      boss:
+        mob: ExampleBoss
+        x: 8.5
+        y: 64.0
+        z: 8.5
+        yaw: 0.0
+        pitch: 0.0
+        cooldown-seconds: 30
+        max-mobs: 1
+        spawn-radius: 0

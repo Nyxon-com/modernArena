@@ -1,0 +1,23 @@
+# =============================================================================
+# Storage proprio del plugin. Tabelle: {table-prefix}kills, {table-prefix}milestones
+# =============================================================================
+
+type: sqlite
+
+sqlite:
+  file: arena.db
+
+mysql:
+  host: 127.0.0.1
+  port: 3306
+  database: valary_arena
+  username: root
+  password: ""
+  ssl: false
+
+pool:
+  maximum-pool-size: 4
+  minimum-idle: 1
+  connection-timeout-millis: 10000
+
+table-prefix: valary_arena_

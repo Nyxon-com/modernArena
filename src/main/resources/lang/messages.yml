@@ -1,0 +1,78 @@
+# =============================================================================
+# Brand e testi MiniMessage. Java non hardcoda colori/prefix/separator.
+# Placeholder: {prefix} {separator} {player} {target} {boss} {slot} {world}
+# {kills} {threshold} {mob} {size} {max} {position} {seconds} {leader}
+# =============================================================================
+
+brand:
+  name: ValaryRPG
+  prefix: "<gradient:#5F22C3:#40099B><bold>ValaryRPG</bold></gradient> <dark_gray>»</dark_gray> "
+  separator: "<bold><strikethrough><gradient:#5F22C3:#40099B>                                                          </gradient></strikethrough></bold>"
+
+errors:
+  player-only: "{prefix}<gray>Solo i giocatori possono usare questo comando."
+  no-permission: "{prefix}<gray>Non hai il permesso."
+  unknown-command: "{prefix}<gray>Sottocomando sconosciuto."
+  cooldown: "{prefix}<gray>Attendi un attimo."
+  unknown-boss: "{prefix}<gray>Boss <white>{boss}</white> inesistente."
+  not-leader: "{prefix}<gray>Solo il leader del party può farlo."
+  no-party: "{prefix}<gray>Non sei in un party. <white>/party create</white>"
+  already-in-party: "{prefix}<gray>Sei già in un party."
+  already-in-arena: "{prefix}<gray>Sei già in un'arena."
+  already-in-queue: "{prefix}<gray>Il party è già in coda."
+  party-full: "{prefix}<gray>Il party è pieno (<white>{max}</white>)."
+  party-too-big: "{prefix}<gray>Il party è troppo grande per questo boss (<white>{max}</white>)."
+  queue-full: "{prefix}<gray>La coda di <white>{boss}</white> è piena."
+  template-missing: "{prefix}<gray>Template <white>{world}</white> assente sul disco."
+  copy-failed: "{prefix}<gray>Copia del mondo fallita. Riprova."
+  not-in-arena: "{prefix}<gray>Non sei in un'arena."
+  target-offline: "{prefix}<gray><white>{target}</white> non è online."
+  target-in-party: "{prefix}<gray><white>{target}</white> è già in un party."
+  invite-self: "{prefix}<gray>Non puoi invitare te stesso."
+  no-invite: "{prefix}<gray>Nessun invito in sospeso."
+  not-in-party: "{prefix}<gray>Non sei in un party."
+  not-member: "{prefix}<gray><white>{target}</white> non è nel party."
+  cannot-kick-self: "{prefix}<gray>Usa <white>/party leave</white> per uscire."
+  player-busy: "{prefix}<gray><white>{target}</white> è occupato in un'arena o in coda."
+
+arena:
+  help:
+    - "{separator}"
+    - "{prefix}<gray>/arena start <white><boss></white>"
+    - "{prefix}<gray>/arena leave"
+    - "{separator}"
+  started: "{prefix}<gray>Arena <white>{boss}</white> avviata. Slot <white>{slot}</white>."
+  queued: "{prefix}<gray>Tutte le istanze di <white>{boss}</white> sono occupate. Coda: <white>#{position}</white>."
+  queue-removed: "{prefix}<gray>Il party è uscito dalla coda di <white>{boss}</white>."
+  leave: "{prefix}<gray>Hai lasciato l'arena."
+  member-left: "{prefix}<gray><white>{player}</white> ha lasciato l'arena."
+  timeout: "{prefix}<gray>Tempo scaduto. Uscita dall'arena."
+  empty-unload: "{prefix}<gray>Nessun giocatore rimasto. Arena chiusa."
+  reloaded: "{prefix}<gray>Configurazione ricaricata."
+  reload-failed: "{prefix}<gray>Reload fallito. Controlla la console."
+
+party:
+  help:
+    - "{separator}"
+    - "{prefix}<gray>/party create"
+    - "{prefix}<gray>/party invite <white><player></white>"
+    - "{prefix}<gray>/party accept"
+    - "{prefix}<gray>/party leave"
+    - "{prefix}<gray>/party kick <white><player></white>"
+    - "{prefix}<gray>/party disband"
+    - "{separator}"
+  created: "{prefix}<gray>Party creato. Sei il leader."
+  disbanded: "{prefix}<gray>Il party è stato sciolto."
+  invited: "{prefix}<gray>Invito inviato a <white>{target}</white>."
+  invite-received: "{prefix}<gray><white>{player}</white> ti ha invitato. <white>/party accept</white>"
+  invite-expired: "{prefix}<gray>L'invito è scaduto."
+  accepted: "{prefix}<gray>Sei entrato nel party di <white>{leader}</white>."
+  member-joined: "{prefix}<gray><white>{player}</white> è entrato nel party."
+  left: "{prefix}<gray>Hai lasciato il party."
+  member-left: "{prefix}<gray><white>{player}</white> ha lasciato il party."
+  kicked: "{prefix}<gray>Sei stato espulso dal party."
+  member-kicked: "{prefix}<gray><white>{target}</white> è stato espulso."
+  leader-passed: "{prefix}<gray><white>{player}</white> è il nuovo leader."
+
+milestone:
+  reached: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white> (<white>{kills}</white> kill)."

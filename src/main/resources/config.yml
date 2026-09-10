@@ -1,0 +1,34 @@
+# =============================================================================
+# ValaryRPG-Arena — comandi, permessi, delay. Testi in lang/messages.yml.
+# =============================================================================
+
+commands:
+  arena: arena
+  arena-aliases: []
+  party: party
+  party-aliases: []
+  arena-start: start
+  arena-leave: leave
+  arena-reload: reload
+  party-create: create
+  party-invite: invite
+  party-accept: accept
+  party-leave: leave
+  party-kick: kick
+  party-disband: disband
+
+permissions:
+  arena: valary.arena
+  arena-start: valary.arena.start
+  arena-leave: valary.arena.leave
+  arena-reload: valary.arena.reload
+  party: valary.party
+  party-create: valary.party.create
+  party-invite: valary.party.invite
+  party-accept: valary.party.accept
+  party-leave: valary.party.leave
+  party-kick: valary.party.kick
+  party-disband: valary.party.disband
+
+delays:
+  command-cooldown-millis: 250

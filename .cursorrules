@@ -1,0 +1,24 @@
+# ValaryArena — Paper 1.21.11
+
+Arena istanziata per **ValaryRPG** (viola `#5F22C3`/`#40099B` + nero). JAR proprio, non un modulo Core.
+
+## Stack
+Paper 1.21.11, Java 21, Gradle, MiniMessage, HikariCP. Hard: MythicMobs. Soft: Core, Vault, PAPI.
+
+## Prodotto
+- Template su disco → max 4 mondi `arena_<boss>_<slot>` → coda se pieni.
+- Spawner Mythic da YAML: stesso xyz, mondo nuovo, nome unico; delete allo unload.
+- Cleanup `arena_*` a ogni enable.
+- Party custom. Kill + milestone in SQL async; reward = comandi console.
+
+## Regole
+1. Zero hardcoding. Java orchestra, YAML decide. Brand e separatore in `lang/messages.yml`.
+2. Classi autoesplicative, javadoc di una riga, `Tasks` per async/sync. Niente logica copiata.
+3. Leggero: copy mondo async; SQL/kill/milestone off-main; cache YAML; niente timer su slot vuoti.
+4. Soft-depend Core. Mai `compileOnly` sul Core per kit/eco: usa `[console] kit …` / eco.
+5. Dopo ogni feature: commit + push. Mai AI nei commit. Non compilare in locale.
+
+## Dove sta cosa
+`config.yml`, `lang/messages.yml`, `sounds/sounds.yml`, `storage.yml`,
+`modules/arenas.yml`, `modules/party.yml`, `modules/milestones.yml`.
+Package `com.valaryrpg.arena`.

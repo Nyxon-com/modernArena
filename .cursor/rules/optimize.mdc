@@ -1,0 +1,18 @@
+---
+description: Ottimizzazione runtime — 4 istanze arena, I/O async, zero lavoro a vuoto
+alwaysApply: true
+---
+
+# Ottimizzazione
+
+Pensato per più arene insieme, non per un player in creative.
+
+- Copy/delete mondo **async**. Load/unload, TP, API Mythic **sync**. Slot `COPYING` non è libero.
+- Cap **4 istanze per boss** + `max-instances-global` se serve. Coda in RAM, niente poll: dequeue sullo unload.
+- SQL kill/milestone **async** + cache contatori online. Niente `SELECT` in death event sul main. Query per `(uuid, mob_id)`, mai scan tabella.
+- YAML boss/spawner/milestone in memoria al load/reload. Zero `getConfigurationSection` in timer/kill.
+- Niente `PlayerMoveEvent` per l’arena. Quit/leave/death/world-change bastano.
+- Template **unloaded** in copy. Enable: cancella `arena_*` orfani (cartelle mezze incluse) e spawners istanza Mythic.
+- Spawner solo nel mondo istanza; allo unload **deregistra**. Niente mob nel template.
+- Timer solo su slot `ACTIVE`. Unload: despawn + unload + delete, poi dequeue.
+- Core `worlds.yml` e Multiverse non devono importare `arena_*`.

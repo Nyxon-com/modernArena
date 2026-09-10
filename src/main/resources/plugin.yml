@@ -1,0 +1,58 @@
+name: ValaryRPG-Arena
+version: '${version}'
+main: com.valaryrpg.arena.ValaryArenaPlugin
+api-version: '1.21'
+description: '${description}'
+authors:
+  - ValaryRPG
+website: https://github.com/Nyxon-com/ValaryRPGarena-instances
+folia-supported: false
+load: POSTWORLD
+depend:
+  - MythicMobs
+softdepend:
+  - ValaryRPG-Core
+  - Vault
+  - PlaceholderAPI
+  - Multiverse-Core
+commands:
+  arena:
+    description: Avvia o lascia un'arena istanziata
+    usage: /<command>
+  party:
+    description: Party per le arene
+    usage: /<command>
+permissions:
+  valary.arena:
+    description: Usa /arena
+    default: true
+  valary.arena.start:
+    description: /arena start
+    default: true
+  valary.arena.leave:
+    description: /arena leave
+    default: true
+  valary.arena.reload:
+    description: /arena reload
+    default: op
+  valary.party:
+    description: Usa /party
+    default: true
+  valary.party.create:
+    description: /party create
+    default: true
+  valary.party.invite:
+    description: /party invite
+    default: true
+  valary.party.accept:
+    description: /party accept
+    default: true
+  valary.party.leave:
+    description: /party leave
+    default: true
+  valary.party.kick:
+    description: /party kick
+    default: true
+  valary.party.disband:
+    description: /party disband
+    default: true
