@@ -63,6 +63,7 @@ Riaggancia `Tasks`, `messages()`, `sounds()`, `console()`, `storage`. Non duplic
 4. Template **unloaded**, copy **async** (`WorldCopier`, esclude `uid.dat` / `session.lock`).
 5. Sync: `createWorld` `arena_{boss}_{slot}` → spawners Mythic (stesso xyz, nome da `spawner-name-format`) → TP party → `ACTIVE`.
 6. Timer durata solo se `duration-seconds` > 0 e solo su `ACTIVE`.
+7. Dopo un reload MythicMobs, gli spawner di tutte le istanze `ACTIVE` vengono ricreati per usare le configurazioni Mythic aggiornate.
 
 ### Leave / vuoto
 

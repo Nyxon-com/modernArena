@@ -2,6 +2,7 @@ package com.valaryrpg.arena.arena;
 
 import com.valaryrpg.arena.milestone.KillTracker;
 import io.lumine.mythic.bukkit.events.MythicMobDeathEvent;
+import io.lumine.mythic.bukkit.events.MythicPostReloadedEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -56,6 +57,11 @@ public final class ArenaListener implements Listener {
         if (location != null) {
             event.setRespawnLocation(location);
         }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onMythicReload(MythicPostReloadedEvent event) {
+        this.arenas.refreshMythicSpawners();
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

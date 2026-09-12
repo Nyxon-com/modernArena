@@ -68,6 +68,23 @@ public final class ArenaService {
                 .toList();
     }
 
+    public void refreshMythicSpawners() {
+        this.plugin.tasks().sync(() -> {
+            for (ArenaInstance instance : activeInstances()) {
+                ArenaDefinition definition = this.catalog.boss(instance.bossId());
+                World world = Bukkit.getWorld(instance.worldName());
+                if (definition == null || world == null) {
+                    continue;
+                }
+                for (String name : instance.spawnerNames()) {
+                    this.mythic.remove(name);
+                }
+                instance.spawnerNames().clear();
+                createSpawners(instance, definition, world);
+            }
+        });
+    }
+
     public boolean busy(Party party) {
         return party != null && (this.byParty.containsKey(party.id()) || this.queue.contains(party));
     }
@@ -292,14 +309,7 @@ public final class ArenaService {
             return;
         }
         world.setAutoSave(false);
-        instance.spawnerNames().clear();
-        for (SpawnerDefinition spawner : definition.spawners) {
-            String name = this.catalog.spawnerName(definition.id, instance.slot(), spawner.id);
-            String created = this.mythic.create(name, spawner.point.to(world), spawner);
-            if (created != null) {
-                instance.spawnerNames().add(created);
-            }
-        }
+        createSpawners(instance, definition, world);
         Location spawn = definition.spawn.to(world);
         world.setSpawnLocation(spawn);
         List<Player> online = this.plugin.parties().onlineMembers(instance.party());
@@ -389,6 +399,16 @@ public final class ArenaService {
         if (instance.durationTask() != null) {
             instance.durationTask().cancel();
             instance.durationTask(null);
+        }
+    }
+
+    private void createSpawners(ArenaInstance instance, ArenaDefinition definition, World world) {
+        for (SpawnerDefinition spawner : definition.spawners) {
+            String name = this.catalog.spawnerName(definition.id, instance.slot(), spawner.id);
+            String created = this.mythic.create(name, spawner.point.to(world), spawner);
+            if (created != null) {
+                instance.spawnerNames().add(created);
+            }
         }
     }
 
