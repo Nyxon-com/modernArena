@@ -60,7 +60,7 @@ Riaggancia `Tasks`, `messages()`, `sounds()`, `console()`, `storage`. Non duplic
 1. Si può entrare da soli senza creare un party. Se il player ha un party, può avviare solo il leader e parte tutto il party.
 2. Slot libero 1..`max-instances-per-boss` (default 4) e cap globale se > 0. `COPYING` non è libero.
 3. Pieno → coda RAM per quel boss (`ArenaQueue.enqueue`). Niente poll.
-4. Template **unloaded**, copy **async** (`WorldCopier`, esclude `uid.dat` / `session.lock`).
+4. Template **unloaded**, copy **async** (`WorldCopier`, esclude `uid.dat` / `session.lock`) in `plugins/ValaryRPG-Arena/instances/`.
 5. Sync: `createWorld` `arena_{boss}_{slot}` → spawners Mythic (stesso xyz, nome da `spawner-name-format`) → TP party → `ACTIVE`.
 6. Timer durata solo se `duration-seconds` > 0 e solo su `ACTIVE`.
 7. Dopo un reload MythicMobs, gli spawner di tutte le istanze `ACTIVE` vengono ricreati per usare le configurazioni Mythic aggiornate.
@@ -91,7 +91,7 @@ Niente `SELECT` sul main. Niente API Java Core.
 
 ## Come cambiare le cose
 
-- **Nuovo boss**: blocco sotto `modules/arenas.yml` → `bosses.<id>`. Cartella template nella world container (stesso livello di `world/`), **non caricata**.
+- **Nuovo boss**: blocco sotto `modules/arenas.yml` → `bosses.<id>`. Cartella template nella world container (stesso livello di `world/`), **non caricata**. Le copie temporanee vanno in `plugins/ValaryRPG-Arena/instances/`.
 - **Testo/permesso/suono/delay**: YAML relativo. Java legge `configs().command` / `permission`.
 - **Milestone**: `modules/milestones.yml` → `mobs.<MythicInternalName>.<soglia>`.
 - **Reload**: `/arena reload` ricarica YAML + cataloghi. Non tocca istanze vive né il DB.

@@ -21,6 +21,7 @@ public final class ArenaCatalog {
     private String worldPrefix = "arena_";
     private String worldNameFormat = "arena_{boss}_{slot}";
     private String spawnerNameFormat = "arena_{boss}_{slot}_{spawner}";
+    private String instancesDirectory = "instances";
     private int maxPerBoss = 4;
     private int maxGlobal;
     private int queueMax = 20;
@@ -39,6 +40,7 @@ public final class ArenaCatalog {
         this.worldPrefix = yaml.getString("settings.world-prefix", "arena_");
         this.worldNameFormat = yaml.getString("settings.world-name-format", "arena_{boss}_{slot}");
         this.spawnerNameFormat = yaml.getString("settings.spawner-name-format", "arena_{boss}_{slot}_{spawner}");
+        this.instancesDirectory = yaml.getString("settings.instances-directory", "instances");
         this.maxPerBoss = yaml.getInt("settings.max-instances-per-boss", 4);
         this.maxGlobal = yaml.getInt("settings.max-instances-global", 0);
         this.copyExclude = yaml.getStringList("settings.copy-exclude");
@@ -117,6 +119,10 @@ public final class ArenaCatalog {
                 .replace("{boss}", boss)
                 .replace("{slot}", Integer.toString(slot))
                 .replace("{spawner}", spawner);
+    }
+
+    public String instancesDirectory() {
+        return this.instancesDirectory;
     }
 
     public int maxPerBoss() {

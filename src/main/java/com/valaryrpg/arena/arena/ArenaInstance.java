@@ -16,6 +16,7 @@ public final class ArenaInstance {
     private final int slot;
     private final String worldName;
     private final Party party;
+    private String loadedWorldName;
     private final Set<UUID> players = ConcurrentHashMap.newKeySet();
     private final Set<UUID> eliminated = ConcurrentHashMap.newKeySet();
     private final List<String> spawnerNames = new ArrayList<>();
@@ -40,6 +41,14 @@ public final class ArenaInstance {
 
     public String worldName() {
         return this.worldName;
+    }
+
+    public String loadedWorldName() {
+        return this.loadedWorldName;
+    }
+
+    public void loadedWorldName(String loadedWorldName) {
+        this.loadedWorldName = loadedWorldName;
     }
 
     public Party party() {

@@ -37,7 +37,8 @@ public final class ArenaListener implements Listener {
         if (instance == null) {
             return;
         }
-        if (!instance.worldName().equals(player.getWorld().getName())) {
+        if (instance.loadedWorldName() == null
+                || !instance.loadedWorldName().equals(player.getWorld().getName())) {
             this.arenas.leave(player, false);
         }
     }

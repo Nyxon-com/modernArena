@@ -6,6 +6,8 @@
 # =============================================================================
 
 settings:
+  # Sottocartella dentro plugins/ValaryRPG-Arena/ che contiene le istanze temporanee.
+  instances-directory: instances
   world-prefix: arena_
   world-name-format: "arena_{boss}_{slot}"
   spawner-name-format: "arena_{boss}_{slot}_{spawner}"
