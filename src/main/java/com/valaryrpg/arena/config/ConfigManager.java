@@ -58,11 +58,13 @@ public final class ConfigManager {
     }
 
     public String command(String key, String fallback) {
-        return this.root.config().getString("commands." + key, fallback);
+        String value = this.root.config().getString("commands." + key);
+        return value == null || value.isBlank() ? fallback : value;
     }
 
     public String permission(String key, String fallback) {
-        return this.root.config().getString("permissions." + key, fallback);
+        String value = this.root.config().getString("permissions." + key);
+        return value == null || value.isBlank() ? fallback : value;
     }
 
     private YamlFile load(String fileName) {

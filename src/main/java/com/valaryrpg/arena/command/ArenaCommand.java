@@ -54,7 +54,7 @@ public final class ArenaCommand implements TabExecutor {
             this.plugin.arenas().start(player, args[1]);
             return true;
         }
-        if (sub.equals(this.plugin.configs().command("arena-list", "list"))) {
+        if (sub.equals("list") || sub.equals(this.plugin.configs().command("arena-list", "list"))) {
             if (!player.hasPermission(this.plugin.configs().permission("arena-list", "valary.arena.list"))) {
                 deny(player);
                 return true;
