@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** /arena start|leave|reload. Nomi e permessi da config.yml. */
+/** /arena start|list|leave|reload. Nomi e permessi da config.yml. */
 public final class ArenaCommand implements TabExecutor {
 
     private final ValaryArenaPlugin plugin;
@@ -54,6 +54,14 @@ public final class ArenaCommand implements TabExecutor {
             this.plugin.arenas().start(player, args[1]);
             return true;
         }
+        if (sub.equals(this.plugin.configs().command("arena-list", "list"))) {
+            if (!player.hasPermission(this.plugin.configs().permission("arena-list", "valary.arena.list"))) {
+                deny(player);
+                return true;
+            }
+            list(player);
+            return true;
+        }
         if (sub.equals(this.plugin.configs().command("arena-leave", "leave"))) {
             if (!player.hasPermission(this.plugin.configs().permission("arena-leave", "valary.arena.leave"))) {
                 deny(player);
@@ -87,6 +95,7 @@ public final class ArenaCommand implements TabExecutor {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
             suggest(out, args[0], this.plugin.configs().command("arena-start", "start"));
+            suggest(out, args[0], this.plugin.configs().command("arena-list", "list"));
             suggest(out, args[0], this.plugin.configs().command("arena-leave", "leave"));
             suggest(out, args[0], this.plugin.configs().command("arena-reload", "reload"));
             return out;
@@ -97,6 +106,26 @@ public final class ArenaCommand implements TabExecutor {
             }
         }
         return out;
+    }
+
+    private void list(Player player) {
+        boolean found = false;
+        for (var definition : this.plugin.arenas().catalog().bosses()) {
+            if (definition.permission != null
+                    && !definition.permission.isEmpty()
+                    && !player.hasPermission(definition.permission)) {
+                continue;
+            }
+            if (!found) {
+                this.plugin.messages().send(player, "arena.list-header");
+                found = true;
+            }
+            this.plugin.messages().send(player, "arena.list-entry", Map.of(
+                    "boss", definition.id,
+                    "display", definition.displayName
+            ));
+        }
+        this.plugin.messages().send(player, found ? "arena.list-footer" : "arena.list-empty");
     }
 
     private boolean cooling(Player player) {

@@ -39,8 +39,13 @@ arena:
   help:
     - "{separator}"
     - "{prefix}<gray>/arena start <white>boss</white>"
+    - "{prefix}<gray>/arena list"
     - "{prefix}<gray>/arena leave"
     - "{separator}"
+  list-header: "{separator}"
+  list-entry: "{prefix}<white>{boss}</white> <dark_gray>—</dark_gray> {display}"
+  list-footer: "{separator}"
+  list-empty: "{prefix}<gray>Non ci sono arene disponibili."
   started: "{prefix}<gray>Arena <white>{boss}</white> avviata. Slot <white>{slot}</white>."
   queued: "{prefix}<gray>Tutte le istanze di <white>{boss}</white> sono occupate. Coda: <white>#{position}</white>."
   queue-removed: "{prefix}<gray>Il party è uscito dalla coda di <white>{boss}</white>."

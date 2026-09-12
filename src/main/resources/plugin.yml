@@ -29,6 +29,9 @@ permissions:
   valary.arena.start:
     description: /arena start
     default: true
+  valary.arena.list:
+    description: /arena list
+    default: true
   valary.arena.leave:
     description: /arena leave
     default: true

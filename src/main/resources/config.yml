@@ -8,6 +8,7 @@ commands:
   party: party
   party-aliases: []
   arena-start: start
+  arena-list: list
   arena-leave: leave
   arena-reload: reload
   party-create: create
@@ -20,6 +21,7 @@ commands:
 permissions:
   arena: valary.arena
   arena-start: valary.arena.start
+  arena-list: valary.arena.list
   arena-leave: valary.arena.leave
   arena-reload: valary.arena.reload
   party: valary.party
