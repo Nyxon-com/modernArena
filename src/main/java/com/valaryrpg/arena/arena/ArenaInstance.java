@@ -17,9 +17,11 @@ public final class ArenaInstance {
     private final String worldName;
     private final Party party;
     private final Set<UUID> players = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> eliminated = ConcurrentHashMap.newKeySet();
     private final List<String> spawnerNames = new ArrayList<>();
     private SlotState state = SlotState.COPYING;
     private BukkitTask durationTask;
+    private boolean closingAfterWipe;
 
     public ArenaInstance(String bossId, int slot, String worldName, Party party) {
         this.bossId = bossId;
@@ -48,6 +50,10 @@ public final class ArenaInstance {
         return this.players;
     }
 
+    public Set<UUID> eliminated() {
+        return this.eliminated;
+    }
+
     public List<String> spawnerNames() {
         return this.spawnerNames;
     }
@@ -66,6 +72,14 @@ public final class ArenaInstance {
 
     public void durationTask(BukkitTask durationTask) {
         this.durationTask = durationTask;
+    }
+
+    public boolean closingAfterWipe() {
+        return this.closingAfterWipe;
+    }
+
+    public void closingAfterWipe(boolean closingAfterWipe) {
+        this.closingAfterWipe = closingAfterWipe;
     }
 
     public boolean empty() {

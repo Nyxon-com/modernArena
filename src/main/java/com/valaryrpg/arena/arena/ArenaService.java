@@ -132,6 +132,7 @@ public final class ArenaService {
             return;
         }
         instance.players().remove(player.getUniqueId());
+        instance.eliminated().remove(player.getUniqueId());
         this.reservedByPlayer.remove(player.getUniqueId());
         if (teleport) {
             sendOut(player);
@@ -142,7 +143,44 @@ public final class ArenaService {
             this.plugin.parties().broadcast(instance.party(), "arena.member-left", Map.of("player", player.getName()));
             return;
         }
+        if (!instance.eliminated().isEmpty()) {
+            markTeamWipe(instance);
+            return;
+        }
         unload(instance, "arena.empty-unload");
+    }
+
+    public void eliminate(Player player) {
+        ArenaInstance instance = this.byPlayer.get(player.getUniqueId());
+        if (instance == null || instance.state() != SlotState.ACTIVE
+                || !instance.players().remove(player.getUniqueId())) {
+            return;
+        }
+        instance.eliminated().add(player.getUniqueId());
+        if (instance.players().isEmpty()) {
+            markTeamWipe(instance);
+        }
+    }
+
+    public Location eliminatedRespawn(Player player) {
+        ArenaInstance instance = this.byPlayer.get(player.getUniqueId());
+        if (instance == null || !instance.eliminated().remove(player.getUniqueId())) {
+            return null;
+        }
+        this.byPlayer.remove(player.getUniqueId(), instance);
+        this.reservedByPlayer.remove(player.getUniqueId(), instance.party());
+        boolean close = instance.closingAfterWipe() && instance.eliminated().isEmpty();
+        this.plugin.tasks().later(() -> {
+            if (player.isOnline()) {
+                sendOut(player);
+                this.plugin.messages().send(player, "arena.eliminated");
+                this.plugin.sounds().play(player, "arena-leave");
+            }
+            if (close) {
+                unload(instance, null);
+            }
+        }, 1L);
+        return this.catalog.leaveLocation();
     }
 
     public void partyGone(Party party) {
@@ -337,6 +375,14 @@ public final class ArenaService {
         });
     }
 
+    private void markTeamWipe(ArenaInstance instance) {
+        instance.closingAfterWipe(true);
+        if (instance.durationTask() != null) {
+            instance.durationTask().cancel();
+            instance.durationTask(null);
+        }
+    }
+
     private void dequeue(String bossId) {
         Party party = this.queue.dequeue(bossId);
         while (party != null) {
@@ -417,19 +463,6 @@ public final class ArenaService {
 
     public boolean isArenaWorld(String worldName) {
         return worldName.startsWith(this.catalog.worldPrefix());
-    }
-
-    public void respawnInArena(Player player) {
-        ArenaInstance instance = instanceOf(player);
-        if (instance == null) {
-            return;
-        }
-        ArenaDefinition definition = this.catalog.boss(instance.bossId());
-        World world = Bukkit.getWorld(instance.worldName());
-        if (definition == null || world == null) {
-            return;
-        }
-        player.teleport(definition.spawn.to(world));
     }
 
     private Path worldContainer() {

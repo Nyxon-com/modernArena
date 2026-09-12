@@ -24,7 +24,6 @@ public final class ArenaCatalog {
     private int maxPerBoss = 4;
     private int maxGlobal;
     private int queueMax = 20;
-    private boolean kickOnDeath;
     private List<String> copyExclude = List.of("uid.dat", "session.lock");
     private String leaveCommand = "spawn";
     private String leaveWorld = "world";
@@ -42,7 +41,6 @@ public final class ArenaCatalog {
         this.spawnerNameFormat = yaml.getString("settings.spawner-name-format", "arena_{boss}_{slot}_{spawner}");
         this.maxPerBoss = yaml.getInt("settings.max-instances-per-boss", 4);
         this.maxGlobal = yaml.getInt("settings.max-instances-global", 0);
-        this.kickOnDeath = yaml.getBoolean("settings.kick-on-death", false);
         this.copyExclude = yaml.getStringList("settings.copy-exclude");
         if (this.copyExclude.isEmpty()) {
             this.copyExclude = List.of("uid.dat", "session.lock");
@@ -131,10 +129,6 @@ public final class ArenaCatalog {
 
     public int queueMax() {
         return this.queueMax;
-    }
-
-    public boolean kickOnDeath() {
-        return this.kickOnDeath;
     }
 
     public List<String> copyExclude() {

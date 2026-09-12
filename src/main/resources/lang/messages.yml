@@ -45,6 +45,7 @@ arena:
   queued: "{prefix}<gray>Tutte le istanze di <white>{boss}</white> sono occupate. Coda: <white>#{position}</white>."
   queue-removed: "{prefix}<gray>Il party è uscito dalla coda di <white>{boss}</white>."
   leave: "{prefix}<gray>Hai lasciato l'arena."
+  eliminated: "{prefix}<gray>Sei stato eliminato dall'arena."
   member-left: "{prefix}<gray><white>{player}</white> ha lasciato l'arena."
   timeout: "{prefix}<gray>Tempo scaduto. Uscita dall'arena."
   empty-unload: "{prefix}<gray>Nessun giocatore rimasto. Arena chiusa."

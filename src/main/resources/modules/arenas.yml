@@ -12,7 +12,6 @@ settings:
   max-instances-per-boss: 4
   # 0 = nessun cap globale oltre al per-boss
   max-instances-global: 0
-  kick-on-death: false
   copy-exclude:
     - uid.dat
     - session.lock

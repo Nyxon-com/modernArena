@@ -66,7 +66,8 @@ Riaggancia `Tasks`, `messages()`, `sounds()`, `console()`, `storage`. Non duplic
 
 ### Leave / vuoto
 
-Quit, `/arena leave`, world-change, death (se `kick-on-death`), party leave/disband.
+Alla morte il membro è eliminato e respawna fuori dall’arena. Quando non restano membri vivi, l’arena chiude dopo che gli eliminati hanno respawnato.
+Quit, `/arena leave`, world-change e party leave/disband rimuovono il membro.
 0 player → TP leave (`leave.command` default `spawn`, else `leave.location`) → despawn + deregistra spawner → unload → delete cartella **async** → dequeue.
 
 Niente `PlayerMoveEvent`.

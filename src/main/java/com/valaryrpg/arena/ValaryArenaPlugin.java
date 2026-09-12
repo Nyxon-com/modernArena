@@ -74,7 +74,7 @@ public final class ValaryArenaPlugin extends JavaPlugin {
         this.parties.onDisband(this.arenas::partyGone);
         this.arenas.cleanup();
 
-        getServer().getPluginManager().registerEvents(new ArenaListener(this, this.arenas, this.kills), this);
+        getServer().getPluginManager().registerEvents(new ArenaListener(this.arenas, this.kills), this);
         bind("arena", new ArenaCommand(this));
         bind("party", new PartyCommand(this));
         getLogger().info(this.messages.brand("name") + " Arena " + getPluginMeta().getVersion() + " abilitato.");
