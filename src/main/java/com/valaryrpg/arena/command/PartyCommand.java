@@ -81,8 +81,19 @@ public final class PartyCommand implements TabExecutor {
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase(cmd("party-invite", "invite"))
                 || args[0].equalsIgnoreCase(cmd("party-kick", "kick")))) {
+            Party party = sender instanceof Player player ? this.plugin.parties().partyOf(player) : null;
             for (Player online : Bukkit.getOnlinePlayers()) {
-                suggest(out, args[1], online.getName());
+                boolean invite = args[0].equalsIgnoreCase(cmd("party-invite", "invite"));
+                boolean validInvite = invite
+                        && !online.equals(sender)
+                        && this.plugin.parties().partyOf(online) == null;
+                boolean validKick = !invite
+                        && party != null
+                        && party.contains(online.getUniqueId())
+                        && !party.isLeader(online.getUniqueId());
+                if (validInvite || validKick) {
+                    suggest(out, args[1], online.getName());
+                }
             }
         }
         return out;
@@ -117,7 +128,7 @@ public final class PartyCommand implements TabExecutor {
             return true;
         }
         if (args.length < 2) {
-            this.plugin.messages().send(player, "party.help");
+            this.plugin.messages().send(player, "party.usage-invite");
             return true;
         }
         Player target = Bukkit.getPlayerExact(args[1]);
@@ -216,7 +227,7 @@ public final class PartyCommand implements TabExecutor {
             return true;
         }
         if (args.length < 2) {
-            this.plugin.messages().send(player, "party.help");
+            this.plugin.messages().send(player, "party.usage-kick");
             return true;
         }
         Player target = Bukkit.getPlayerExact(args[1]);

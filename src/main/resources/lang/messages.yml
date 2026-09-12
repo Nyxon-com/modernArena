@@ -38,7 +38,7 @@ errors:
 arena:
   help:
     - "{separator}"
-    - "{prefix}<gray>/arena start <white><boss></white>"
+    - "{prefix}<gray>/arena start <white>boss</white>"
     - "{prefix}<gray>/arena leave"
     - "{separator}"
   started: "{prefix}<gray>Arena <white>{boss}</white> avviata. Slot <white>{slot}</white>."
@@ -55,12 +55,14 @@ party:
   help:
     - "{separator}"
     - "{prefix}<gray>/party create"
-    - "{prefix}<gray>/party invite <white><player></white>"
+    - "{prefix}<gray>/party invite <white>player</white>"
     - "{prefix}<gray>/party accept"
     - "{prefix}<gray>/party leave"
-    - "{prefix}<gray>/party kick <white><player></white>"
+    - "{prefix}<gray>/party kick <white>player</white>"
     - "{prefix}<gray>/party disband"
     - "{separator}"
+  usage-invite: "{prefix}<gray>Uso: <white>/party invite player</white>"
+  usage-kick: "{prefix}<gray>Uso: <white>/party kick player</white>"
   created: "{prefix}<gray>Party creato. Sei il leader."
   disbanded: "{prefix}<gray>Il party è stato sciolto."
   invited: "{prefix}<gray>Invito inviato a <white>{target}</white>."

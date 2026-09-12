@@ -27,6 +27,7 @@ public final class ArenaService {
     private final Map<String, ArenaInstance> byWorld = new ConcurrentHashMap<>();
     private final Map<UUID, ArenaInstance> byPlayer = new ConcurrentHashMap<>();
     private final Map<UUID, ArenaInstance> byParty = new ConcurrentHashMap<>();
+    private final Map<UUID, Party> reservedByPlayer = new ConcurrentHashMap<>();
 
     public ArenaService(
             ValaryArenaPlugin plugin,
@@ -73,14 +74,24 @@ public final class ArenaService {
             this.plugin.sounds().play(leader, "command-denied");
             return;
         }
+        if (this.byPlayer.containsKey(leader.getUniqueId())
+                || this.reservedByPlayer.containsKey(leader.getUniqueId())) {
+            this.plugin.messages().send(leader, "errors.already-in-arena");
+            return;
+        }
         Party party = this.plugin.parties().partyOf(leader);
         if (party == null) {
-            this.plugin.messages().send(leader, "errors.no-party");
-            return;
+            party = new Party(leader.getUniqueId());
         }
         if (!party.isLeader(leader.getUniqueId())) {
             this.plugin.messages().send(leader, "errors.not-leader");
             return;
+        }
+        for (UUID member : party.members()) {
+            if (this.byPlayer.containsKey(member) || this.reservedByPlayer.containsKey(member)) {
+                this.plugin.messages().send(leader, "errors.already-in-arena");
+                return;
+            }
         }
         if (busy(party)) {
             this.plugin.messages().send(leader, this.queue.contains(party) ? "errors.already-in-queue" : "errors.already-in-arena");
@@ -102,6 +113,7 @@ public final class ArenaService {
                 this.plugin.messages().send(leader, "errors.queue-full", Map.of("boss", bossId));
                 return;
             }
+            reserve(party);
             this.plugin.parties().broadcast(party, "arena.queued", Map.of(
                     "boss", display(definition),
                     "position", Integer.toString(position)
@@ -120,6 +132,7 @@ public final class ArenaService {
             return;
         }
         instance.players().remove(player.getUniqueId());
+        this.reservedByPlayer.remove(player.getUniqueId());
         if (teleport) {
             sendOut(player);
             this.plugin.messages().send(player, "arena.leave");
@@ -136,6 +149,7 @@ public final class ArenaService {
         String queued = this.queue.bossOf(party);
         if (queued != null) {
             this.queue.remove(party);
+            clearReservations(party);
             this.plugin.parties().broadcast(party, "arena.queue-removed", Map.of("boss", queued));
         }
         ArenaInstance instance = this.byParty.get(party.id());
@@ -180,6 +194,7 @@ public final class ArenaService {
         this.byWorld.clear();
         this.byPlayer.clear();
         this.byParty.clear();
+        this.reservedByPlayer.clear();
     }
 
     public void shutdown() {
@@ -189,6 +204,7 @@ public final class ArenaService {
     }
 
     private void begin(Party party, ArenaDefinition definition, int slot) {
+        reserve(party);
         String worldName = this.catalog.worldName(definition.id, slot);
         ArenaInstance instance = new ArenaInstance(definition.id, slot, worldName, party);
         this.byWorld.put(worldName, instance);
@@ -203,6 +219,7 @@ public final class ArenaService {
             this.plugin.getLogger().warning("Copia mondo fallita: " + exception.getMessage());
             this.byWorld.remove(worldName);
             this.byParty.remove(party.id());
+            clearReservations(party);
             for (Player member : this.plugin.parties().onlineMembers(party)) {
                 this.plugin.messages().send(member, "errors.copy-failed");
             }
@@ -338,6 +355,31 @@ public final class ArenaService {
     private void release(ArenaInstance instance) {
         this.byWorld.remove(instance.worldName(), instance);
         this.byParty.remove(instance.party().id(), instance);
+        clearReservations(instance.party());
+    }
+
+    public void quit(Player player) {
+        ArenaInstance instance = instanceOf(player);
+        if (instance != null) {
+            leave(player, false);
+            return;
+        }
+        Party reservation = this.reservedByPlayer.get(player.getUniqueId());
+        if (reservation != null && reservation.size() == 1 && this.queue.remove(reservation)) {
+            clearReservations(reservation);
+        }
+    }
+
+    private void reserve(Party party) {
+        for (UUID member : party.members()) {
+            this.reservedByPlayer.put(member, party);
+        }
+    }
+
+    private void clearReservations(Party party) {
+        for (UUID member : party.members()) {
+            this.reservedByPlayer.remove(member, party);
+        }
     }
 
     private int freeSlot(String bossId) {

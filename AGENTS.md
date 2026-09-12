@@ -57,7 +57,7 @@ Riaggancia `Tasks`, `messages()`, `sounds()`, `console()`, `storage`. Non duplic
 
 ### Start — `/arena start <boss>` (leader)
 
-1. Serve un party (`/party create`). Leader only.
+1. Si può entrare da soli senza creare un party. Se il player ha un party, può avviare solo il leader e parte tutto il party.
 2. Slot libero 1..`max-instances-per-boss` (default 4) e cap globale se > 0. `COPYING` non è libero.
 3. Pieno → coda RAM per quel boss (`ArenaQueue.enqueue`). Niente poll.
 4. Template **unloaded**, copy **async** (`WorldCopier`, esclude `uid.dat` / `session.lock`).

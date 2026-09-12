@@ -29,10 +29,7 @@ public final class ArenaListener implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         this.kills.evict(player.getUniqueId());
-        ArenaInstance instance = this.arenas.instanceOf(player);
-        if (instance != null) {
-            this.arenas.leave(player, false);
-        }
+        this.arenas.quit(player);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
