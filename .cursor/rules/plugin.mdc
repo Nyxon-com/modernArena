@@ -1,0 +1,16 @@
+---
+description: Mappa plugin ValaryArena — YAML, package, flussi v1
+alwaysApply: true
+---
+
+# ValaryArena
+
+Guida completa: `AGENTS.md`. JAR proprio, package `com.valaryrpg.arena`. Non è un modulo Core.
+
+- Testi/permessi/suoni/delay/coord/cap/nomi spawner → YAML. Java orchestra.
+- Brand e separator solo in `lang/messages.yml`.
+- Helper esistenti: `Tasks`, `MessageService`, `SoundService`, `ConsoleCommands`, `StorageManager`.
+- Async: copy/delete mondo, SQL kill/milestone. Sync: load/unload, TP, Mythic.
+- Max 4 istanze per boss. Coda RAM, dequeue sull’unload. Niente `PlayerMoveEvent`.
+- Reward Core = `[console]` in `milestones.yml`. Mai compileOnly sul Core.
+- v1 only: party, istanze, coda, kill/milestone. Niente shop/wave/spectator/editor.

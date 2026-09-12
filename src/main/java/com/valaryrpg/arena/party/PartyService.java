@@ -19,7 +19,7 @@ public final class PartyService {
     private final Map<UUID, Party> byPlayer = new ConcurrentHashMap<>();
     private final Map<UUID, Party> byId = new ConcurrentHashMap<>();
     private final Map<UUID, Invite> invites = new ConcurrentHashMap<>();
-    private Runnable onDisband = party -> {
+    private RunnableListener onDisband = party -> {
     };
 
     public PartyService(ValaryArenaPlugin plugin) {

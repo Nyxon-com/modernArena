@@ -228,7 +228,6 @@ public final class ArenaService {
             return;
         }
         world.setAutoSave(false);
-        world.setKeepSpawnInMemory(false);
         instance.spawnerNames().clear();
         for (SpawnerDefinition spawner : definition.spawners) {
             String name = this.catalog.spawnerName(definition.id, instance.slot(), spawner.id);
