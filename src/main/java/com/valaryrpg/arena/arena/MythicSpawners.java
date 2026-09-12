@@ -1,6 +1,7 @@
 package com.valaryrpg.arena.arena;
 
 import io.lumine.mythic.api.skills.placeholders.PlaceholderInt;
+import io.lumine.mythic.bukkit.BukkitAdapter;
 import io.lumine.mythic.bukkit.MythicBukkit;
 import io.lumine.mythic.core.mobs.ActiveMob;
 import io.lumine.mythic.core.spawning.spawners.MythicSpawner;
@@ -28,6 +29,18 @@ public final class MythicSpawners {
     public String create(String name, Location location, SpawnerDefinition definition) {
         SpawnerManager manager = MythicBukkit.inst().getSpawnerManager();
         remove(name);
+        if (definition.sourceSpawner != null && !definition.sourceSpawner.isBlank()) {
+            boolean copied = manager.copySpawner(
+                    definition.sourceSpawner,
+                    name,
+                    BukkitAdapter.adapt(location)
+            );
+            if (!copied) {
+                this.logger.warning("Spawner Mythic sorgente non trovato: " + definition.sourceSpawner);
+                return null;
+            }
+            return name;
+        }
         MythicSpawner spawner = manager.createSpawner(name, location, definition.mob);
         if (spawner == null) {
             this.logger.warning("Spawner Mythic non creato: " + name + " (" + definition.mob + ")");

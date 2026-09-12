@@ -61,7 +61,7 @@ Riaggancia `Tasks`, `messages()`, `sounds()`, `console()`, `storage`. Non duplic
 2. Slot libero 1..`max-instances-per-boss` (default 4) e cap globale se > 0. `COPYING` non è libero.
 3. Pieno → coda RAM per quel boss (`ArenaQueue.enqueue`). Niente poll.
 4. Template **unloaded**, copy **async** (`WorldCopier`, esclude `uid.dat` / `session.lock`) in `plugins/ValaryRPG-Arena/instances/`.
-5. Sync: `createWorld` `arena_{boss}_{slot}` → spawners Mythic (stesso xyz, nome da `spawner-name-format`) → TP party → `ACTIVE`.
+5. Sync: `createWorld` `arena_{boss}_{slot}` → clona lo spawner Mythic indicato da `source-spawner` mantenendo tutte le sue opzioni e cambiando solo nome/mondo/coordinate → TP party → `ACTIVE`.
 6. Timer durata solo se `duration-seconds` > 0 e solo su `ACTIVE`.
 7. Dopo un reload MythicMobs, gli spawner di tutte le istanze `ACTIVE` vengono ricreati per usare le configurazioni Mythic aggiornate.
 
@@ -91,7 +91,7 @@ Niente `SELECT` sul main. Niente API Java Core.
 
 ## Come cambiare le cose
 
-- **Nuovo boss**: blocco sotto `modules/arenas.yml` → `bosses.<id>`. Cartella template nella world container (stesso livello di `world/`), **non caricata**. Le copie temporanee vanno in `plugins/ValaryRPG-Arena/instances/`.
+- **Nuovo boss**: blocco sotto `modules/arenas.yml` → `bosses.<id>`. Cartella template nella world container (stesso livello di `world/`), **non caricata**. Le copie temporanee vanno in `plugins/ValaryRPG-Arena/instances/`. Ogni spawner usa `source-spawner: <nome Mythic>` per clonare integralmente quello originale.
 - **Testo/permesso/suono/delay**: YAML relativo. Java legge `configs().command` / `permission`.
 - **Milestone**: `modules/milestones.yml` → `mobs.<MythicInternalName>.<soglia>`.
 - **Reload**: `/arena reload` ricarica YAML + cataloghi. Non tocca istanze vive né il DB.

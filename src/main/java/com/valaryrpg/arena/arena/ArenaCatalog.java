@@ -71,6 +71,7 @@ public final class ArenaCatalog {
                     }
                     spawners.add(new SpawnerDefinition(
                             spawnerId,
+                            node.getString("source-spawner", ""),
                             node.getString("mob", spawnerId),
                             point(node, 0, 64, 0),
                             node.getInt("cooldown-seconds", 30),

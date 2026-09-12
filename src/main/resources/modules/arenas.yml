@@ -48,6 +48,9 @@ bosses:
       pitch: 0.0
     spawners:
       boss:
+        # Clona tutte le opzioni di questo spawner Mythic; cambia solo nome, mondo e coordinate.
+        source-spawner: ExampleSpawner
+        # Usati solo se source-spawner è vuoto.
         mob: ExampleBoss
         x: 8.5
         y: 64.0
