@@ -110,7 +110,11 @@ public final class ArenaCommand implements TabExecutor {
 
     private void list(Player player) {
         boolean found = false;
-        for (var definition : this.plugin.arenas().catalog().bosses()) {
+        for (var instance : this.plugin.arenas().activeInstances()) {
+            var definition = this.plugin.arenas().catalog().boss(instance.bossId());
+            if (definition == null) {
+                continue;
+            }
             if (definition.permission != null
                     && !definition.permission.isEmpty()
                     && !player.hasPermission(definition.permission)) {
@@ -122,7 +126,10 @@ public final class ArenaCommand implements TabExecutor {
             }
             this.plugin.messages().send(player, "arena.list-entry", Map.of(
                     "boss", definition.id,
-                    "display", definition.displayName
+                    "display", definition.displayName,
+                    "world", instance.worldName(),
+                    "slot", Integer.toString(instance.slot()),
+                    "players", Integer.toString(instance.players().size())
             ));
         }
         this.plugin.messages().send(player, found ? "arena.list-footer" : "arena.list-empty");

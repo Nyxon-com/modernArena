@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -57,6 +58,14 @@ public final class ArenaService {
 
     public ArenaInstance instanceOfWorld(String worldName) {
         return this.byWorld.get(worldName);
+    }
+
+    public List<ArenaInstance> activeInstances() {
+        return this.byWorld.values().stream()
+                .filter(instance -> instance.state() == SlotState.ACTIVE)
+                .sorted(Comparator.comparing(ArenaInstance::bossId)
+                        .thenComparingInt(ArenaInstance::slot))
+                .toList();
     }
 
     public boolean busy(Party party) {
