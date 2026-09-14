@@ -63,18 +63,14 @@ public final class WorldCopier {
         });
     }
 
-    public boolean cleanup(Path instancesRoot, List<Path> legacyFolders, Runnable onDone, Consumer<Exception> onFail) {
+    public boolean cleanup(List<Path> folders, Runnable onDone, Consumer<Exception> onFail) {
         return submit(() -> {
             try {
-                Files.createDirectories(instancesRoot);
-                try (var stream = Files.list(instancesRoot)) {
-                    for (Path folder : stream.filter(Files::isDirectory).toList()) {
-                        deleteSync(folder);
-                    }
-                }
-                for (Path folder : legacyFolders) {
-                    if (Files.isDirectory(folder)) {
-                        deleteSync(folder);
+                for (Path folder : folders) {
+                    synchronized (pathLock(folder)) {
+                        if (Files.isDirectory(folder)) {
+                            deleteSync(folder);
+                        }
                     }
                 }
                 this.tasks.sync(onDone);

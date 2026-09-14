@@ -264,11 +264,7 @@ public final class ArenaService {
             if (!isInstanceWorld(world) && !isLegacyInstanceWorld(world.getName())) {
                 continue;
             }
-            for (Player player : new ArrayList<>(world.getPlayers())) {
-                sendOut(player);
-            }
-            this.mythic.despawnWorld(world);
-            Bukkit.unloadWorld(world, false);
+            unloadLoadedWorld(world);
         }
         List<Path> legacyFolders = new ArrayList<>();
         for (ArenaDefinition definition : this.catalog.bosses()) {
@@ -280,9 +276,36 @@ public final class ArenaService {
         this.byPlayer.clear();
         this.byParty.clear();
         this.reservedByPlayer.clear();
+        if (this.plugin.tasks().later(() -> cleanupDisk(legacyFolders), 5L) == null) {
+            cleanupDisk(legacyFolders);
+        }
+    }
+
+    private void cleanupDisk(List<Path> legacyFolders) {
+        List<Path> folders = new ArrayList<>();
+        try {
+            Files.createDirectories(instanceRoot());
+            try (var stream = Files.list(instanceRoot())) {
+                for (Path folder : stream.filter(Files::isDirectory).toList()) {
+                    if (worldUsing(folder) == null) {
+                        folders.add(folder);
+                    } else {
+                        this.plugin.getLogger().warning("Cleanup: mondo ancora caricato, cartella lasciata: " + folder.getFileName());
+                    }
+                }
+            }
+        } catch (Exception exception) {
+            this.cleaning = false;
+            this.plugin.getLogger().warning("Cleanup cartelle arena: " + exception.getMessage());
+            return;
+        }
+        for (Path folder : legacyFolders) {
+            if (Files.isDirectory(folder) && worldUsing(folder) == null) {
+                folders.add(folder);
+            }
+        }
         boolean scheduled = this.copier.cleanup(
-                instanceRoot(),
-                legacyFolders,
+                folders,
                 () -> this.cleaning = false,
                 exception -> {
                     this.cleaning = false;
@@ -297,45 +320,48 @@ public final class ArenaService {
     public void shutdown(long timeoutMillis) {
         this.shuttingDown = true;
         this.cleaning = false;
-        this.copier.shutdown(timeoutMillis);
         this.queue.clear();
-        Location leave = this.catalog.leaveLocation();
         for (ArenaInstance instance : new ArrayList<>(this.byWorld.values())) {
             instance.state(SlotState.UNLOADING);
             if (instance.durationTask() != null) {
                 instance.durationTask().cancel();
                 instance.durationTask(null);
             }
-            for (UUID uuid : instance.players()) {
-                Player player = Bukkit.getPlayer(uuid);
-                if (player != null && leave != null && !player.isDead()) {
-                    player.teleport(leave);
-                }
-            }
-            World world = loadedWorld(instance);
-            if (world != null) {
-                this.mythic.despawnWorld(world);
-            }
             for (String spawner : instance.spawnerNames()) {
                 this.mythic.remove(spawner);
             }
             instance.spawnerNames().clear();
-            if (world != null) {
-                Bukkit.unloadWorld(world, false);
-            }
             instance.players().clear();
             instance.eliminated().clear();
+        }
+        for (World world : new ArrayList<>(Bukkit.getWorlds())) {
+            if (isInstanceWorld(world) || isLegacyInstanceWorld(world.getName())) {
+                unloadLoadedWorld(world);
+            }
         }
         this.byWorld.clear();
         this.byPlayer.clear();
         this.byParty.clear();
         this.reservedByPlayer.clear();
+        this.copier.shutdown(timeoutMillis);
     }
 
     private void begin(Party party, ArenaDefinition definition, int slot) {
         reserve(party);
         String worldName = this.catalog.worldName(definition.id, slot);
         Path destination = instancePath(worldName);
+        World live = worldUsing(destination);
+        if (live != null) {
+            unloadLoadedWorld(live);
+        }
+        if (worldUsing(destination) != null) {
+            clearReservations(party);
+            for (Player member : this.plugin.parties().onlineMembers(party)) {
+                this.plugin.messages().send(member, "errors.copy-failed");
+            }
+            this.plugin.getLogger().warning("Slot ancora caricato, copia saltata: " + destination.getFileName());
+            return;
+        }
         ArenaInstance instance = new ArenaInstance(definition.id, slot, worldName, destination, party);
         this.byWorld.put(worldName, instance);
         this.byParty.put(party.id(), instance);
@@ -362,15 +388,12 @@ public final class ArenaService {
 
     private void activate(ArenaInstance instance, ArenaDefinition definition) {
         if (instance.state() == SlotState.UNLOADING) {
-            this.copier.delete(instance.folder(), null);
-            release(instance);
             return;
         }
         World world = new WorldCreator(worldLoadName(instance.folder())).createWorld();
         if (world == null) {
             this.plugin.getLogger().warning("Load mondo fallito: " + instance.worldName());
-            this.copier.delete(instance.folder(), null);
-            release(instance);
+            deleteFolderWhenSafe(instance);
             return;
         }
         instance.loadedWorldName(world.getName());
@@ -449,21 +472,19 @@ public final class ArenaService {
         }
         instance.players().clear();
         instance.eliminated().clear();
-        World world = loadedWorld(instance);
-        if (world != null) {
-            this.mythic.despawnWorld(world);
+        World world = worldUsing(instance.folder());
+        if (world == null) {
+            world = loadedWorld(instance);
         }
         for (String spawner : instance.spawnerNames()) {
             this.mythic.remove(spawner);
         }
         instance.spawnerNames().clear();
         if (world != null) {
-            Bukkit.unloadWorld(world, false);
+            unloadLoadedWorld(world);
         }
-        this.copier.delete(instance.folder(), () -> {
-            release(instance);
-            dequeue(instance.bossId());
-        });
+        instance.loadedWorldName(null);
+        deleteFolderWhenSafe(instance);
     }
 
     private void markTeamWipe(ArenaInstance instance) {
@@ -587,8 +608,68 @@ public final class ArenaService {
     }
 
     private World loadedWorld(ArenaInstance instance) {
+        World byFolder = worldUsing(instance.folder());
+        if (byFolder != null) {
+            return byFolder;
+        }
         String name = instance.loadedWorldName();
         return name == null ? null : Bukkit.getWorld(name);
+    }
+
+    private World worldUsing(Path folder) {
+        Path expected = folder.toAbsolutePath().normalize();
+        for (World world : Bukkit.getWorlds()) {
+            if (world.getWorldFolder().toPath().toAbsolutePath().normalize().equals(expected)) {
+                return world;
+            }
+        }
+        return null;
+    }
+
+    private void unloadLoadedWorld(World world) {
+        world.setAutoSave(false);
+        for (Player player : new ArrayList<>(world.getPlayers())) {
+            sendOut(player);
+            if (player.getWorld() == world) {
+                World fallback = Bukkit.getWorlds().stream()
+                        .filter(candidate -> candidate != world && !isArenaWorld(candidate))
+                        .findFirst()
+                        .orElse(null);
+                if (fallback != null) {
+                    player.teleport(fallback.getSpawnLocation());
+                }
+            }
+        }
+        this.mythic.despawnWorld(world);
+        if (!Bukkit.unloadWorld(world, false)) {
+            this.plugin.getLogger().warning("Unload mondo fallito: " + world.getName());
+        }
+    }
+
+    private void deleteFolderWhenSafe(ArenaInstance instance) {
+        Path folder = instance.folder();
+        Runnable delete = () -> {
+            if (this.shuttingDown) {
+                return;
+            }
+            World leftover = worldUsing(folder);
+            if (leftover != null) {
+                unloadLoadedWorld(leftover);
+            }
+            if (worldUsing(folder) != null) {
+                this.plugin.getLogger().warning("Unload mondo incompleto, cartella lasciata: " + folder.getFileName());
+                return;
+            }
+            this.copier.delete(folder, () -> {
+                release(instance);
+                if (!this.shuttingDown) {
+                    dequeue(instance.bossId());
+                }
+            });
+        };
+        if (this.plugin.tasks().later(delete, 5L) == null && !this.shuttingDown) {
+            delete.run();
+        }
     }
 
     private boolean isInstanceWorld(World world) {
