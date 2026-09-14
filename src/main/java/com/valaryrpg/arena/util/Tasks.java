@@ -56,6 +56,17 @@ public final class Tasks {
         }
     }
 
+    public BukkitTask repeat(Runnable task, long delay, long period) {
+        if (!available()) {
+            return null;
+        }
+        try {
+            return Bukkit.getScheduler().runTaskTimer(this.plugin, guarded(task), delay, period);
+        } catch (IllegalPluginAccessException ignored) {
+            return null;
+        }
+    }
+
     public void shutdown() {
         if (this.accepting.compareAndSet(true, false)) {
             Bukkit.getScheduler().cancelTasks(this.plugin);

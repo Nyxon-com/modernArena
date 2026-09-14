@@ -25,6 +25,8 @@ public final class ArenaService {
     private final ArenaQueue queue;
     private final WorldCopier copier;
     private final MythicSpawners mythic;
+    private final ArenaHolograms holograms;
+    private final ArenaCooldowns joinCooldowns;
     private final Map<String, ArenaInstance> byWorld = new HashMap<>();
     private final Map<UUID, ArenaInstance> byPlayer = new HashMap<>();
     private final Map<UUID, ArenaInstance> byParty = new HashMap<>();
@@ -44,6 +46,8 @@ public final class ArenaService {
         this.queue = queue;
         this.copier = copier;
         this.mythic = mythic;
+        this.holograms = new ArenaHolograms(plugin, mythic, catalog);
+        this.joinCooldowns = new ArenaCooldowns();
     }
 
     public ArenaCatalog catalog() {
@@ -95,7 +99,7 @@ public final class ArenaService {
             for (ArenaInstance instance : activeInstances()) {
                 ArenaDefinition definition = this.catalog.boss(instance.bossId());
                 World world = loadedWorld(instance);
-                if (definition == null || world == null) {
+                if (definition == null || world == null || instance.spawnersHalted()) {
                     continue;
                 }
                 for (String name : instance.spawnerNames()) {
@@ -153,6 +157,9 @@ public final class ArenaService {
             this.plugin.messages().send(leader, "errors.party-too-big", Map.of("max", Integer.toString(definition.maxPartySize)));
             return;
         }
+        if (blockedByCooldown(party, definition, leader)) {
+            return;
+        }
         Path template = worldContainer().resolve(definition.template);
         if (!Files.isDirectory(template)) {
             this.plugin.messages().send(leader, "errors.template-missing", Map.of("world", definition.template));
@@ -189,6 +196,7 @@ public final class ArenaService {
         instance.players().remove(player.getUniqueId());
         instance.eliminated().remove(player.getUniqueId());
         this.reservedByPlayer.remove(player.getUniqueId());
+        this.joinCooldowns.mark(player.getUniqueId(), instance.bossId());
         if (teleport) {
             sendOut(player);
             this.plugin.messages().send(player, "arena.leave");
@@ -224,6 +232,7 @@ public final class ArenaService {
         }
         this.byPlayer.remove(player.getUniqueId(), instance);
         this.reservedByPlayer.remove(player.getUniqueId(), instance.party());
+        this.joinCooldowns.mark(player.getUniqueId(), instance.bossId());
         boolean close = instance.closingAfterWipe() && instance.eliminated().isEmpty();
         this.plugin.tasks().later(() -> {
             if (player.isOnline()) {
@@ -344,6 +353,7 @@ public final class ArenaService {
                 instance.durationTask().cancel();
                 instance.durationTask(null);
             }
+            this.holograms.remove(instance);
             for (String spawner : instance.spawnerNames()) {
                 this.mythic.remove(spawner);
             }
@@ -360,6 +370,7 @@ public final class ArenaService {
         this.byPlayer.clear();
         this.byParty.clear();
         this.reservedByPlayer.clear();
+        this.joinCooldowns.clear();
         this.copier.shutdown(timeoutMillis);
     }
 
@@ -430,6 +441,7 @@ public final class ArenaService {
             this.plugin.sounds().play(member, "arena-start");
         }
         instance.state(SlotState.ACTIVE);
+        this.holograms.spawn(instance, definition, world);
         if (definition.durationSeconds > 0) {
             instance.durationTask(this.plugin.tasks().later(
                     () -> timeout(instance),
@@ -466,6 +478,7 @@ public final class ArenaService {
             instance.durationTask().cancel();
             instance.durationTask(null);
         }
+        this.holograms.remove(instance);
         if (messagePath != null) {
             for (UUID uuid : instance.players()) {
                 Player player = Bukkit.getPlayer(uuid);
@@ -477,6 +490,7 @@ public final class ArenaService {
         for (UUID uuid : new ArrayList<>(instance.players())) {
             this.byPlayer.remove(uuid, instance);
             this.reservedByPlayer.remove(uuid, instance.party());
+            this.joinCooldowns.mark(uuid, instance.bossId());
             Player player = Bukkit.getPlayer(uuid);
             if (player != null) {
                 sendOut(player);
@@ -486,6 +500,7 @@ public final class ArenaService {
         for (UUID uuid : new ArrayList<>(instance.eliminated())) {
             this.byPlayer.remove(uuid, instance);
             this.reservedByPlayer.remove(uuid, instance.party());
+            this.joinCooldowns.mark(uuid, instance.bossId());
         }
         instance.players().clear();
         instance.eliminated().clear();
@@ -513,6 +528,9 @@ public final class ArenaService {
     }
 
     private void createSpawners(ArenaInstance instance, ArenaDefinition definition, World world) {
+        if (instance.spawnersHalted()) {
+            return;
+        }
         for (SpawnerDefinition spawner : definition.spawners) {
             String name = this.catalog.spawnerName(definition.id, instance.slot(), spawner.id);
             String created = this.mythic.create(name, spawner.point.to(world), spawner);
@@ -525,15 +543,59 @@ public final class ArenaService {
     private void dequeue(String bossId) {
         Party party = this.queue.dequeue(bossId);
         while (party != null) {
-            if (!this.plugin.parties().onlineMembers(party).isEmpty()) {
-                ArenaDefinition definition = this.catalog.boss(bossId);
-                int slot = definition == null ? -1 : freeSlot(bossId);
-                if (definition != null && slot > 0) {
-                    begin(party, definition, slot);
-                }
+            if (this.plugin.parties().onlineMembers(party).isEmpty()) {
+                clearReservations(party);
+                party = this.queue.dequeue(bossId);
+                continue;
+            }
+            ArenaDefinition definition = this.catalog.boss(bossId);
+            int slot = definition == null ? -1 : freeSlot(bossId);
+            if (definition == null || slot < 0) {
                 return;
             }
-            party = this.queue.dequeue(bossId);
+            if (blockedByCooldown(party, definition, null)) {
+                clearReservations(party);
+                party = this.queue.dequeue(bossId);
+                continue;
+            }
+            begin(party, definition, slot);
+            return;
+        }
+    }
+
+    public void recordDamage(ArenaInstance instance, UUID mobId, Player player, double amount) {
+        if (instance.state() != SlotState.ACTIVE || amount <= 0D) {
+            return;
+        }
+        instance.damageByMob()
+                .computeIfAbsent(mobId, ignored -> new HashMap<>())
+                .merge(player.getUniqueId(), amount, Double::sum);
+    }
+
+    public void trackedBossKilled(ArenaInstance instance, UUID mobId) {
+        Map<UUID, Double> damage = instance.damageByMob().remove(mobId);
+        if (damage != null && !damage.isEmpty()) {
+            UUID top = null;
+            double best = 0D;
+            for (Map.Entry<UUID, Double> entry : damage.entrySet()) {
+                if (entry.getValue() > best) {
+                    best = entry.getValue();
+                    top = entry.getKey();
+                }
+            }
+            if (top != null) {
+                Player player = Bukkit.getPlayer(top);
+                instance.previousTopDamager(player != null ? player.getName() : top.toString().substring(0, 8));
+                instance.previousTopDamage(best);
+            }
+        }
+        instance.bossesKilled(instance.bossesKilled() + 1);
+        ArenaDefinition definition = this.catalog.boss(instance.bossId());
+        if (definition != null && definition.maxBosses > 0 && instance.bossesKilled() >= definition.maxBosses) {
+            haltSpawners(instance, definition);
+        }
+        if (definition != null) {
+            this.holograms.refresh(instance, definition);
         }
     }
 
@@ -707,5 +769,58 @@ public final class ArenaService {
 
     private String display(ArenaDefinition definition) {
         return definition.displayName == null || definition.displayName.isEmpty() ? definition.id : definition.displayName;
+    }
+
+    private boolean blockedByCooldown(Party party, ArenaDefinition definition, Player notify) {
+        String bypass = this.plugin.configs().permission("arena-cooldown-bypass", "valary.arena.cooldown.bypass");
+        for (UUID uuid : party.members()) {
+            Player member = Bukkit.getPlayer(uuid);
+            if (member != null && member.hasPermission(bypass)) {
+                continue;
+            }
+            ArenaCooldowns.Remaining remaining = this.joinCooldowns.remaining(
+                    uuid,
+                    definition.id,
+                    definition.entryCooldownSeconds,
+                    definition.betweenCooldownSeconds
+            );
+            if (!remaining.blocked()) {
+                continue;
+            }
+            String name = member != null ? member.getName() : uuid.toString().substring(0, 8);
+            Player target = notify != null ? notify : member;
+            if (target != null) {
+                this.plugin.messages().send(target, remaining.messagePath(), Map.of(
+                        "player", name,
+                        "seconds", Long.toString(remaining.seconds()),
+                        "boss", display(definition)
+                ));
+                this.plugin.sounds().play(target, "arena-cooldown");
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private void haltSpawners(ArenaInstance instance, ArenaDefinition definition) {
+        if (instance.spawnersHalted()) {
+            return;
+        }
+        instance.spawnersHalted(true);
+        for (String name : instance.spawnerNames()) {
+            this.mythic.remove(name);
+        }
+        instance.spawnerNames().clear();
+        for (UUID uuid : instance.players()) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null) {
+                this.plugin.messages().send(player, "arena.boss-cap", Map.of(
+                        "kills", Integer.toString(instance.bossesKilled()),
+                        "max", Integer.toString(definition.maxBosses),
+                        "boss", display(definition)
+                ));
+                this.plugin.sounds().play(player, "arena-boss-cap");
+            }
+        }
     }
 }

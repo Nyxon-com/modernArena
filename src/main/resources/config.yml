@@ -29,6 +29,7 @@ permissions:
   arena-milestones: valary.arena.milestones
   arena-stats-other: valary.arena.stats.other
   arena-reload: valary.arena.reload
+  arena-cooldown-bypass: valary.arena.cooldown.bypass
   party: valary.party
   party-create: valary.party.create
   party-invite: valary.party.invite

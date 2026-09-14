@@ -83,4 +83,11 @@ public final class MessageService {
         }
         return result;
     }
+
+    public Component mini(String text, Map<String, String> placeholders) {
+        if (text == null || text.isEmpty()) {
+            return Component.empty();
+        }
+        return MINI.deserialize(apply(text, placeholders));
+    }
 }

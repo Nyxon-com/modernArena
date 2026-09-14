@@ -47,6 +47,9 @@ permissions:
   valary.arena.reload:
     description: /arena reload
     default: op
+  valary.arena.cooldown.bypass:
+    description: Ignora i cooldown di ingresso arena
+    default: op
   valary.party:
     description: Usa /party
     default: true

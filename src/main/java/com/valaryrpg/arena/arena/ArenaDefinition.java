@@ -11,6 +11,10 @@ public final class ArenaDefinition {
     public final String permission;
     public final int maxPartySize;
     public final int durationSeconds;
+    public final int maxBosses;
+    public final int entryCooldownSeconds;
+    public final int betweenCooldownSeconds;
+    public final HologramSettings hologram;
     public final Point spawn;
     public final List<SpawnerDefinition> spawners;
 
@@ -21,6 +25,10 @@ public final class ArenaDefinition {
             String permission,
             int maxPartySize,
             int durationSeconds,
+            int maxBosses,
+            int entryCooldownSeconds,
+            int betweenCooldownSeconds,
+            HologramSettings hologram,
             Point spawn,
             List<SpawnerDefinition> spawners
     ) {
@@ -30,6 +38,10 @@ public final class ArenaDefinition {
         this.permission = permission;
         this.maxPartySize = maxPartySize;
         this.durationSeconds = durationSeconds;
+        this.maxBosses = maxBosses;
+        this.entryCooldownSeconds = entryCooldownSeconds;
+        this.betweenCooldownSeconds = betweenCooldownSeconds;
+        this.hologram = hologram;
         this.spawn = spawn;
         this.spawners = List.copyOf(spawners);
     }

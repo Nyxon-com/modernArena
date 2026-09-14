@@ -3,6 +3,7 @@ package com.valaryrpg.arena.arena;
 import com.valaryrpg.arena.command.CommandCooldowns;
 import com.valaryrpg.arena.milestone.KillTracker;
 import com.valaryrpg.arena.party.PartyService;
+import io.lumine.mythic.bukkit.MythicBukkit;
 import io.lumine.mythic.bukkit.events.MythicMobDeathEvent;
 import io.lumine.mythic.bukkit.events.MythicPostReloadedEvent;
 import io.lumine.mythic.core.mobs.ActiveMob;
@@ -10,9 +11,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
+import org.bukkit.entity.Tameable;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -86,6 +90,41 @@ public final class ArenaListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onDamage(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof LivingEntity victim)) {
+            return;
+        }
+        ArenaInstance instance = this.arenas.instanceOf(victim.getWorld());
+        if (instance == null || instance.state() != SlotState.ACTIVE) {
+            return;
+        }
+        Player attacker = attacker(event.getDamager());
+        if (attacker == null || !instance.players().contains(attacker.getUniqueId())) {
+            return;
+        }
+        var manager = MythicBukkit.inst().getMobManager();
+        ActiveMob active = null;
+        for (ActiveMob candidate : manager.getActiveMobs()) {
+            if (candidate.getEntity() == null) {
+                continue;
+            }
+            Entity bukkit = candidate.getEntity().getBukkitEntity();
+            if (bukkit != null && bukkit.getUniqueId().equals(victim.getUniqueId())) {
+                active = candidate;
+                break;
+            }
+        }
+        if (active == null) {
+            return;
+        }
+        String mythicName = active.getType() == null ? "" : active.getType().getInternalName();
+        if (!this.arenas.catalog().tracksMob(this.arenas.catalog().boss(instance.bossId()), mythicName)) {
+            return;
+        }
+        this.arenas.recordDamage(instance, victim.getUniqueId(), attacker, event.getFinalDamage());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onMythicDeath(MythicMobDeathEvent event) {
         ActiveMob mob = event.getMob();
         Entity entity = mob == null || mob.getEntity() == null ? null : mob.getEntity().getBukkitEntity();
@@ -101,6 +140,9 @@ public final class ArenaListener implements Listener {
         boolean tracked = this.arenas.catalog().tracksMob(this.arenas.catalog().boss(instance.bossId()), mythicName);
         String key = this.kills.keyFor(mythicName, instance.bossId(), tracked);
         if (tracked) {
+            if (entity != null) {
+                this.arenas.trackedBossKilled(instance, entity.getUniqueId());
+            }
             for (UUID uuid : new ArrayList<>(instance.players())) {
                 Player member = Bukkit.getPlayer(uuid);
                 if (member != null) {
@@ -112,6 +154,19 @@ public final class ArenaListener implements Listener {
         if (killer != null && instance.players().contains(killer.getUniqueId())) {
             this.kills.record(killer, key);
         }
+    }
+
+    private Player attacker(Entity damager) {
+        if (damager instanceof Player player) {
+            return player;
+        }
+        if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Player player) {
+            return player;
+        }
+        if (damager instanceof Tameable tameable && tameable.getOwner() instanceof Player player) {
+            return player;
+        }
+        return null;
     }
 
     private Player killer(MythicMobDeathEvent event, Entity entity) {

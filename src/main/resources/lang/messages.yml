@@ -2,6 +2,7 @@
 # Brand e testi MiniMessage. Java non hardcoda colori/prefix/separator.
 # Placeholder: {prefix} {separator} {player} {target} {boss} {slot} {world}
 # {kills} {threshold} {mob} {size} {max} {position} {seconds} {leader}
+# {warmup} {boss-kills} {max-bosses} {top-damager} {top-damage}
 # =============================================================================
 
 brand:
@@ -36,6 +37,8 @@ errors:
   not-member: "{prefix}<gray><white>{target}</white> non è nel party."
   cannot-kick-self: "{prefix}<gray>Usa <white>/party leave</white> per uscire."
   player-busy: "{prefix}<gray><white>{target}</white> è occupato in un'arena o in coda."
+  entry-cooldown: "{prefix}<gray>{player} deve attendere <white>{seconds}s</white> prima di rientrare."
+  between-cooldown: "{prefix}<gray>{player} deve attendere <white>{seconds}s</white> prima di cambiare arena."
 
 arena:
   help:
@@ -65,6 +68,21 @@ arena:
   stats-mob: "{prefix}<gray>{player} — {mob}: <white>{kills}</white> kill"
   stats-empty: "{prefix}<gray>{player} non ha kill registrati."
   stats-footer: "{separator}"
+  boss-cap: "{prefix}<gray>Cap boss raggiunto (<white>{kills}</white>/<white>{max}</white>). Niente altri spawn."
+
+hologram:
+  unlimited: "∞"
+  none: "—"
+  warmup-combat: "<gray>in combattimento"
+  warmup-wait: "<white>{seconds}s</white>"
+  warmup-ready: "<gray>in spawn"
+  warmup-done: "<gray>completata"
+  lines:
+    - "<gradient:#5F22C3:#40099B><bold>{boss}</bold></gradient>"
+    - "<gray>Warmup <dark_gray>•</dark_gray> {warmup}"
+    - "<gray>Boss <white>{boss-kills}</white><dark_gray>/</dark_gray><white>{max-bosses}</white>"
+    - "<gray>Top danno <dark_gray>•</dark_gray> <white>{top-damager}</white>"
+    - "<dark_gray>{top-damage}</dark_gray>"
 
 party:
   help:

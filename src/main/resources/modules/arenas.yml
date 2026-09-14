@@ -17,6 +17,17 @@ settings:
   copy-exclude:
     - uid.dat
     - session.lock
+  # 0 = nessun cap. Override per boss: bosses.<id>.max-bosses
+  max-bosses: 0
+  # Secondi dopo l'uscita prima di rientrare nella stessa arena. 0 = disattivo.
+  entry-cooldown-seconds: 30
+  # Secondi dopo l'uscita prima di entrare in un'altra arena. 0 = disattivo.
+  between-cooldown-seconds: 60
+  hologram:
+    enabled: true
+    update-ticks: 20
+    # Usato se il boss non ha hologram.x/y/z: spawn + offset-y
+    offset-y: 2.5
 
 leave:
   # Comando eseguito dal player, senza slash. Vuoto = teleport a location.
@@ -40,6 +51,15 @@ bosses:
     max-party-size: 4
     # 0 = nessun timer di durata
     duration-seconds: 0
+    # 0 = eredita settings.max-bosses (0 globale = illimitato)
+    max-bosses: 3
+    hologram:
+      enabled: true
+      x: 0.5
+      y: 66.5
+      z: 0.5
+      yaw: 0.0
+      pitch: 0.0
     spawn:
       x: 0.5
       y: 64.0

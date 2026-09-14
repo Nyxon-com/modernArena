@@ -1,6 +1,6 @@
 # =============================================================================
 # Suoni. Chiavi usate dal Java: party-invite, arena-start, arena-leave,
-# arena-queue, milestone, command-denied.
+# arena-queue, milestone, command-denied, arena-cooldown, arena-boss-cap.
 # =============================================================================
 
 party-invite:
@@ -38,3 +38,15 @@ command-denied:
   sound: BLOCK_NOTE_BLOCK_BASS
   volume: 0.6
   pitch: 0.7
+
+arena-cooldown:
+  enabled: true
+  sound: BLOCK_NOTE_BLOCK_BASS
+  volume: 0.6
+  pitch: 0.6
+
+arena-boss-cap:
+  enabled: true
+  sound: ENTITY_ENDER_DRAGON_DEATH
+  volume: 0.4
+  pitch: 1.4

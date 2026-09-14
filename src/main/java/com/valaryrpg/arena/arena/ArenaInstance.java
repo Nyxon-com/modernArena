@@ -1,12 +1,15 @@
 package com.valaryrpg.arena.arena;
 
 import com.valaryrpg.arena.party.Party;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -24,7 +27,14 @@ public final class ArenaInstance {
     private final List<String> spawnerNames = new ArrayList<>();
     private SlotState state = SlotState.COPYING;
     private BukkitTask durationTask;
+    private BukkitTask hologramTask;
+    private TextDisplay hologram;
     private boolean closingAfterWipe;
+    private boolean spawnersHalted;
+    private int bossesKilled;
+    private String previousTopDamager = "";
+    private double previousTopDamage;
+    private final Map<UUID, Map<UUID, Double>> damageByMob = new HashMap<>();
 
     public ArenaInstance(String bossId, int slot, String worldName, Path folder, Party party) {
         this.bossId = bossId;
@@ -88,6 +98,58 @@ public final class ArenaInstance {
 
     public void durationTask(BukkitTask durationTask) {
         this.durationTask = durationTask;
+    }
+
+    public BukkitTask hologramTask() {
+        return this.hologramTask;
+    }
+
+    public void hologramTask(BukkitTask hologramTask) {
+        this.hologramTask = hologramTask;
+    }
+
+    public TextDisplay hologram() {
+        return this.hologram;
+    }
+
+    public void hologram(TextDisplay hologram) {
+        this.hologram = hologram;
+    }
+
+    public boolean spawnersHalted() {
+        return this.spawnersHalted;
+    }
+
+    public void spawnersHalted(boolean spawnersHalted) {
+        this.spawnersHalted = spawnersHalted;
+    }
+
+    public int bossesKilled() {
+        return this.bossesKilled;
+    }
+
+    public void bossesKilled(int bossesKilled) {
+        this.bossesKilled = bossesKilled;
+    }
+
+    public String previousTopDamager() {
+        return this.previousTopDamager;
+    }
+
+    public void previousTopDamager(String previousTopDamager) {
+        this.previousTopDamager = previousTopDamager == null ? "" : previousTopDamager;
+    }
+
+    public double previousTopDamage() {
+        return this.previousTopDamage;
+    }
+
+    public void previousTopDamage(double previousTopDamage) {
+        this.previousTopDamage = previousTopDamage;
+    }
+
+    public Map<UUID, Map<UUID, Double>> damageByMob() {
+        return this.damageByMob;
     }
 
     public boolean closingAfterWipe() {

@@ -52,6 +52,20 @@ public final class MythicSpawners {
         return name;
     }
 
+    public int waitSeconds(List<String> names) {
+        SpawnerManager manager = MythicBukkit.inst().getSpawnerManager();
+        int wait = 0;
+        for (String name : names) {
+            MythicSpawner spawner = manager.getSpawnerByName(name);
+            if (spawner == null) {
+                continue;
+            }
+            wait = Math.max(wait, spawner.getRemainingWarmupSeconds());
+            wait = Math.max(wait, spawner.getRemainingCooldownSeconds());
+        }
+        return wait;
+    }
+
     public void remove(String name) {
         SpawnerManager manager = MythicBukkit.inst().getSpawnerManager();
         MythicSpawner match = manager.getSpawnerByName(name);

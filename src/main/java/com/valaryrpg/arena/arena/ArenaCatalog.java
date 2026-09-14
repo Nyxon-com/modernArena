@@ -29,6 +29,12 @@ public final class ArenaCatalog {
     private String leaveCommand = "spawn";
     private String leaveWorld = "world";
     private Point leavePoint = new Point(0.5, 64, 0.5, 0, 0);
+    private int maxBosses;
+    private int entryCooldownSeconds;
+    private int betweenCooldownSeconds;
+    private boolean hologramEnabled = true;
+    private int hologramUpdateTicks = 20;
+    private double hologramOffsetY = 2.5;
 
     public ArenaCatalog(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
@@ -51,6 +57,12 @@ public final class ArenaCatalog {
         this.leaveCommand = yaml.getString("leave.command", "spawn");
         this.leaveWorld = yaml.getString("leave.location.world", "world");
         this.leavePoint = point(yaml.getConfigurationSection("leave.location"), 0.5, 64, 0.5);
+        this.maxBosses = yaml.getInt("settings.max-bosses", 0);
+        this.entryCooldownSeconds = yaml.getInt("settings.entry-cooldown-seconds", 0);
+        this.betweenCooldownSeconds = yaml.getInt("settings.between-cooldown-seconds", 0);
+        this.hologramEnabled = yaml.getBoolean("settings.hologram.enabled", true);
+        this.hologramUpdateTicks = yaml.getInt("settings.hologram.update-ticks", 20);
+        this.hologramOffsetY = yaml.getDouble("settings.hologram.offset-y", 2.5);
 
         ConfigurationSection section = yaml.getConfigurationSection("bosses");
         if (section == null) {
@@ -87,6 +99,14 @@ public final class ArenaCatalog {
                     boss.getString("permission", ""),
                     boss.getInt("max-party-size", 4),
                     boss.getInt("duration-seconds", 0),
+                    boss.contains("max-bosses") ? boss.getInt("max-bosses") : this.maxBosses,
+                    boss.contains("entry-cooldown-seconds")
+                            ? boss.getInt("entry-cooldown-seconds")
+                            : this.entryCooldownSeconds,
+                    boss.contains("between-cooldown-seconds")
+                            ? boss.getInt("between-cooldown-seconds")
+                            : this.betweenCooldownSeconds,
+                    hologram(boss),
                     point(boss.getConfigurationSection("spawn"), 0.5, 64, 0.5),
                     spawners
             ));
@@ -170,6 +190,24 @@ public final class ArenaCatalog {
             return null;
         }
         return this.leavePoint.to(world);
+    }
+
+    private HologramSettings hologram(ConfigurationSection boss) {
+        ConfigurationSection node = boss.getConfigurationSection("hologram");
+        boolean enabled = node == null
+                ? this.hologramEnabled
+                : node.getBoolean("enabled", this.hologramEnabled);
+        int ticks = node == null
+                ? this.hologramUpdateTicks
+                : node.getInt("update-ticks", this.hologramUpdateTicks);
+        double offsetY = node == null
+                ? this.hologramOffsetY
+                : node.getDouble("offset-y", this.hologramOffsetY);
+        Point point = null;
+        if (node != null && node.contains("x") && node.contains("y") && node.contains("z")) {
+            point = point(node, 0.5, 64, 0.5);
+        }
+        return new HologramSettings(enabled, ticks, offsetY, point);
     }
 
     private Point point(ConfigurationSection section, double x, double y, double z) {
