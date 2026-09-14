@@ -35,6 +35,7 @@ public final class YamlFile {
                 YamlConfiguration defaults = YamlConfiguration.loadConfiguration(
                         new InputStreamReader(input, StandardCharsets.UTF_8));
                 this.config.setDefaults(defaults);
+                this.config.options().copyDefaults(true);
             }
         } catch (IOException ignored) {
             // defaults dal jar non disponibili

@@ -26,7 +26,18 @@ public final class MessageService {
 
     public String raw(String path) {
         FileConfiguration yaml = this.plugin.configs().messages();
-        return yaml.getString(path, path);
+        String value = yaml.getString(path);
+        if (value != null && !value.isBlank()) {
+            return value;
+        }
+        FileConfiguration defaults = yaml.getDefaults();
+        if (defaults != null) {
+            String fallback = defaults.getString(path);
+            if (fallback != null && !fallback.isBlank()) {
+                return fallback;
+            }
+        }
+        return path;
     }
 
     public String brand(String key) {
