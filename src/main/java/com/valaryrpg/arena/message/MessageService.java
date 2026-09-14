@@ -4,6 +4,7 @@ import com.valaryrpg.arena.ValaryArenaPlugin;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ public final class MessageService {
         if (value != null && !value.isBlank()) {
             return value;
         }
-        FileConfiguration defaults = yaml.getDefaults();
+        Configuration defaults = yaml.getDefaults();
         if (defaults != null) {
             String fallback = defaults.getString(path);
             if (fallback != null && !fallback.isBlank()) {
