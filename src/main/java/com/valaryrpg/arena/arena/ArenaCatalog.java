@@ -105,6 +105,21 @@ public final class ArenaCatalog {
         return this.bosses.keySet();
     }
 
+    public boolean tracksMob(ArenaDefinition definition, String mythicName) {
+        if (definition == null || mythicName == null || mythicName.isBlank()) {
+            return false;
+        }
+        if (definition.id.equalsIgnoreCase(mythicName)) {
+            return true;
+        }
+        for (SpawnerDefinition spawner : definition.spawners) {
+            if (spawner.mob != null && !spawner.mob.isBlank() && spawner.mob.equalsIgnoreCase(mythicName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public String worldPrefix() {
         return this.worldPrefix;
     }

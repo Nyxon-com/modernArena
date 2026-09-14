@@ -10,6 +10,8 @@ commands:
   arena-start: start
   arena-list: list
   arena-leave: leave
+  arena-stats: stats
+  arena-milestones: milestones
   arena-reload: reload
   party-create: create
   party-invite: invite
@@ -23,6 +25,9 @@ permissions:
   arena-start: valary.arena.start
   arena-list: valary.arena.list
   arena-leave: valary.arena.leave
+  arena-stats: valary.arena.stats
+  arena-milestones: valary.arena.milestones
+  arena-stats-other: valary.arena.stats.other
   arena-reload: valary.arena.reload
   party: valary.party
   party-create: valary.party.create

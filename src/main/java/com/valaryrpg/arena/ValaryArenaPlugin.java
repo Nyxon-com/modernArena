@@ -159,6 +159,10 @@ public final class ValaryArenaPlugin extends JavaPlugin {
         return this.arenas;
     }
 
+    public KillTracker kills() {
+        return this.kills;
+    }
+
     private void bind(String name, org.bukkit.command.TabExecutor executor) {
         PluginCommand command = getCommand(name);
         if (command == null) {

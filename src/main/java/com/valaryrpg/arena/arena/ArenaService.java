@@ -62,6 +62,23 @@ public final class ArenaService {
         return this.byWorld.get(worldName);
     }
 
+    public ArenaInstance instanceOf(World world) {
+        if (world == null) {
+            return null;
+        }
+        Path folder = world.getWorldFolder().toPath().toAbsolutePath().normalize();
+        for (ArenaInstance instance : this.byWorld.values()) {
+            if (instance.folder().toAbsolutePath().normalize().equals(folder)) {
+                return instance;
+            }
+            String loaded = instance.loadedWorldName();
+            if (world.getName().equals(loaded) || world.getName().equals(instance.worldName())) {
+                return instance;
+            }
+        }
+        return null;
+    }
+
     public List<ArenaInstance> activeInstances() {
         return this.byWorld.values().stream()
                 .filter(instance -> instance.state() == SlotState.ACTIVE)

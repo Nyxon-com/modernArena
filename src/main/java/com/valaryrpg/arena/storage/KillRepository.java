@@ -4,6 +4,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /** Query per (uuid, mob_id): increment kill e claim milestone. */
@@ -46,6 +48,22 @@ public final class KillRepository {
             }
         }
         return 1;
+    }
+
+    public Map<String, Integer> list(UUID uuid) throws SQLException {
+        Map<String, Integer> kills = new LinkedHashMap<>();
+        String sql = "SELECT mob_id, kills FROM " + this.storage.table("kills")
+                + " WHERE player_uuid = ? ORDER BY mob_id";
+        try (Connection connection = this.storage.connection();
+             PreparedStatement select = connection.prepareStatement(sql)) {
+            select.setString(1, uuid.toString());
+            try (ResultSet result = select.executeQuery()) {
+                while (result.next()) {
+                    kills.put(result.getString(1), result.getInt(2));
+                }
+            }
+        }
+        return kills;
     }
 
     public boolean claim(UUID uuid, String mobId, int threshold) throws SQLException {

@@ -14,6 +14,7 @@ errors:
   no-permission: "{prefix}<gray>Non hai il permesso."
   unknown-command: "{prefix}<gray>Sottocomando sconosciuto."
   cooldown: "{prefix}<gray>Attendi un attimo."
+  stats-failed: "{prefix}<gray>Impossibile leggere le statistiche. Riprova."
   arena-cleaning: "{prefix}<gray>Cleanup delle istanze in corso. Riprova tra poco."
   unknown-boss: "{prefix}<gray>Boss <white>{boss}</white> inesistente."
   not-leader: "{prefix}<gray>Solo il leader del party può farlo."
@@ -42,6 +43,8 @@ arena:
     - "{prefix}<gray>/arena start <white>boss</white>"
     - "{prefix}<gray>/arena list"
     - "{prefix}<gray>/arena leave"
+    - "{prefix}<gray>/arena stats <white>[player] [boss]</white>"
+    - "{prefix}<gray>/arena milestones <white>[player]</white>"
     - "{separator}"
   list-header: "{prefix}<gray>Arene attive:"
   list-entry: "{prefix}{display} <dark_gray>—</dark_gray> <gray>mondo <white>{world}</white>, slot <white>{slot}</white>, giocatori <white>{players}</white>"
@@ -57,6 +60,11 @@ arena:
   empty-unload: "{prefix}<gray>Nessun giocatore rimasto. Arena chiusa."
   reloaded: "{prefix}<gray>Configurazione ricaricata."
   reload-failed: "{prefix}<gray>Reload fallito. Controlla la console."
+  stats-header: "{prefix}<gray>Kill di <white>{player}</white>:"
+  stats-entry: "{prefix}<gray>{mob}: <white>{kills}</white>"
+  stats-mob: "{prefix}<gray>{player} — {mob}: <white>{kills}</white> kill"
+  stats-empty: "{prefix}<gray>{player} non ha kill registrati."
+  stats-footer: "{separator}"
 
 party:
   help:
@@ -85,3 +93,8 @@ party:
 
 milestone:
   reached: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white> (<white>{kills}</white> kill)."
+  stats-header: "{prefix}<gray>Milestone di <white>{player}</white>:"
+  stats-entry: "{prefix}<gray>{mob}: <white>{kills}</white> kill, prossimo <white>{next}</white>"
+  stats-entry-done: "{prefix}<gray>{mob}: <white>{kills}</white> kill, tutte le soglie sbloccate."
+  stats-none: "{prefix}<gray>Nessuna milestone configurata."
+  stats-footer: "{separator}"

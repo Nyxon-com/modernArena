@@ -1,5 +1,6 @@
 # =============================================================================
-# Soglie per internal name Mythic. Reward = comandi, es. [console] kit / eco.
+# Soglie per player, chiave = internal name Mythic o id boss in arenas.yml.
+# Ogni kill del player incrementa il suo contatore; la reward scatta sulla soglia personale.
 # Placeholder: {player} {uuid} {name} {mob} {kills} {threshold}
 # =============================================================================
 

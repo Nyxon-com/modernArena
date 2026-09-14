@@ -5,6 +5,10 @@ import com.valaryrpg.arena.milestone.KillTracker;
 import com.valaryrpg.arena.party.PartyService;
 import io.lumine.mythic.bukkit.events.MythicMobDeathEvent;
 import io.lumine.mythic.bukkit.events.MythicPostReloadedEvent;
+import io.lumine.mythic.core.mobs.ActiveMob;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -13,6 +17,9 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+
+import java.util.ArrayList;
+import java.util.UUID;
 
 /** Quit, leave mondo, death/respawn e kill Mythic. Niente PlayerMoveEvent. */
 public final class ArenaListener implements Listener {
@@ -80,13 +87,40 @@ public final class ArenaListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onMythicDeath(MythicMobDeathEvent event) {
-        if (!(event.getKiller() instanceof Player player)) {
+        ActiveMob mob = event.getMob();
+        Entity entity = mob == null || mob.getEntity() == null ? null : mob.getEntity().getBukkitEntity();
+        ArenaInstance instance = entity == null ? null : this.arenas.instanceOf(entity.getWorld());
+        Player killer = killer(event, entity);
+        if (instance == null && killer != null) {
+            instance = this.arenas.instanceOf(killer);
+        }
+        if (instance == null || instance.state() != SlotState.ACTIVE) {
             return;
         }
-        if (this.arenas.instanceOf(player) == null) {
+        String mythicName = event.getMobType().getInternalName();
+        boolean tracked = this.arenas.catalog().tracksMob(this.arenas.catalog().boss(instance.bossId()), mythicName);
+        String key = this.kills.keyFor(mythicName, instance.bossId(), tracked);
+        if (tracked) {
+            for (UUID uuid : new ArrayList<>(instance.players())) {
+                Player member = Bukkit.getPlayer(uuid);
+                if (member != null) {
+                    this.kills.record(member, key);
+                }
+            }
             return;
         }
-        String mobId = event.getMobType().getInternalName();
-        this.kills.record(player, mobId);
+        if (killer != null && instance.players().contains(killer.getUniqueId())) {
+            this.kills.record(killer, key);
+        }
+    }
+
+    private Player killer(MythicMobDeathEvent event, Entity entity) {
+        if (event.getKiller() instanceof Player player) {
+            return player;
+        }
+        if (entity instanceof LivingEntity living && living.getKiller() instanceof Player player) {
+            return player;
+        }
+        return null;
     }
 }

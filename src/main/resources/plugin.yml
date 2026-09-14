@@ -35,6 +35,15 @@ permissions:
   valary.arena.leave:
     description: /arena leave
     default: true
+  valary.arena.stats:
+    description: /arena stats
+    default: true
+  valary.arena.milestones:
+    description: /arena milestones
+    default: true
+  valary.arena.stats.other:
+    description: Vedi kill e milestone di altri player
+    default: op
   valary.arena.reload:
     description: /arena reload
     default: op
