@@ -7,8 +7,9 @@ Paper 1.21.11, Java 21, Gradle, MiniMessage, HikariCP. Hard: MythicMobs. Soft: C
 
 ## Prodotto
 - Template su disco → max 4 mondi `arena_<boss>_<slot>` → coda se pieni.
-- Spawner Mythic da YAML: stesso xyz, mondo nuovo, nome unico; delete allo unload.
-- Cleanup `arena_*` a ogni enable.
+- Spawner Mythic da YAML: clone `source-spawner`; kill/milestone per player.
+- Hologram TextDisplay (warmup, kill istanza, top danno). Cap boss → TP fuori.
+- Cooldown rientro stessa arena / cambio arena. Cleanup `arena_*` a ogni enable.
 - Party custom. Kill + milestone in SQL async; reward = comandi console.
 
 ## Regole
