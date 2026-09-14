@@ -68,7 +68,7 @@ arena:
   stats-mob: "{prefix}<gray>{player} — {mob}: <white>{kills}</white> kill"
   stats-empty: "{prefix}<gray>{player} non ha kill registrati."
   stats-footer: "{separator}"
-  boss-cap: "{prefix}<gray>Cap boss raggiunto (<white>{kills}</white>/<white>{max}</white>). Niente altri spawn."
+  boss-cap: "{prefix}<gray>Cap boss raggiunto (<white>{kills}</white>/<white>{max}</white>). Uscita dall'arena."
 
 hologram:
   unlimited: "∞"

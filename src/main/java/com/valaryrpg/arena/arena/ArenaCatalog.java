@@ -32,6 +32,7 @@ public final class ArenaCatalog {
     private int maxBosses;
     private int entryCooldownSeconds;
     private int betweenCooldownSeconds;
+    private int bossCapLeaveTicks = 20;
     private boolean hologramEnabled = true;
     private int hologramUpdateTicks = 20;
     private double hologramOffsetY = 2.5;
@@ -60,6 +61,7 @@ public final class ArenaCatalog {
         this.maxBosses = yaml.getInt("settings.max-bosses", 0);
         this.entryCooldownSeconds = yaml.getInt("settings.entry-cooldown-seconds", 0);
         this.betweenCooldownSeconds = yaml.getInt("settings.between-cooldown-seconds", 0);
+        this.bossCapLeaveTicks = Math.max(1, yaml.getInt("settings.boss-cap-leave-ticks", 20));
         this.hologramEnabled = yaml.getBoolean("settings.hologram.enabled", true);
         this.hologramUpdateTicks = yaml.getInt("settings.hologram.update-ticks", 20);
         this.hologramOffsetY = yaml.getDouble("settings.hologram.offset-y", 2.5);
@@ -175,6 +177,10 @@ public final class ArenaCatalog {
 
     public List<String> copyExclude() {
         return this.copyExclude;
+    }
+
+    public int bossCapLeaveTicks() {
+        return this.bossCapLeaveTicks;
     }
 
     public String leaveCommand() {

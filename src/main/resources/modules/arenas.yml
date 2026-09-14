@@ -19,6 +19,8 @@ settings:
     - session.lock
   # 0 = nessun cap. Override per boss: bosses.<id>.max-bosses
   max-bosses: 0
+  # Tick di attesa dopo il cap prima del teleport fuori. Minimo 1.
+  boss-cap-leave-ticks: 20
   # Secondi dopo l'uscita prima di rientrare nella stessa arena. 0 = disattivo.
   entry-cooldown-seconds: 30
   # Secondi dopo l'uscita prima di entrare in un'altra arena. 0 = disattivo.

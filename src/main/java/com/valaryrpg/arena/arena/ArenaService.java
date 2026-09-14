@@ -822,5 +822,24 @@ public final class ArenaService {
                 this.plugin.sounds().play(player, "arena-boss-cap");
             }
         }
+        this.plugin.tasks().later(() -> closeAfterCap(instance), this.catalog.bossCapLeaveTicks());
+    }
+
+    private void closeAfterCap(ArenaInstance instance) {
+        if (instance.state() != SlotState.ACTIVE) {
+            return;
+        }
+        for (UUID uuid : new ArrayList<>(instance.players())) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null) {
+                leave(player, true);
+            } else {
+                instance.players().remove(uuid);
+                this.byPlayer.remove(uuid);
+            }
+        }
+        if (instance.state() == SlotState.ACTIVE) {
+            unload(instance, null);
+        }
     }
 }
