@@ -6,20 +6,22 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** Create/invite/accept/leave/kick/disband e timeout inviti. */
 public final class PartyService {
 
     private final ValaryArenaPlugin plugin;
-    private final Map<UUID, Party> byPlayer = new ConcurrentHashMap<>();
-    private final Map<UUID, Party> byId = new ConcurrentHashMap<>();
-    private final Map<UUID, Invite> invites = new ConcurrentHashMap<>();
+    private final Map<UUID, Party> byPlayer = new HashMap<>();
+    private final Map<UUID, Party> byId = new HashMap<>();
+    private final Map<UUID, Invite> invites = new HashMap<>();
     private RunnableListener onDisband = party -> {
+    };
+    private MemberRemovedListener onMemberRemoved = (party, member) -> {
     };
 
     public PartyService(ValaryArenaPlugin plugin) {
@@ -28,6 +30,10 @@ public final class PartyService {
 
     public void onDisband(RunnableListener listener) {
         this.onDisband = listener;
+    }
+
+    public void onMemberRemoved(MemberRemovedListener listener) {
+        this.onMemberRemoved = listener;
     }
 
     public Party partyOf(UUID uuid) {
@@ -62,7 +68,7 @@ public final class PartyService {
         if (party == null || !party.isLeader(leader.getUniqueId())) {
             return false;
         }
-        Invite invite = new Invite(party.id(), leader.getUniqueId(), target.getUniqueId());
+        Invite invite = new Invite(party.id());
         Invite previous = this.invites.put(target.getUniqueId(), invite);
         if (previous != null && previous.task != null) {
             previous.task.cancel();
@@ -127,6 +133,7 @@ public final class PartyService {
         this.byId.remove(party.id());
         clearInvites(party.id());
         this.onDisband.run(party);
+        party.members().clear();
     }
 
     public List<Player> onlineMembers(Party party) {
@@ -149,6 +156,7 @@ public final class PartyService {
     private LeaveResult removeMember(Party party, UUID uuid) {
         party.members().remove(uuid);
         this.byPlayer.remove(uuid);
+        this.onMemberRemoved.run(party, uuid);
         if (party.members().isEmpty()) {
             dissolve(party);
             return LeaveResult.DISBANDED;
@@ -186,6 +194,24 @@ public final class PartyService {
         }
     }
 
+    public void shutdown() {
+        for (Invite invite : this.invites.values()) {
+            if (invite.task != null) {
+                invite.task.cancel();
+            }
+        }
+        this.invites.clear();
+        this.byPlayer.clear();
+        for (Party party : this.byId.values()) {
+            party.members().clear();
+        }
+        this.byId.clear();
+        this.onDisband = party -> {
+        };
+        this.onMemberRemoved = (party, member) -> {
+        };
+    }
+
     public enum LeaveResult {
         NONE, LEFT, LEADER_PASSED, DISBANDED
     }
@@ -195,16 +221,17 @@ public final class PartyService {
         void run(Party party);
     }
 
+    @FunctionalInterface
+    public interface MemberRemovedListener {
+        void run(Party party, UUID member);
+    }
+
     private static final class Invite {
         private final UUID partyId;
-        private final UUID from;
-        private final UUID to;
         private BukkitTask task;
 
-        private Invite(UUID partyId, UUID from, UUID to) {
+        private Invite(UUID partyId) {
             this.partyId = partyId;
-            this.from = from;
-            this.to = to;
         }
     }
 }

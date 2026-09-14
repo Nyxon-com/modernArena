@@ -76,6 +76,12 @@ Niente `PlayerMoveEvent`.
 ### Enable
 
 `ArenaService.cleanup()`: mondi/cartelle con `world-prefix` (`arena_`), spawners Mythic con quel prefisso, player residui fuori, coda vuota.
+Finché il cleanup disco async non termina, nuovi start sono rifiutati per evitare race sulla stessa cartella.
+
+### Disable
+
+`Tasks.shutdown()` blocca nuovi task e cancella quelli pendenti. `ArenaService.shutdown()` rimuove spawner e scarica i mondi in modo sincrono, senza schedulare delete dopo il disable; le cartelle residue vengono eliminate al prossimo enable.
+Inviti, party, code, cooldown, mapping player/istanza e lock SQL vengono sempre svuotati. Le operazioni I/O e SQL già partite hanno attesa limitata prima della chiusura storage.
 
 ### Party — `/party`
 
@@ -85,9 +91,9 @@ Un player = un party. Leader leave → passa leader; ultimo → disband. Party i
 ### Kill / milestone
 
 `MythicMobDeathEvent` solo se il killer è in un’istanza.
-`KillTracker.record` → SQL **async** (`valary_arena_kills` + `valary_arena_milestones`) + cache online.
+`KillTracker.record` → SQL **async** (`valary_arena_kills` + `valary_arena_milestones`) + cache contatori limitata ai player online e rimossa al quit.
 Soglia da `milestones.yml` (già in RAM). Reward: messaggio + suono + `[console] kit …` / `eco …`.
-Niente `SELECT` sul main. Niente API Java Core.
+Il claim milestone è atomico sulla chiave primaria e non esegue un `SELECT` a ogni kill. Niente SQL sul main e niente API Java Core.
 
 ## Come cambiare le cose
 

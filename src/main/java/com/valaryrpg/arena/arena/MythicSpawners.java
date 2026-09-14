@@ -54,13 +54,7 @@ public final class MythicSpawners {
 
     public void remove(String name) {
         SpawnerManager manager = MythicBukkit.inst().getSpawnerManager();
-        MythicSpawner match = null;
-        for (MythicSpawner spawner : manager.getSpawners()) {
-            if (name.equalsIgnoreCase(spawner.getName())) {
-                match = spawner;
-                break;
-            }
-        }
+        MythicSpawner match = manager.getSpawnerByName(name);
         if (match != null) {
             manager.removeSpawner(match);
         }

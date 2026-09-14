@@ -10,14 +10,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** /arena start|list|leave|reload. Nomi e permessi da config.yml. */
 public final class ArenaCommand implements TabExecutor {
 
     private final ValaryArenaPlugin plugin;
-    private final Map<UUID, Long> cooldown = new ConcurrentHashMap<>();
 
     public ArenaCommand(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
@@ -37,7 +34,7 @@ public final class ArenaCommand implements TabExecutor {
             this.plugin.messages().send(player, "arena.help");
             return true;
         }
-        if (cooling(player)) {
+        if (this.plugin.cooldowns().cooling(player, "arena")) {
             this.plugin.messages().send(player, "errors.cooldown");
             return true;
         }
@@ -133,17 +130,6 @@ public final class ArenaCommand implements TabExecutor {
             ));
         }
         this.plugin.messages().send(player, found ? "arena.list-footer" : "arena.list-empty");
-    }
-
-    private boolean cooling(Player player) {
-        long now = System.currentTimeMillis();
-        long wait = this.plugin.configs().root().getLong("delays.command-cooldown-millis", 250L);
-        Long last = this.cooldown.get(player.getUniqueId());
-        if (last != null && now - last < wait) {
-            return true;
-        }
-        this.cooldown.put(player.getUniqueId(), now);
-        return false;
     }
 
     private void deny(Player player) {

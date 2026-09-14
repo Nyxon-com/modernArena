@@ -14,13 +14,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** /party create|invite|accept|leave|kick|disband. */
 public final class PartyCommand implements TabExecutor {
 
     private final ValaryArenaPlugin plugin;
-    private final Map<UUID, Long> cooldown = new ConcurrentHashMap<>();
 
     public PartyCommand(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
@@ -40,7 +38,7 @@ public final class PartyCommand implements TabExecutor {
             this.plugin.messages().send(player, "party.help");
             return true;
         }
-        if (cooling(player)) {
+        if (this.plugin.cooldowns().cooling(player, "party")) {
             this.plugin.messages().send(player, "errors.cooldown");
             return true;
         }
@@ -273,17 +271,6 @@ public final class PartyCommand implements TabExecutor {
 
     private String perm(String key, String fallback) {
         return this.plugin.configs().permission(key, fallback);
-    }
-
-    private boolean cooling(Player player) {
-        long now = System.currentTimeMillis();
-        long wait = this.plugin.configs().root().getLong("delays.command-cooldown-millis", 250L);
-        Long last = this.cooldown.get(player.getUniqueId());
-        if (last != null && now - last < wait) {
-            return true;
-        }
-        this.cooldown.put(player.getUniqueId(), now);
-        return false;
     }
 
     private void deny(Player player) {

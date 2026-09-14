@@ -12,10 +12,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** Orchestra slot, copy async, load/TP/Mythic sync, unload e dequeue. */
 public final class ArenaService {
@@ -25,10 +25,12 @@ public final class ArenaService {
     private final ArenaQueue queue;
     private final WorldCopier copier;
     private final MythicSpawners mythic;
-    private final Map<String, ArenaInstance> byWorld = new ConcurrentHashMap<>();
-    private final Map<UUID, ArenaInstance> byPlayer = new ConcurrentHashMap<>();
-    private final Map<UUID, ArenaInstance> byParty = new ConcurrentHashMap<>();
-    private final Map<UUID, Party> reservedByPlayer = new ConcurrentHashMap<>();
+    private final Map<String, ArenaInstance> byWorld = new HashMap<>();
+    private final Map<UUID, ArenaInstance> byPlayer = new HashMap<>();
+    private final Map<UUID, ArenaInstance> byParty = new HashMap<>();
+    private final Map<UUID, Party> reservedByPlayer = new HashMap<>();
+    private boolean cleaning;
+    private boolean shuttingDown;
 
     public ArenaService(
             ValaryArenaPlugin plugin,
@@ -69,6 +71,9 @@ public final class ArenaService {
     }
 
     public void refreshMythicSpawners() {
+        if (this.shuttingDown) {
+            return;
+        }
         this.plugin.tasks().sync(() -> {
             for (ArenaInstance instance : activeInstances()) {
                 ArenaDefinition definition = this.catalog.boss(instance.bossId());
@@ -90,6 +95,10 @@ public final class ArenaService {
     }
 
     public void start(Player leader, String bossId) {
+        if (this.cleaning || this.shuttingDown) {
+            this.plugin.messages().send(leader, "errors.arena-cleaning");
+            return;
+        }
         ArenaDefinition definition = this.catalog.boss(bossId);
         if (definition == null) {
             this.plugin.messages().send(leader, "errors.unknown-boss", Map.of("boss", bossId));
@@ -153,6 +162,9 @@ public final class ArenaService {
     }
 
     public void leave(Player player, boolean teleport) {
+        if (this.shuttingDown) {
+            return;
+        }
         ArenaInstance instance = this.byPlayer.remove(player.getUniqueId());
         if (instance == null) {
             return;
@@ -210,6 +222,9 @@ public final class ArenaService {
     }
 
     public void partyGone(Party party) {
+        if (this.shuttingDown) {
+            return;
+        }
         String queued = this.queue.bossOf(party);
         if (queued != null) {
             this.queue.remove(party);
@@ -234,7 +249,15 @@ public final class ArenaService {
         }
     }
 
+    public void partyMemberGone(Party party, UUID member) {
+        if (this.shuttingDown) {
+            return;
+        }
+        this.reservedByPlayer.remove(member, party);
+    }
+
     public void cleanup() {
+        this.cleaning = true;
         this.queue.clear();
         this.mythic.removePrefix(this.catalog.worldPrefix());
         for (World world : new ArrayList<>(Bukkit.getWorlds())) {
@@ -247,25 +270,61 @@ public final class ArenaService {
             this.mythic.despawnWorld(world);
             Bukkit.unloadWorld(world, false);
         }
-        Path instances = instanceRoot();
-        try {
-            Files.createDirectories(instances);
-        } catch (Exception exception) {
-            this.plugin.getLogger().warning("Creazione cartella instances: " + exception.getMessage());
-        }
-        try (var stream = Files.list(instances)) {
-            stream.filter(Files::isDirectory)
-                    .forEach(path -> this.copier.delete(path, null));
-        } catch (Exception exception) {
-            this.plugin.getLogger().warning("Cleanup cartelle arena: " + exception.getMessage());
-        }
+        List<Path> legacyFolders = new ArrayList<>();
         for (ArenaDefinition definition : this.catalog.bosses()) {
             for (int slot = 1; slot <= this.catalog.maxPerBoss(); slot++) {
-                Path legacy = worldContainer().resolve(this.catalog.worldName(definition.id, slot));
-                if (Files.isDirectory(legacy)) {
-                    this.copier.delete(legacy, null);
+                legacyFolders.add(worldContainer().resolve(this.catalog.worldName(definition.id, slot)));
+            }
+        }
+        this.byWorld.clear();
+        this.byPlayer.clear();
+        this.byParty.clear();
+        this.reservedByPlayer.clear();
+        boolean scheduled = this.copier.cleanup(
+                instanceRoot(),
+                legacyFolders,
+                () -> this.cleaning = false,
+                exception -> {
+                    this.cleaning = false;
+                    this.plugin.getLogger().warning("Cleanup cartelle arena: " + exception.getMessage());
+                }
+        );
+        if (!scheduled) {
+            this.cleaning = false;
+        }
+    }
+
+    public void shutdown(long timeoutMillis) {
+        this.shuttingDown = true;
+        this.cleaning = false;
+        this.copier.shutdown(timeoutMillis);
+        this.queue.clear();
+        Location leave = this.catalog.leaveLocation();
+        for (ArenaInstance instance : new ArrayList<>(this.byWorld.values())) {
+            instance.state(SlotState.UNLOADING);
+            if (instance.durationTask() != null) {
+                instance.durationTask().cancel();
+                instance.durationTask(null);
+            }
+            for (UUID uuid : instance.players()) {
+                Player player = Bukkit.getPlayer(uuid);
+                if (player != null && leave != null && !player.isDead()) {
+                    player.teleport(leave);
                 }
             }
+            World world = loadedWorld(instance);
+            if (world != null) {
+                this.mythic.despawnWorld(world);
+            }
+            for (String spawner : instance.spawnerNames()) {
+                this.mythic.remove(spawner);
+            }
+            instance.spawnerNames().clear();
+            if (world != null) {
+                Bukkit.unloadWorld(world, false);
+            }
+            instance.players().clear();
+            instance.eliminated().clear();
         }
         this.byWorld.clear();
         this.byPlayer.clear();
@@ -273,16 +332,11 @@ public final class ArenaService {
         this.reservedByPlayer.clear();
     }
 
-    public void shutdown() {
-        for (ArenaInstance instance : new ArrayList<>(this.byWorld.values())) {
-            unload(instance, null);
-        }
-    }
-
     private void begin(Party party, ArenaDefinition definition, int slot) {
         reserve(party);
         String worldName = this.catalog.worldName(definition.id, slot);
-        ArenaInstance instance = new ArenaInstance(definition.id, slot, worldName, party);
+        Path destination = instancePath(worldName);
+        ArenaInstance instance = new ArenaInstance(definition.id, slot, worldName, destination, party);
         this.byWorld.put(worldName, instance);
         this.byParty.put(party.id(), instance);
         World loadedTemplate = Bukkit.getWorld(definition.template);
@@ -290,7 +344,6 @@ public final class ArenaService {
             Bukkit.unloadWorld(loadedTemplate, true);
         }
         Path source = worldContainer().resolve(definition.template);
-        Path destination = instancePath(worldName);
         this.copier.copy(source, destination, this.catalog.copyExclude(), () -> activate(instance, definition), exception -> {
             this.plugin.getLogger().warning("Copia mondo fallita: " + exception.getMessage());
             this.byWorld.remove(worldName);
@@ -309,14 +362,14 @@ public final class ArenaService {
 
     private void activate(ArenaInstance instance, ArenaDefinition definition) {
         if (instance.state() == SlotState.UNLOADING) {
-            this.copier.delete(instancePath(instance.worldName()), null);
+            this.copier.delete(instance.folder(), null);
             release(instance);
             return;
         }
-        World world = new WorldCreator(worldLoadName(instance.worldName())).createWorld();
+        World world = new WorldCreator(worldLoadName(instance.folder())).createWorld();
         if (world == null) {
             this.plugin.getLogger().warning("Load mondo fallito: " + instance.worldName());
-            this.copier.delete(instancePath(instance.worldName()), null);
+            this.copier.delete(instance.folder(), null);
             release(instance);
             return;
         }
@@ -382,14 +435,20 @@ public final class ArenaService {
             }
         }
         for (UUID uuid : new ArrayList<>(instance.players())) {
-            this.byPlayer.remove(uuid);
+            this.byPlayer.remove(uuid, instance);
+            this.reservedByPlayer.remove(uuid, instance.party());
             Player player = Bukkit.getPlayer(uuid);
             if (player != null) {
                 sendOut(player);
                 this.plugin.sounds().play(player, "arena-leave");
             }
         }
+        for (UUID uuid : new ArrayList<>(instance.eliminated())) {
+            this.byPlayer.remove(uuid, instance);
+            this.reservedByPlayer.remove(uuid, instance.party());
+        }
         instance.players().clear();
+        instance.eliminated().clear();
         World world = loadedWorld(instance);
         if (world != null) {
             this.mythic.despawnWorld(world);
@@ -401,7 +460,7 @@ public final class ArenaService {
         if (world != null) {
             Bukkit.unloadWorld(world, false);
         }
-        this.copier.delete(instancePath(instance.worldName()), () -> {
+        this.copier.delete(instance.folder(), () -> {
             release(instance);
             dequeue(instance.bossId());
         });
@@ -447,6 +506,9 @@ public final class ArenaService {
     }
 
     public void quit(Player player) {
+        if (this.shuttingDown) {
+            return;
+        }
         ArenaInstance instance = instanceOf(player);
         if (instance != null) {
             leave(player, false);
@@ -519,10 +581,9 @@ public final class ArenaService {
         return instanceRoot().resolve(worldName);
     }
 
-    private String worldLoadName(String worldName) {
+    private String worldLoadName(Path folder) {
         Path container = worldContainer().toAbsolutePath().normalize();
-        Path folder = instancePath(worldName).toAbsolutePath().normalize();
-        return container.relativize(folder).toString().replace('\\', '/');
+        return container.relativize(folder.toAbsolutePath().normalize()).toString().replace('\\', '/');
     }
 
     private World loadedWorld(ArenaInstance instance) {

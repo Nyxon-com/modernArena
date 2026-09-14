@@ -14,6 +14,7 @@ errors:
   no-permission: "{prefix}<gray>Non hai il permesso."
   unknown-command: "{prefix}<gray>Sottocomando sconosciuto."
   cooldown: "{prefix}<gray>Attendi un attimo."
+  arena-cleaning: "{prefix}<gray>Cleanup delle istanze in corso. Riprova tra poco."
   unknown-boss: "{prefix}<gray>Boss <white>{boss}</white> inesistente."
   not-leader: "{prefix}<gray>Solo il leader del party può farlo."
   no-party: "{prefix}<gray>Non sei in un party. <white>/party create</white>"

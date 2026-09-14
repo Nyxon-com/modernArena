@@ -1,39 +1,76 @@
 package com.valaryrpg.arena.util;
 
 import org.bukkit.Bukkit;
+import org.bukkit.plugin.IllegalPluginAccessException;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Scheduler unico: copy/SQL async, load/TP/Mythic sync. */
 public final class Tasks {
 
     private final JavaPlugin plugin;
+    private final AtomicBoolean accepting = new AtomicBoolean(true);
 
     public Tasks(JavaPlugin plugin) {
         this.plugin = plugin;
     }
 
-    public void sync(Runnable task) {
+    public boolean sync(Runnable task) {
+        if (!available()) {
+            return false;
+        }
         if (Bukkit.isPrimaryThread()) {
             task.run();
-            return;
+            return true;
         }
-        Bukkit.getScheduler().runTask(this.plugin, task);
+        try {
+            Bukkit.getScheduler().runTask(this.plugin, guarded(task));
+            return true;
+        } catch (IllegalPluginAccessException ignored) {
+            return false;
+        }
     }
 
-    public void async(Runnable task) {
-        Bukkit.getScheduler().runTaskAsynchronously(this.plugin, task);
+    public boolean async(Runnable task) {
+        if (!available()) {
+            return false;
+        }
+        try {
+            Bukkit.getScheduler().runTaskAsynchronously(this.plugin, guarded(task));
+            return true;
+        } catch (IllegalPluginAccessException ignored) {
+            return false;
+        }
     }
 
     public BukkitTask later(Runnable task, long ticks) {
-        return Bukkit.getScheduler().runTaskLater(this.plugin, task, ticks);
+        if (!available()) {
+            return null;
+        }
+        try {
+            return Bukkit.getScheduler().runTaskLater(this.plugin, guarded(task), ticks);
+        } catch (IllegalPluginAccessException ignored) {
+            return null;
+        }
     }
 
-    public BukkitTask laterAsync(Runnable task, long ticks) {
-        return Bukkit.getScheduler().runTaskLaterAsynchronously(this.plugin, task, ticks);
+    public void shutdown() {
+        if (this.accepting.compareAndSet(true, false)) {
+            Bukkit.getScheduler().cancelTasks(this.plugin);
+        }
     }
 
-    public BukkitTask repeat(Runnable task, long delay, long period) {
-        return Bukkit.getScheduler().runTaskTimer(this.plugin, task, delay, period);
+    private boolean available() {
+        return this.accepting.get() && this.plugin.isEnabled();
+    }
+
+    private Runnable guarded(Runnable task) {
+        return () -> {
+            if (available()) {
+                task.run();
+            }
+        };
     }
 }

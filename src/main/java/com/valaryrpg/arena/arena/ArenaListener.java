@@ -1,6 +1,8 @@
 package com.valaryrpg.arena.arena;
 
+import com.valaryrpg.arena.command.CommandCooldowns;
 import com.valaryrpg.arena.milestone.KillTracker;
+import com.valaryrpg.arena.party.PartyService;
 import io.lumine.mythic.bukkit.events.MythicMobDeathEvent;
 import io.lumine.mythic.bukkit.events.MythicPostReloadedEvent;
 import org.bukkit.entity.Player;
@@ -17,17 +19,28 @@ public final class ArenaListener implements Listener {
 
     private final ArenaService arenas;
     private final KillTracker kills;
+    private final PartyService parties;
+    private final CommandCooldowns cooldowns;
 
-    public ArenaListener(ArenaService arenas, KillTracker kills) {
+    public ArenaListener(
+            ArenaService arenas,
+            KillTracker kills,
+            PartyService parties,
+            CommandCooldowns cooldowns
+    ) {
         this.arenas = arenas;
         this.kills = kills;
+        this.parties = parties;
+        this.cooldowns = cooldowns;
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         this.kills.evict(player.getUniqueId());
+        this.cooldowns.evict(player.getUniqueId());
         this.arenas.quit(player);
+        this.parties.leave(player);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

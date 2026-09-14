@@ -3,11 +3,12 @@ package com.valaryrpg.arena.arena;
 import com.valaryrpg.arena.party.Party;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** Istanza viva: slot, mondo, party, spawners registrati. */
 public final class ArenaInstance {
@@ -15,19 +16,21 @@ public final class ArenaInstance {
     private final String bossId;
     private final int slot;
     private final String worldName;
+    private final Path folder;
     private final Party party;
     private String loadedWorldName;
-    private final Set<UUID> players = ConcurrentHashMap.newKeySet();
-    private final Set<UUID> eliminated = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> players = new HashSet<>();
+    private final Set<UUID> eliminated = new HashSet<>();
     private final List<String> spawnerNames = new ArrayList<>();
     private SlotState state = SlotState.COPYING;
     private BukkitTask durationTask;
     private boolean closingAfterWipe;
 
-    public ArenaInstance(String bossId, int slot, String worldName, Party party) {
+    public ArenaInstance(String bossId, int slot, String worldName, Path folder, Party party) {
         this.bossId = bossId;
         this.slot = slot;
         this.worldName = worldName;
+        this.folder = folder;
         this.party = party;
     }
 
@@ -41,6 +44,10 @@ public final class ArenaInstance {
 
     public String worldName() {
         return this.worldName;
+    }
+
+    public Path folder() {
+        return this.folder;
     }
 
     public String loadedWorldName() {

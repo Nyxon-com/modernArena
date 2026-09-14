@@ -4,22 +4,22 @@ import com.valaryrpg.arena.party.Party;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** Coda RAM per boss: enqueue allo start, dequeue sull'unload. */
 public final class ArenaQueue {
 
-    private final Map<String, Deque<Party>> queues = new ConcurrentHashMap<>();
-    private final Map<UUID, String> partyBoss = new ConcurrentHashMap<>();
+    private final Map<String, Deque<Party>> queues = new HashMap<>();
+    private final Map<UUID, String> partyBoss = new HashMap<>();
 
     public int enqueue(String bossId, Party party, int max) {
-        Deque<Party> queue = this.queues.computeIfAbsent(bossId, key -> new ArrayDeque<>());
-        if (queue.size() >= max) {
+        if (this.partyBoss.containsKey(party.id())) {
             return -1;
         }
-        if (this.partyBoss.containsKey(party.id())) {
+        Deque<Party> queue = this.queues.computeIfAbsent(bossId, key -> new ArrayDeque<>());
+        if (queue.size() >= max) {
             return -1;
         }
         queue.addLast(party);
@@ -36,6 +36,9 @@ public final class ArenaQueue {
         if (party != null) {
             this.partyBoss.remove(party.id());
         }
+        if (queue.isEmpty()) {
+            this.queues.remove(bossId);
+        }
         return party;
     }
 
@@ -48,7 +51,11 @@ public final class ArenaQueue {
         if (queue == null) {
             return false;
         }
-        return queue.remove(party);
+        boolean removed = queue.remove(party);
+        if (queue.isEmpty()) {
+            this.queues.remove(bossId);
+        }
+        return removed;
     }
 
     public boolean contains(Party party) {

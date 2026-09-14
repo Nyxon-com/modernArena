@@ -7,6 +7,7 @@ import com.valaryrpg.arena.arena.ArenaService;
 import com.valaryrpg.arena.arena.MythicSpawners;
 import com.valaryrpg.arena.arena.WorldCopier;
 import com.valaryrpg.arena.command.ArenaCommand;
+import com.valaryrpg.arena.command.CommandCooldowns;
 import com.valaryrpg.arena.command.PartyCommand;
 import com.valaryrpg.arena.config.ConfigManager;
 import com.valaryrpg.arena.message.MessageService;
@@ -30,6 +31,7 @@ public final class ValaryArenaPlugin extends JavaPlugin {
     private Tasks tasks;
     private StorageManager storage;
     private ConsoleCommands console;
+    private CommandCooldowns cooldowns;
     private PartyService parties;
     private ArenaCatalog arenaCatalog;
     private MilestoneCatalog milestoneCatalog;
@@ -48,6 +50,7 @@ public final class ValaryArenaPlugin extends JavaPlugin {
     public void onEnable() {
         this.tasks = new Tasks(this);
         this.console = new ConsoleCommands();
+        this.cooldowns = new CommandCooldowns(this);
         this.storage = new StorageManager(this);
         try {
             this.storage.connect();
@@ -72,9 +75,13 @@ public final class ValaryArenaPlugin extends JavaPlugin {
         );
         this.kills = new KillTracker(this, new KillRepository(this.storage), this.milestoneCatalog);
         this.parties.onDisband(this.arenas::partyGone);
+        this.parties.onMemberRemoved(this.arenas::partyMemberGone);
         this.arenas.cleanup();
 
-        getServer().getPluginManager().registerEvents(new ArenaListener(this.arenas, this.kills), this);
+        getServer().getPluginManager().registerEvents(
+                new ArenaListener(this.arenas, this.kills, this.parties, this.cooldowns),
+                this
+        );
         bind("arena", new ArenaCommand(this));
         bind("party", new PartyCommand(this));
         getLogger().info(this.messages.brand("name") + " Arena " + getPluginMeta().getVersion() + " abilitato.");
@@ -82,8 +89,23 @@ public final class ValaryArenaPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        long shutdownTimeout = this.configs == null
+                ? 10000L
+                : this.configs.storage().getLong("pool.connection-timeout-millis", 10000L);
+        if (this.tasks != null) {
+            this.tasks.shutdown();
+        }
+        if (this.kills != null) {
+            this.kills.shutdown(shutdownTimeout);
+        }
         if (this.arenas != null) {
-            this.arenas.shutdown();
+            this.arenas.shutdown(shutdownTimeout);
+        }
+        if (this.parties != null) {
+            this.parties.shutdown();
+        }
+        if (this.cooldowns != null) {
+            this.cooldowns.clear();
         }
         if (this.storage != null) {
             this.storage.close();
@@ -123,6 +145,10 @@ public final class ValaryArenaPlugin extends JavaPlugin {
 
     public ConsoleCommands console() {
         return this.console;
+    }
+
+    public CommandCooldowns cooldowns() {
+        return this.cooldowns;
     }
 
     public PartyService parties() {
