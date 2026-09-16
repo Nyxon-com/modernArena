@@ -3,10 +3,13 @@ package com.valaryrpg.arena.message;
 import com.valaryrpg.arena.ValaryArenaPlugin;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.title.Title;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -101,5 +104,30 @@ public final class MessageService {
             return Component.empty();
         }
         return MINI.deserialize(apply(text, placeholders));
+    }
+
+    public void intro(
+            Player player,
+            String title,
+            String subtitle,
+            String actionbar,
+            int fadeInTicks,
+            int stayTicks,
+            int fadeOutTicks,
+            Map<String, String> placeholders
+    ) {
+        Title.Times times = Title.Times.times(
+                Duration.ofMillis(Math.max(0, fadeInTicks) * 50L),
+                Duration.ofMillis(Math.max(1, stayTicks) * 50L),
+                Duration.ofMillis(Math.max(0, fadeOutTicks) * 50L)
+        );
+        player.showTitle(Title.title(
+                mini(title == null ? "" : title, placeholders),
+                mini(subtitle == null ? "" : subtitle, placeholders),
+                times
+        ));
+        if (actionbar != null && !actionbar.isBlank()) {
+            player.sendActionBar(mini(actionbar, placeholders));
+        }
     }
 }

@@ -14,6 +14,7 @@ public final class ConfigManager {
     private YamlFile arenas;
     private YamlFile party;
     private YamlFile milestones;
+    private YamlFile dungeons;
 
     public ConfigManager(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
@@ -27,6 +28,7 @@ public final class ConfigManager {
         this.arenas = load("modules/arenas.yml");
         this.party = load("modules/party.yml");
         this.milestones = load("modules/milestones.yml");
+        this.dungeons = load("modules/dungeons.yml");
     }
 
     public FileConfiguration root() {
@@ -55,6 +57,10 @@ public final class ConfigManager {
 
     public FileConfiguration milestones() {
         return this.milestones.config();
+    }
+
+    public FileConfiguration dungeons() {
+        return this.dungeons.config();
     }
 
     public String command(String key, String fallback) {

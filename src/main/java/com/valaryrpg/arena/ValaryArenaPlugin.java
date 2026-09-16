@@ -8,8 +8,12 @@ import com.valaryrpg.arena.arena.MythicSpawners;
 import com.valaryrpg.arena.arena.WorldCopier;
 import com.valaryrpg.arena.command.ArenaCommand;
 import com.valaryrpg.arena.command.CommandCooldowns;
+import com.valaryrpg.arena.command.DungeonCommand;
 import com.valaryrpg.arena.command.PartyCommand;
 import com.valaryrpg.arena.config.ConfigManager;
+import com.valaryrpg.arena.dungeon.DungeonCatalog;
+import com.valaryrpg.arena.dungeon.DungeonListener;
+import com.valaryrpg.arena.dungeon.DungeonService;
 import com.valaryrpg.arena.message.MessageService;
 import com.valaryrpg.arena.milestone.KillTracker;
 import com.valaryrpg.arena.milestone.MilestoneCatalog;
@@ -22,7 +26,7 @@ import com.valaryrpg.arena.util.Tasks;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
-/** Entry point: YAML, storage, cleanup arena_*, party e istanze. */
+/** Entry point: YAML, storage, cleanup arena_ e dungeon_, party e istanze. */
 public final class ValaryArenaPlugin extends JavaPlugin {
 
     private ConfigManager configs;
@@ -34,8 +38,10 @@ public final class ValaryArenaPlugin extends JavaPlugin {
     private CommandCooldowns cooldowns;
     private PartyService parties;
     private ArenaCatalog arenaCatalog;
+    private DungeonCatalog dungeonCatalog;
     private MilestoneCatalog milestoneCatalog;
     private ArenaService arenas;
+    private DungeonService dungeons;
     private KillTracker kills;
 
     @Override
@@ -64,25 +70,44 @@ public final class ValaryArenaPlugin extends JavaPlugin {
         this.parties = new PartyService(this);
         this.arenaCatalog = new ArenaCatalog(this);
         this.arenaCatalog.load();
+        this.dungeonCatalog = new DungeonCatalog(this);
+        this.dungeonCatalog.load();
         this.milestoneCatalog = new MilestoneCatalog(this);
         this.milestoneCatalog.load();
+        MythicSpawners mythic = new MythicSpawners(this);
         this.arenas = new ArenaService(
                 this,
                 this.arenaCatalog,
                 new ArenaQueue(),
                 new WorldCopier(this.tasks),
-                new MythicSpawners(this)
+                mythic
+        );
+        this.dungeons = new DungeonService(
+                this,
+                this.dungeonCatalog,
+                new ArenaQueue(),
+                new WorldCopier(this.tasks),
+                mythic
         );
         this.kills = new KillTracker(this, new KillRepository(this.storage), this.milestoneCatalog);
-        this.parties.onDisband(this.arenas::partyGone);
-        this.parties.onMemberRemoved(this.arenas::partyMemberGone);
+        this.parties.onDisband(party -> {
+            this.arenas.partyGone(party);
+            this.dungeons.partyGone(party);
+        });
+        this.parties.onMemberRemoved((party, member) -> {
+            this.arenas.partyMemberGone(party, member);
+            this.dungeons.partyMemberGone(party, member);
+        });
         this.arenas.cleanup();
+        this.dungeons.cleanup();
 
         getServer().getPluginManager().registerEvents(
                 new ArenaListener(this.arenas, this.kills, this.parties, this.cooldowns),
                 this
         );
+        getServer().getPluginManager().registerEvents(new DungeonListener(this.dungeons, this.kills), this);
         bind("arena", new ArenaCommand(this));
+        bind("dungeon", new DungeonCommand(this));
         bind("party", new PartyCommand(this));
         getLogger().info(this.messages.brand("name") + " Arena " + getPluginMeta().getVersion() + " abilitato.");
     }
@@ -101,6 +126,9 @@ public final class ValaryArenaPlugin extends JavaPlugin {
         if (this.arenas != null) {
             this.arenas.shutdown(shutdownTimeout);
         }
+        if (this.dungeons != null) {
+            this.dungeons.shutdown(shutdownTimeout);
+        }
         if (this.parties != null) {
             this.parties.shutdown();
         }
@@ -118,6 +146,7 @@ public final class ValaryArenaPlugin extends JavaPlugin {
             this.configs.loadAll();
             this.messages.reload();
             this.arenaCatalog.load();
+            this.dungeonCatalog.load();
             this.milestoneCatalog.load();
             return true;
         } catch (Exception exception) {
@@ -157,6 +186,10 @@ public final class ValaryArenaPlugin extends JavaPlugin {
 
     public ArenaService arenas() {
         return this.arenas;
+    }
+
+    public DungeonService dungeons() {
+        return this.dungeons;
     }
 
     public KillTracker kills() {

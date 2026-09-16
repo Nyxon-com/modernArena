@@ -12,8 +12,8 @@ Pensato per più arene insieme, non per un player in creative.
 - SQL kill/milestone **async** + cache contatori online. Niente `SELECT` in death event sul main. Query per `(uuid, mob_id)` o lista kill di un uuid (comandi stats).
 - YAML boss/spawner/milestone/holo in memoria al load/reload. Zero `getConfigurationSection` in timer/kill.
 - Niente `PlayerMoveEvent`. Hologram `repeat` solo su slot `ACTIVE`, cancel allo unload.
-- Template **unloaded** in copy. Enable: cancella `arena_*` orfani e spawners istanza Mythic.
+- Template **unloaded** in copy. Enable: cancella `arena_*` e `dungeon_*` orfani e spawners istanza Mythic.
 - Spawner solo nel mondo istanza; allo unload **deregistra**. Niente mob nel template.
 - Timer solo su slot `ACTIVE`. Unload: despawn + **unloadWorld** + delete cartella solo se nessun World la usa.
 - Disable: unload sync, niente delete cartelle (cleanup al prossimo enable).
-- Core `worlds.yml` e Multiverse non devono importare `arena_*`.
+- Core `worlds.yml` e Multiverse non devono importare `arena_*` / `dungeon_*`.

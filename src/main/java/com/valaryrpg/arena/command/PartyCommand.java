@@ -146,7 +146,7 @@ public final class PartyCommand implements TabExecutor {
             this.plugin.messages().send(player, "errors.party-full", Map.of("max", Integer.toString(this.plugin.parties().maxSize())));
             return true;
         }
-        if (this.plugin.arenas().busy(this.plugin.parties().partyOf(target))) {
+        if (instanceBusy(target)) {
             this.plugin.messages().send(player, "errors.player-busy", Map.of("target", target.getName()));
             return true;
         }
@@ -164,6 +164,10 @@ public final class PartyCommand implements TabExecutor {
         }
         if (this.plugin.parties().partyOf(player) != null) {
             this.plugin.messages().send(player, "errors.already-in-party");
+            return true;
+        }
+        if (instanceBusy(player)) {
+            this.plugin.messages().send(player, "errors.player-busy", Map.of("target", player.getName()));
             return true;
         }
         Party party = this.plugin.parties().accept(player);
@@ -190,6 +194,9 @@ public final class PartyCommand implements TabExecutor {
         }
         if (this.plugin.arenas().instanceOf(player) != null) {
             this.plugin.arenas().leave(player, true);
+        }
+        if (this.plugin.dungeons().instanceOf(player) != null) {
+            this.plugin.dungeons().leave(player, true);
         }
         PartyService.LeaveResult result = this.plugin.parties().leave(player);
         if (result == PartyService.LeaveResult.NONE) {
@@ -241,6 +248,9 @@ public final class PartyCommand implements TabExecutor {
         if (this.plugin.arenas().instanceOf(target) != null) {
             this.plugin.arenas().leave(target, true);
         }
+        if (this.plugin.dungeons().instanceOf(target) != null) {
+            this.plugin.dungeons().leave(target, true);
+        }
         this.plugin.parties().kick(player, targetId);
         this.plugin.messages().send(target, "party.kicked");
         this.plugin.parties().broadcast(party, "party.member-kicked", Map.of("target", target.getName()));
@@ -263,6 +273,13 @@ public final class PartyCommand implements TabExecutor {
             return true;
         }
         return true;
+    }
+
+    private boolean instanceBusy(Player player) {
+        return this.plugin.arenas().occupies(player.getUniqueId())
+                || this.plugin.dungeons().occupies(player.getUniqueId())
+                || this.plugin.arenas().busy(this.plugin.parties().partyOf(player))
+                || this.plugin.dungeons().busy(this.plugin.parties().partyOf(player));
     }
 
     private String cmd(String key, String fallback) {

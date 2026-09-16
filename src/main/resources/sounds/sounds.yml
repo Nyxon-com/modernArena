@@ -1,6 +1,7 @@
 # =============================================================================
 # Suoni. Chiavi usate dal Java: party-invite, arena-start, arena-leave,
-# arena-queue, milestone, command-denied, arena-cooldown, arena-boss-cap.
+# arena-queue, milestone, command-denied, arena-cooldown, arena-boss-cap,
+# dungeon-start, dungeon-leave, dungeon-queue, dungeon-complete, dungeon-room.
 # =============================================================================
 
 party-invite:
@@ -50,3 +51,33 @@ arena-boss-cap:
   sound: ENTITY_ENDER_DRAGON_DEATH
   volume: 0.4
   pitch: 1.4
+
+dungeon-start:
+  enabled: true
+  sound: ENTITY_WITHER_SPAWN
+  volume: 0.5
+  pitch: 1.2
+
+dungeon-leave:
+  enabled: true
+  sound: ENTITY_ENDERMAN_TELEPORT
+  volume: 0.7
+  pitch: 1.0
+
+dungeon-queue:
+  enabled: true
+  sound: BLOCK_NOTE_BLOCK_PLING
+  volume: 0.8
+  pitch: 0.8
+
+dungeon-room:
+  enabled: true
+  sound: BLOCK_NOTE_BLOCK_CHIME
+  volume: 0.8
+  pitch: 1.1
+
+dungeon-complete:
+  enabled: true
+  sound: UI_TOAST_CHALLENGE_COMPLETE
+  volume: 0.9
+  pitch: 1.0

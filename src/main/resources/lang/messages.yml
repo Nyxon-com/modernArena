@@ -3,6 +3,7 @@
 # Placeholder: {prefix} {separator} {player} {target} {boss} {slot} {world}
 # {kills} {threshold} {mob} {size} {max} {position} {seconds} {leader}
 # {warmup} {boss-kills} {max-bosses} {top-damager} {top-damage}
+# {dungeon} {room} {remaining}
 # =============================================================================
 
 brand:
@@ -36,7 +37,11 @@ errors:
   not-in-party: "{prefix}<gray>Non sei in un party."
   not-member: "{prefix}<gray><white>{target}</white> non è nel party."
   cannot-kick-self: "{prefix}<gray>Usa <white>/party leave</white> per uscire."
-  player-busy: "{prefix}<gray><white>{target}</white> è occupato in un'arena o in coda."
+  player-busy: "{prefix}<gray><white>{target}</white> è occupato in un'istanza o in coda."
+  already-in-dungeon: "{prefix}<gray>Sei già in un dungeon."
+  not-in-dungeon: "{prefix}<gray>Non sei in un dungeon."
+  unknown-dungeon: "{prefix}<gray>Dungeon <white>{dungeon}</white> inesistente."
+  dungeon-cleaning: "{prefix}<gray>Cleanup delle istanze in corso. Riprova tra poco."
   entry-cooldown: "{prefix}<gray>{player} deve attendere <white>{seconds}s</white> prima di rientrare."
   between-cooldown: "{prefix}<gray>{player} deve attendere <white>{seconds}s</white> prima di cambiare arena."
 
@@ -83,6 +88,32 @@ hologram:
     - "<gray>Boss <white>{boss-kills}</white><dark_gray>/</dark_gray><white>{max-bosses}</white>"
     - "<gray>Top danno <dark_gray>•</dark_gray> <white>{top-damager}</white>"
     - "<dark_gray>{top-damage}</dark_gray>"
+  dungeon-lines:
+    - "<gradient:#5F22C3:#40099B><bold>{dungeon}</bold></gradient>"
+    - "<gray>Stanza <white>{room}</white>"
+    - "<gray>Mob <white>{remaining}</white>"
+
+dungeon:
+  help:
+    - "{separator}"
+    - "{prefix}<gray>/dungeon start <white>id</white>"
+    - "{prefix}<gray>/dungeon list"
+    - "{prefix}<gray>/dungeon leave"
+    - "{separator}"
+  list-header: "{prefix}<gray>Dungeon attivi:"
+  list-entry: "{prefix}{display} <dark_gray>—</dark_gray> <gray>mondo <white>{world}</white>, slot <white>{slot}</white>, stanza <white>{room}</white>, giocatori <white>{players}</white>"
+  list-footer: "{separator}"
+  list-empty: "{prefix}<gray>Non ci sono dungeon attivi."
+  started: "{prefix}<gray>Dungeon <white>{dungeon}</white> avviato. Slot <white>{slot}</white>."
+  queued: "{prefix}<gray>Tutte le istanze di <white>{dungeon}</white> sono occupate. Coda: <white>#{position}</white>."
+  queue-removed: "{prefix}<gray>Il party è uscito dalla coda di <white>{dungeon}</white>."
+  leave: "{prefix}<gray>Hai lasciato il dungeon."
+  eliminated: "{prefix}<gray>Sei stato eliminato dal dungeon."
+  member-left: "{prefix}<gray><white>{player}</white> ha lasciato il dungeon."
+  timeout: "{prefix}<gray>Tempo scaduto. Uscita dal dungeon."
+  empty-unload: "{prefix}<gray>Nessun giocatore rimasto. Dungeon chiuso."
+  room-clear: "{prefix}<gray>Stanza <white>{room}</white> pulita."
+  complete: "{prefix}<gray>Dungeon <white>{dungeon}</white> completato."
 
 party:
   help:

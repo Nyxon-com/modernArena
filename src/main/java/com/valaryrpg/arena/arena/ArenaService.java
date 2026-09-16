@@ -54,6 +54,14 @@ public final class ArenaService {
         return this.catalog;
     }
 
+    public boolean cleaning() {
+        return this.cleaning;
+    }
+
+    public boolean occupies(UUID uuid) {
+        return this.byPlayer.containsKey(uuid) || this.reservedByPlayer.containsKey(uuid);
+    }
+
     public ArenaQueue queue() {
         return this.queue;
     }
@@ -120,6 +128,10 @@ public final class ArenaService {
             this.plugin.messages().send(leader, "errors.arena-cleaning");
             return;
         }
+        if (this.plugin.dungeons() != null && this.plugin.dungeons().cleaning()) {
+            this.plugin.messages().send(leader, "errors.dungeon-cleaning");
+            return;
+        }
         ArenaDefinition definition = this.catalog.boss(bossId);
         if (definition == null) {
             this.plugin.messages().send(leader, "errors.unknown-boss", Map.of("boss", bossId));
@@ -130,9 +142,12 @@ public final class ArenaService {
             this.plugin.sounds().play(leader, "command-denied");
             return;
         }
-        if (this.byPlayer.containsKey(leader.getUniqueId())
-                || this.reservedByPlayer.containsKey(leader.getUniqueId())) {
+        if (occupies(leader.getUniqueId())) {
             this.plugin.messages().send(leader, "errors.already-in-arena");
+            return;
+        }
+        if (this.plugin.dungeons() != null && this.plugin.dungeons().occupies(leader.getUniqueId())) {
+            this.plugin.messages().send(leader, "errors.already-in-dungeon");
             return;
         }
         Party party = this.plugin.parties().partyOf(leader);
@@ -144,13 +159,21 @@ public final class ArenaService {
             return;
         }
         for (UUID member : party.members()) {
-            if (this.byPlayer.containsKey(member) || this.reservedByPlayer.containsKey(member)) {
+            if (occupies(member)) {
                 this.plugin.messages().send(leader, "errors.already-in-arena");
+                return;
+            }
+            if (this.plugin.dungeons() != null && this.plugin.dungeons().occupies(member)) {
+                this.plugin.messages().send(leader, "errors.already-in-dungeon");
                 return;
             }
         }
         if (busy(party)) {
             this.plugin.messages().send(leader, this.queue.contains(party) ? "errors.already-in-queue" : "errors.already-in-arena");
+            return;
+        }
+        if (this.plugin.dungeons() != null && this.plugin.dungeons().busy(party)) {
+            this.plugin.messages().send(leader, "errors.already-in-dungeon");
             return;
         }
         if (party.size() > definition.maxPartySize) {
@@ -312,7 +335,11 @@ public final class ArenaService {
         try {
             Files.createDirectories(instanceRoot());
             try (var stream = Files.list(instanceRoot())) {
+                String prefix = this.catalog.worldPrefix();
                 for (Path folder : stream.filter(Files::isDirectory).toList()) {
+                    if (!folder.getFileName().toString().startsWith(prefix)) {
+                        continue;
+                    }
                     if (worldUsing(folder) == null) {
                         folders.add(folder);
                     } else {
@@ -711,7 +738,8 @@ public final class ArenaService {
             sendOut(player);
             if (player.getWorld() == world) {
                 World fallback = Bukkit.getWorlds().stream()
-                        .filter(candidate -> candidate != world && !isArenaWorld(candidate))
+                        .filter(candidate -> candidate != world && !isArenaWorld(candidate)
+                                && (this.plugin.dungeons() == null || !this.plugin.dungeons().isDungeonWorld(candidate)))
                         .findFirst()
                         .orElse(null);
                 if (fallback != null) {
@@ -753,7 +781,11 @@ public final class ArenaService {
 
     private boolean isInstanceWorld(World world) {
         Path folder = world.getWorldFolder().toPath().toAbsolutePath().normalize();
-        return folder.startsWith(instanceRoot().toAbsolutePath().normalize());
+        Path root = instanceRoot().toAbsolutePath().normalize();
+        if (!folder.startsWith(root)) {
+            return false;
+        }
+        return folder.getFileName().toString().startsWith(this.catalog.worldPrefix());
     }
 
     private boolean isLegacyInstanceWorld(String worldName) {

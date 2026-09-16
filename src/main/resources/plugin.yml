@@ -22,6 +22,9 @@ commands:
   party:
     description: Party per le arene
     usage: /<command>
+  dungeon:
+    description: Avvia o lascia un dungeon istanziato
+    usage: /<command>
 permissions:
   valary.arena:
     description: Usa /arena
@@ -50,6 +53,18 @@ permissions:
   valary.arena.cooldown.bypass:
     description: Ignora i cooldown di ingresso arena
     default: op
+  valary.dungeon:
+    description: Usa /dungeon
+    default: true
+  valary.dungeon.start:
+    description: /dungeon start
+    default: true
+  valary.dungeon.list:
+    description: /dungeon list
+    default: true
+  valary.dungeon.leave:
+    description: /dungeon leave
+    default: true
   valary.party:
     description: Usa /party
     default: true

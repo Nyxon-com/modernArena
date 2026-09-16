@@ -1,7 +1,7 @@
 # ValaryArena — wiki Cursor
 
 Plugin Paper **separato** da ValaryRPG-Core. Server **ValaryRPG**, viola `#5F22C3`→`#40099B` + nero.
-Non è AdvancedMobArena: template mondo → istanze `arena_<boss>_<slot>` → party → coda → kill/milestone SQL → hologram → cap boss → cooldown ingresso.
+Non è AdvancedMobArena: template mondo → istanze `arena_<boss>_<slot>` o `dungeon_<id>_<slot>` → party → coda → kill/milestone SQL. Dungeon: stanze sequentiali, fill cubo, title, boss finale.
 
 Repo: `Nyxon-com/ValaryRPGarena-instances` (privata). Artifact: `ValaryRPG-Arena`. Package: `com.valaryrpg.arena`.
 
@@ -33,6 +33,7 @@ In `lang/messages.yml` → `brand.*`. Mai hardcodare in Java.
 | `modules/arenas.yml` | Slot, coda, leave, boss, spawners, hologram, max-bosses, cooldown ingresso |
 | `modules/party.yml` | `invite-timeout-seconds`, `max-size` |
 | `modules/milestones.yml` | Soglie per Mythic internal name **o** id boss |
+| `modules/dungeons.yml` | Slot, coda, leave, dungeon, stanze, spawners, wall, intro, hologram |
 
 Testi, permessi, suoni, delay, coord, cap, nomi spawner: **solo YAML**. Se manca un testo, aggiungi la chiave, non un sistema nuovo.
 
@@ -48,15 +49,29 @@ Testi, permessi, suoni, delay, coord, cap, nomi spawner: **solo YAML**. Se manca
 - `bosses.<id>.spawners.*.source-spawner` — clona lo spawner Mythic
 - `bosses.<id>.spawners.*.mob` — internal name Mythic per kill/milestone anche con `source-spawner`
 
+### `modules/dungeons.yml` — chiavi vive
+
+- `settings.world-prefix` — `dungeon_` (Core/Multiverse devono ignorarlo come `arena_`)
+- `settings.max-instances-per-dungeon` (default 4), `complete-leave-ticks`
+- `dungeons.<id>.rooms` — ordine YAML. Stanza 1: `spawn` TP. `objective: clear-mobs | boss`
+- `rooms.*.spawners` — come arene (`source-spawner` + `mob` + xyz + `max-mobs`)
+- `rooms.*.wall.from/to` + `set-block` (default air) — fill sync al clear, no restore
+- `rooms.*.intro` — title/subtitle/actionbar MiniMessage + fade ticks
+- Ultima stanza `objective: boss` + `commands: ["[console] …"]`
+
 ### Comandi `/arena`
 
 `start`, `list`, `leave`, `stats [player] [boss]`, `milestones [player]`, `reload`.
 Vedere altri player: permesso `valary.arena.stats.other`.
 Bypass cooldown: `valary.arena.cooldown.bypass`.
 
+### Comandi `/dungeon`
+
+`start <id>`, `list`, `leave`. Solo o con party (leader). Un player non sta in arena e dungeon insieme.
+
 ### Suoni
 
-`party-invite`, `arena-start`, `arena-leave`, `arena-queue`, `milestone`, `command-denied`, `arena-cooldown`, `arena-boss-cap`.
+`party-invite`, `arena-start`, `arena-leave`, `arena-queue`, `milestone`, `command-denied`, `arena-cooldown`, `arena-boss-cap`, `dungeon-start`, `dungeon-leave`, `dungeon-queue`, `dungeon-room`, `dungeon-complete`.
 
 ## Package Java
 
@@ -68,10 +83,11 @@ com.valaryrpg.arena
   sound/                     SoundService
   storage/                   StorageManager, KillRepository  (query uuid, o lista kill per uuid)
   util/                      Tasks (async/sync/later/repeat), ConsoleCommands ([console])
-  command/                   ArenaCommand, PartyCommand, CommandCooldowns
+  command/                   ArenaCommand, DungeonCommand, PartyCommand, CommandCooldowns
   party/                     Party, PartyService
   arena/                     Catalog, Service, Queue, Instance, WorldCopier,
                              MythicSpawners, Listener, Holograms, Cooldowns
+  dungeon/                   Catalog, Service, Rooms, Instance, Command-side Listener, Holograms
   milestone/                 MilestoneCatalog, KillTracker
 ```
 
@@ -90,6 +106,15 @@ Riaggancia `Tasks`, `messages()`, `sounds()`, `console()`, `storage`. Non duplic
 7. Timer durata solo se `duration-seconds` > 0 e solo su `ACTIVE`.
 8. Dopo reload Mythic, spawner delle istanze `ACTIVE` ricreati (skip se `spawnersHalted`).
 
+### Start — `/dungeon start <id>` (leader)
+
+1. Stesso flusso slot/coda/copy async delle arene. Mondi `dungeon_<id>_<slot>` in `plugins/ValaryRPG-Arena/instances/`.
+2. Occupato in arena o dungeon → rifiuto. Party condiviso.
+3. TP spawn stanza 1 → `ACTIVE` → title intro → **solo** spawners di quella stanza.
+4. `MythicMobDeathEvent` nel mondo dungeon: se mob della stanza, ricalcola alive. `clear-mobs` e remaining 0 → halt spawner → fill wall → stanza successiva.
+5. Ultima stanza `objective: boss`: alla kill tracciata, `[console]` YAML, messaggio, dopo `complete-leave-ticks` TP e unload.
+6. Morte = eliminato come in arena. 0 vivi → chiude. Niente `PlayerMoveEvent`.
+
 ### Leave / morte / cap
 
 Morte = eliminato, respawn fuori. 0 vivi → chiude dopo il respawn degli eliminati.
@@ -107,7 +132,7 @@ Mai cancellare la directory se un World è ancora caricato. Disable: unload sync
 
 ### Enable / disable
 
-Enable: `cleanup()` unloada mondi `arena_*` / cartelle instance, spawners Mythic prefisso, coda vuota. Finché il cleanup disco non finisce, start rifiutati (`errors.arena-cleaning`).
+Enable: `cleanup()` unloada mondi `arena_*` e `dungeon_*` / cartelle instance del relativo prefisso, spawners Mythic prefisso, coda vuota. Finché il cleanup disco non finisce, start rifiutati. Un player non può essere in arena e dungeon insieme.
 Disable: `Tasks.shutdown()` poi unload mondi istanza sync, niente task delete post-disable. Svuota party, code, cooldown comando, mapping, lock SQL. `ArenaCooldowns` ingresso si azzera al disable (RAM).
 
 ### Party — `/party`
@@ -132,16 +157,17 @@ Danno da `EntityDamageByEntityEvent` (melee, projectile, tameable). Linee in `la
 - **Nuovo boss**: `modules/arenas.yml` → `bosses.<id>`. Template nella world container, **non caricato**. `source-spawner` + `mob:` = internal name Mythic.
 - **Milestone**: `milestones.yml` → `mobs.<id>.<soglia>`. L’id deve matchare boss id o Mythic name (`mob:`).
 - **Holo / cap / cooldown**: YAML arenas + testi `hologram.*` / `errors.entry-cooldown` / `errors.between-cooldown` / `arena.boss-cap`.
-- **Reload**: `/arena reload` ricarica YAML + cataloghi. Non tocca istanze vive né il DB.
+- **Nuovo dungeon**: `modules/dungeons.yml` → `dungeons.<id>` + `rooms`. Template nella world container, **non caricato**.
+- **Reload**: `/arena reload` ricarica YAML + cataloghi (anche dungeon). Non tocca istanze vive né il DB.
 
 ## Fuori scope
 
-Editor in-game, shop, wave AMA, spectator, party chat, friendly fire, PAPI expansion, dipendenza Java Core, plugin hologram terzi.
+Editor in-game, shop, wave AMA, spectator, party chat, friendly fire, PAPI expansion, dipendenza Java Core, plugin hologram terzi, editor MythicDungeons.
 
 ## Core / Multiverse (non questo JAR)
 
-Sul Core: `worlds.ignore-prefixes: ["arena_"]`.
-Multiverse: non auto-importare `arena_*`. Mondi creati con Bukkit.
+Sul Core: `worlds.ignore-prefixes: ["arena_", "dungeon_"]`.
+Multiverse: non auto-importare `arena_*` / `dungeon_*`. Mondi creati con Bukkit.
 
 ## Convenzioni
 

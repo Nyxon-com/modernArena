@@ -6,10 +6,11 @@ Arena istanziata per **ValaryRPG** (viola `#5F22C3`/`#40099B` + nero). JAR propr
 Paper 1.21.11, Java 21, Gradle, MiniMessage, HikariCP. Hard: MythicMobs. Soft: Core, Vault, PAPI.
 
 ## Prodotto
-- Template su disco → max 4 mondi `arena_<boss>_<slot>` → coda se pieni.
+- Template su disco → max 4 mondi `arena_<boss>_<slot>` / `dungeon_<id>_<slot>` → coda se pieni.
 - Spawner Mythic da YAML: clone `source-spawner`; kill/milestone per player.
 - Hologram TextDisplay (warmup, kill istanza, top danno). Cap boss → TP fuori.
-- Cooldown rientro stessa arena / cambio arena. Cleanup `arena_*` a ogni enable.
+- Dungeon: stanze sequentiali, fill cubo, title, boss finale + reward.
+- Cooldown rientro. Cleanup `arena_*` e `dungeon_*` a ogni enable.
 - Party custom. Kill + milestone in SQL async; reward = comandi console.
 
 ## Regole
@@ -21,5 +22,5 @@ Paper 1.21.11, Java 21, Gradle, MiniMessage, HikariCP. Hard: MythicMobs. Soft: C
 
 ## Dove sta cosa
 `config.yml`, `lang/messages.yml`, `sounds/sounds.yml`, `storage.yml`,
-`modules/arenas.yml`, `modules/party.yml`, `modules/milestones.yml`.
+`modules/arenas.yml`, `modules/dungeons.yml`, `modules/party.yml`, `modules/milestones.yml`.
 Package `com.valaryrpg.arena`.

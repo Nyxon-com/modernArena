@@ -1,0 +1,109 @@
+# =============================================================================
+# Dungeon istanziati: template → dungeon_<id>_<slot> → stanze sequentiali.
+# Core: worlds.ignore-prefixes deve includere dungeon_ (oltre ad arena_).
+# =============================================================================
+
+settings:
+  instances-directory: instances
+  world-prefix: dungeon_
+  world-name-format: "dungeon_{dungeon}_{slot}"
+  spawner-name-format: "dungeon_{dungeon}_{slot}_{room}_{spawner}"
+  max-instances-per-dungeon: 4
+  max-instances-global: 0
+  copy-exclude:
+    - uid.dat
+    - session.lock
+  complete-leave-ticks: 40
+  entry-cooldown-seconds: 30
+  between-cooldown-seconds: 60
+  hologram:
+    enabled: true
+    update-ticks: 20
+    offset-y: 2.5
+
+leave:
+  command: spawn
+  location:
+    world: world
+    x: 0.5
+    y: 64.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 0.0
+
+queue:
+  max-size: 20
+
+dungeons:
+  example:
+    display-name: "<gradient:#5F22C3:#40099B>Esempio</gradient>"
+    template: dungeon_template_example
+    permission: ""
+    max-party-size: 4
+    duration-seconds: 0
+    hologram:
+      enabled: true
+      x: 0.5
+      y: 66.5
+      z: 0.5
+    rooms:
+      room1:
+        objective: clear-mobs
+        spawn:
+          x: 0.5
+          y: 64.0
+          z: 0.5
+          yaw: 0.0
+          pitch: 0.0
+        intro:
+          title: "<gradient:#5F22C3:#40099B><bold>Stanza 1</bold></gradient>"
+          subtitle: "<gray>Elimina tutti i mob"
+          actionbar: "<gray>10 nemici"
+          fade-in-ticks: 10
+          stay-ticks: 40
+          fade-out-ticks: 10
+        wall:
+          from:
+            x: 8
+            y: 64
+            z: 4
+          to:
+            x: 8
+            y: 66
+            z: 6
+          set-block: air
+        spawners:
+          pack:
+            source-spawner: ExampleSpawner
+            mob: ExampleMob
+            x: 4.5
+            y: 64.0
+            z: 4.5
+            yaw: 0.0
+            pitch: 0.0
+            cooldown-seconds: 0
+            max-mobs: 10
+            spawn-radius: 2
+      boss:
+        objective: boss
+        intro:
+          title: "<red><bold>Boss</bold></red>"
+          subtitle: "<gray>Sconfiggi il guardiano"
+          actionbar: ""
+          fade-in-ticks: 10
+          stay-ticks: 40
+          fade-out-ticks: 10
+        spawners:
+          boss:
+            source-spawner: ExampleBossSpawner
+            mob: ExampleBoss
+            x: 20.5
+            y: 64.0
+            z: 20.5
+            yaw: 0.0
+            pitch: 0.0
+            cooldown-seconds: 0
+            max-mobs: 1
+            spawn-radius: 0
+        commands:
+          - "[console] kit starter {player}"

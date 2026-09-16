@@ -13,6 +13,11 @@ commands:
   arena-stats: stats
   arena-milestones: milestones
   arena-reload: reload
+  dungeon: dungeon
+  dungeon-aliases: []
+  dungeon-start: start
+  dungeon-list: list
+  dungeon-leave: leave
   party-create: create
   party-invite: invite
   party-accept: accept
@@ -30,6 +35,10 @@ permissions:
   arena-stats-other: valary.arena.stats.other
   arena-reload: valary.arena.reload
   arena-cooldown-bypass: valary.arena.cooldown.bypass
+  dungeon: valary.dungeon
+  dungeon-start: valary.dungeon.start
+  dungeon-list: valary.dungeon.list
+  dungeon-leave: valary.dungeon.leave
   party: valary.party
   party-create: valary.party.create
   party-invite: valary.party.invite
