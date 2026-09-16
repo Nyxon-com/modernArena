@@ -94,6 +94,10 @@ public final class DungeonService {
         return party != null && (this.byParty.containsKey(party.id()) || this.queue.contains(party));
     }
 
+    public int loadedCount() {
+        return this.byWorld.size();
+    }
+
     public List<DungeonInstance> activeInstances() {
         return this.byWorld.values().stream()
                 .filter(instance -> instance.state() == SlotState.ACTIVE)
@@ -484,9 +488,9 @@ public final class DungeonService {
         }
         instance.loadedWorldName(world.getName());
         this.byLoadedName.put(world.getName(), instance);
-        world.setAutoSave(false);
         Location spawn = definition.entrySpawn().to(world);
         world.setSpawnLocation(spawn);
+        this.plugin.configs().instances().tune(world);
         List<Player> online = this.plugin.parties().onlineMembers(instance.party());
         if (online.isEmpty()) {
             unload(instance, null);
@@ -651,6 +655,10 @@ public final class DungeonService {
     }
 
     private int freeSlot(String dungeonId) {
+        int cap = this.plugin.configs().instances().maxLoaded;
+        if (cap > 0 && this.plugin.loadedInstances() >= cap) {
+            return -1;
+        }
         if (this.catalog.maxGlobal() > 0 && this.byWorld.size() >= this.catalog.maxGlobal()) {
             return -1;
         }

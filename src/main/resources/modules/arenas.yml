@@ -27,7 +27,7 @@ settings:
   between-cooldown-seconds: 60
   hologram:
     enabled: true
-    update-ticks: 20
+    update-ticks: 40
     # Usato se il boss non ha hologram.x/y/z: spawn + offset-y
     offset-y: 2.5
 

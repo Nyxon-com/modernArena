@@ -34,7 +34,7 @@ public final class ArenaCatalog {
     private int betweenCooldownSeconds;
     private int bossCapLeaveTicks = 20;
     private boolean hologramEnabled = true;
-    private int hologramUpdateTicks = 20;
+    private int hologramUpdateTicks = 40;
     private double hologramOffsetY = 2.5;
 
     public ArenaCatalog(ValaryArenaPlugin plugin) {
@@ -63,7 +63,7 @@ public final class ArenaCatalog {
         this.betweenCooldownSeconds = yaml.getInt("settings.between-cooldown-seconds", 0);
         this.bossCapLeaveTicks = Math.max(1, yaml.getInt("settings.boss-cap-leave-ticks", 20));
         this.hologramEnabled = yaml.getBoolean("settings.hologram.enabled", true);
-        this.hologramUpdateTicks = yaml.getInt("settings.hologram.update-ticks", 20);
+        this.hologramUpdateTicks = yaml.getInt("settings.hologram.update-ticks", 40);
         this.hologramOffsetY = yaml.getDouble("settings.hologram.offset-y", 2.5);
 
         ConfigurationSection section = yaml.getConfigurationSection("bosses");

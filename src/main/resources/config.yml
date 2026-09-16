@@ -49,3 +49,15 @@ permissions:
 
 delays:
   command-cooldown-millis: 250
+
+# 8 GB RAM: tetto arene+dungeon insieme. 0 = nessun tetto extra (solo per-boss/dungeon).
+# Heap Java consigliato: -Xmx5G. Copy una alla volta per non piccare la RAM.
+instances:
+  max-loaded: 16
+  copy-max-concurrent: 1
+  world:
+    keep-spawn-in-memory: false
+    view-distance: 4
+    simulation-distance: 2
+    random-tick-speed: 0
+    vanilla-mob-spawning: false

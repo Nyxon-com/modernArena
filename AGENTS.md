@@ -166,7 +166,8 @@ Il plugin è fatto per **molte istanze insieme**, non per un player in creative.
 - Copy/delete cartella **async**. Load/unload, TP, API Mythic **sync**.
 - SQL kill/milestone **async**. Niente `SELECT` sul main nel death event.
 - Timer hologram / durata **solo** su slot `ACTIVE`, cancel allo unload.
-- Slot `COPYING` non è libero. Cap default **4 istanze per boss/dungeon**.
+- Slot `COPYING` non è libero. Cap per-tipo **4**. Tetto totale arene+dungeon: `config.yml` → `instances.max-loaded` (default **16**, pensato per 8 GB).
+- Copy mondo **una alla volta** (`instances.copy-max-concurrent: 1`). Mondo istanza: spawn chunks off, view 4 / sim 2, random tick 0, niente mob vanilla.
 - Unload: despawn Mythic nel **mondo** → `unloadWorld` → delete cartella solo se nessun World usa quella path.
 
 ### Costo per N istanze ACTIVE
@@ -174,8 +175,8 @@ Il plugin è fatto per **molte istanze insieme**, non per un player in creative.
 | Pezzo | Costo | Note |
 |-------|--------|------|
 | Mondo Paper | alto | RAM chunk + tick world. Questo limita N, non il plugin. |
-| Copy template | disco async | Più start insieme = I/O. Windows è il caso peggiore. |
-| Hologram `repeat` | 1 task / istanza | Default 20 tick. Conta mob **nel mondo istanza**, non tutti i Mythic del server. |
+| Copy template | disco async, max 1 insieme | Evita picco RAM su 8 GB. |
+| Hologram `repeat` | 1 task / istanza | Default 40 tick. Skip se il testo non è cambiato. |
 | Danno (`EntityDamageByEntityEvent`) | 1 lookup | Mondo → istanza O(1); Mythic per UUID, niente scan globale. |
 | Death Mythic | basso | Solo se il mondo è un’istanza. |
 | Fill muro dungeon | sync, cubo YAML | Cubo piccolo. Un cubo enorme lagga un tick. |
@@ -183,21 +184,25 @@ Il plugin è fatto per **molte istanze insieme**, non per un player in creative.
 
 ### Quante istanze regge
 
-- **Default YAML:** 4 per boss + 4 per dungeon. 5 boss = fino a 20 mondi arena, più dungeon.
-- `max-instances-global: 0` = nessun cap oltre al per-tipo. **Non lasciarlo 0 in produzione** se hai tanti boss: metti un numero (es. 12–24) in base alla RAM.
+- **Default YAML:** tetto totale `instances.max-loaded: 16` (8 GB). 4 per boss/dungeon, poi il globale. I start extra vanno in coda.
 - Paper: ogni mondo ha overhead (chunk, entities, random tick). 20+ mondi caricati insieme chiedono RAM e TPS, anche se il JAR è leggero.
 - Template **unloaded**. Mondi `arena_*` / `dungeon_*` ignorati da Core e Multiverse.
 
 Crash già coperti: cartella cancellata con World ancora loaded (fix: unload prima, delete async, disable senza delete). Disable: niente task delete post-disable.
 
+### 8 GB RAM, ~20 player
+
+Heap `-Xmx5G`. `instances.max-loaded: 16` (alza a 18 solo con template minuscoli). I 20esimi start vanno in **coda**, non aprono il 17° mondo. Template piccoli, pochi `max-mobs`.
+
 ### Come alzare il carico senza rompere
 
-1. `settings.max-instances-per-boss` / `max-instances-per-dungeon` e **`max-instances-global`** in YAML.
-2. `storage.yml` → `type: mysql` (o mariadb) se le kill sono tante. SQLite serializza gli INSERT.
-3. Hologram: `update-ticks: 40` se non serve 1s. `enabled: false` se non lo vuoi.
-4. Template mondo **piccolo** (poco terreno, pochi entity). Copy e RAM scalano con la cartella.
-5. Muri dungeon: cubo stretto (porta), non un chunk intero.
-6. Spawner: `max-mobs` basso. 10 mob/stanza × N istanze = N×10 living + Mythic AI.
+1. `config.yml` → `instances.max-loaded` (tetto **totale** arene+dungeon) e `copy-max-concurrent`.
+2. `settings.max-instances-per-boss` / `max-instances-per-dungeon` e `max-instances-global` per-tipo.
+3. `storage.yml` → `type: mysql` (o mariadb) se le kill sono tante. SQLite serializza gli INSERT.
+4. Hologram: `update-ticks: 40` se non serve 1s. `enabled: false` se non lo vuoi.
+5. Template mondo **piccolo** (poco terreno, pochi entity). Copy e RAM scalano con la cartella.
+6. Muri dungeon: cubo stretto (porta), non un chunk intero.
+7. Spawner: `max-mobs` basso. 10 mob/stanza × N istanze = N×10 living + Mythic AI.
 
 ### Hotspot da non reintrodurre
 

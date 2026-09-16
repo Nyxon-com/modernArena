@@ -58,7 +58,14 @@ public final class DungeonHolograms {
         if (display == null || display.isDead()) {
             return;
         }
-        display.text(lines(instance, definition, display.getWorld()));
+        DungeonRoom room = definition.room(instance.roomIndex());
+        int remaining = this.rooms.remaining(instance, definition, display.getWorld());
+        String fingerprint = (room == null ? "" : room.id) + "|" + remaining;
+        if (fingerprint.equals(instance.hologramFingerprint())) {
+            return;
+        }
+        instance.hologramFingerprint(fingerprint);
+        display.text(lines(instance, definition, remaining));
     }
 
     public void remove(DungeonInstance instance) {
@@ -73,13 +80,13 @@ public final class DungeonHolograms {
         }
     }
 
-    private Component lines(DungeonInstance instance, DungeonDefinition definition, World world) {
+    private Component lines(DungeonInstance instance, DungeonDefinition definition, int remaining) {
         DungeonRoom room = definition.room(instance.roomIndex());
         Map<String, String> placeholders = Map.of(
                 "dungeon", definition.displayName == null || definition.displayName.isEmpty()
                         ? definition.id : definition.displayName,
                 "room", room == null ? "" : room.id,
-                "remaining", Integer.toString(this.rooms.remaining(instance, definition, world))
+                "remaining", Integer.toString(remaining)
         );
         List<String> raw = this.plugin.messages().list("hologram.dungeon-lines");
         Component result = Component.empty();

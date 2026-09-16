@@ -1,6 +1,7 @@
 package com.valaryrpg.arena.config;
 
 import com.valaryrpg.arena.ValaryArenaPlugin;
+import com.valaryrpg.arena.arena.InstanceWorlds;
 import org.bukkit.configuration.file.FileConfiguration;
 
 /** Carica i YAML di prodotto in memoria. */
@@ -15,6 +16,7 @@ public final class ConfigManager {
     private YamlFile party;
     private YamlFile milestones;
     private YamlFile dungeons;
+    private InstanceWorlds instances;
 
     public ConfigManager(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
@@ -29,6 +31,7 @@ public final class ConfigManager {
         this.party = load("modules/party.yml");
         this.milestones = load("modules/milestones.yml");
         this.dungeons = load("modules/dungeons.yml");
+        this.instances = InstanceWorlds.load(this.root.config());
     }
 
     public FileConfiguration root() {
@@ -71,6 +74,10 @@ public final class ConfigManager {
     public String permission(String key, String fallback) {
         String value = this.root.config().getString("permissions." + key);
         return value == null || value.isBlank() ? fallback : value;
+    }
+
+    public InstanceWorlds instances() {
+        return this.instances;
     }
 
     private YamlFile load(String fileName) {

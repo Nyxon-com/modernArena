@@ -19,7 +19,7 @@ settings:
   between-cooldown-seconds: 60
   hologram:
     enabled: true
-    update-ticks: 20
+    update-ticks: 40
     offset-y: 2.5
 
 leave:

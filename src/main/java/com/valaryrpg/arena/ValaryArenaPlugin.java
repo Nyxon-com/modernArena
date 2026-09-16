@@ -75,18 +75,19 @@ public final class ValaryArenaPlugin extends JavaPlugin {
         this.milestoneCatalog = new MilestoneCatalog(this);
         this.milestoneCatalog.load();
         MythicSpawners mythic = new MythicSpawners(this);
+        WorldCopier copier = new WorldCopier(this.tasks, this.configs.instances().copyMaxConcurrent);
         this.arenas = new ArenaService(
                 this,
                 this.arenaCatalog,
                 new ArenaQueue(),
-                new WorldCopier(this.tasks),
+                copier,
                 mythic
         );
         this.dungeons = new DungeonService(
                 this,
                 this.dungeonCatalog,
                 new ArenaQueue(),
-                new WorldCopier(this.tasks),
+                copier,
                 mythic
         );
         this.kills = new KillTracker(this, new KillRepository(this.storage), this.milestoneCatalog);
@@ -190,6 +191,17 @@ public final class ValaryArenaPlugin extends JavaPlugin {
 
     public DungeonService dungeons() {
         return this.dungeons;
+    }
+
+    public int loadedInstances() {
+        int loaded = 0;
+        if (this.arenas != null) {
+            loaded += this.arenas.loadedCount();
+        }
+        if (this.dungeons != null) {
+            loaded += this.dungeons.loadedCount();
+        }
+        return loaded;
     }
 
     public KillTracker kills() {

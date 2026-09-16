@@ -8,7 +8,7 @@ alwaysApply: true
 Pensato per più arene/dungeon insieme, non per un player in creative. Il limite è Paper (un mondo per slot), non un timer extra.
 
 - Copy/delete mondo **async**. Load/unload, TP, API Mythic **sync**. Slot `COPYING` non è libero.
-- Cap **4 istanze per boss/dungeon** + `max-instances-global` in produzione (0 = no cap, non usarlo se hai tanti id).
+- Cap **4 per boss/dungeon** + tetto totale `config.yml` `instances.max-loaded` (default 16, 8 GB). Copy max 1.
 - Coda in RAM, niente poll: dequeue sullo unload.
 - SQL kill/milestone **async** + cache contatori online. Niente `SELECT` in death event sul main.
 - YAML in RAM al load/reload. Zero `getConfigurationSection` in timer/kill.

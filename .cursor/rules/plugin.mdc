@@ -11,7 +11,7 @@ Guida completa: `AGENTS.md`. JAR proprio, package `com.valaryrpg.arena`. Non è 
 - Brand e separator solo in `lang/messages.yml`.
 - Helper: `Tasks`, `MessageService`, `SoundService`, `ConsoleCommands`, `StorageManager`.
 - Async: copy/delete mondo, SQL kill/milestone. Sync: load/unload, TP, Mythic.
-- Max 4 istanze per boss/dungeon. Coda RAM, dequeue sull’unload. Niente `PlayerMoveEvent`.
+- Max 4 per boss/dungeon, tetto totale 16 (`config.yml` `instances.max-loaded`). Coda RAM, dequeue sull’unload. Niente `PlayerMoveEvent`.
 - Kill/milestone **per player**. Hologram TextDisplay solo su `ACTIVE`.
 - Cap `max-bosses` → stop spawner + TP fuori. Cooldown entry/between in `arenas.yml`.
 - Reward Core = `[console]` in `milestones.yml` / `dungeons.yml`. Mai compileOnly sul Core.

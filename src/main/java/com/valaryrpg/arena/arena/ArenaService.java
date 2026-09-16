@@ -123,6 +123,10 @@ public final class ArenaService {
         return party != null && (this.byParty.containsKey(party.id()) || this.queue.contains(party));
     }
 
+    public int loadedCount() {
+        return this.byWorld.size();
+    }
+
     public void start(Player leader, String bossId) {
         if (this.cleaning || this.shuttingDown) {
             this.plugin.messages().send(leader, "errors.arena-cleaning");
@@ -459,10 +463,10 @@ public final class ArenaService {
         }
         instance.loadedWorldName(world.getName());
         this.byLoadedName.put(world.getName(), instance);
-        world.setAutoSave(false);
-        createSpawners(instance, definition, world);
         Location spawn = definition.spawn.to(world);
         world.setSpawnLocation(spawn);
+        this.plugin.configs().instances().tune(world);
+        createSpawners(instance, definition, world);
         List<Player> online = this.plugin.parties().onlineMembers(instance.party());
         if (online.isEmpty()) {
             unload(instance, null);
@@ -672,6 +676,10 @@ public final class ArenaService {
     }
 
     private int freeSlot(String bossId) {
+        int cap = this.plugin.configs().instances().maxLoaded;
+        if (cap > 0 && this.plugin.loadedInstances() >= cap) {
+            return -1;
+        }
         if (this.catalog.maxGlobal() > 0 && busyCount() >= this.catalog.maxGlobal()) {
             return -1;
         }

@@ -28,6 +28,7 @@ public final class DungeonInstance {
     private BukkitTask durationTask;
     private BukkitTask hologramTask;
     private TextDisplay hologram;
+    private String hologramFingerprint = "";
     private boolean closingAfterWipe;
     private boolean completing;
     private int roomIndex;
@@ -111,6 +112,17 @@ public final class DungeonInstance {
 
     public void hologram(TextDisplay hologram) {
         this.hologram = hologram;
+        if (hologram == null) {
+            this.hologramFingerprint = "";
+        }
+    }
+
+    public String hologramFingerprint() {
+        return this.hologramFingerprint;
+    }
+
+    public void hologramFingerprint(String hologramFingerprint) {
+        this.hologramFingerprint = hologramFingerprint == null ? "" : hologramFingerprint;
     }
 
     public boolean closingAfterWipe() {

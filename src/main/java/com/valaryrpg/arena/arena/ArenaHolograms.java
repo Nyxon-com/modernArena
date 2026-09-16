@@ -60,7 +60,16 @@ public final class ArenaHolograms {
         if (display == null || display.isDead()) {
             return;
         }
-        display.text(lines(instance, definition));
+        String warmup = warmup(instance, definition);
+        String fingerprint = warmup
+                + "|" + instance.bossesKilled()
+                + "|" + instance.previousTopDamager()
+                + "|" + formatDamage(instance.previousTopDamage());
+        if (fingerprint.equals(instance.hologramFingerprint())) {
+            return;
+        }
+        instance.hologramFingerprint(fingerprint);
+        display.text(lines(instance, definition, warmup));
     }
 
     public void remove(ArenaInstance instance) {
@@ -75,11 +84,11 @@ public final class ArenaHolograms {
         }
     }
 
-    private Component lines(ArenaInstance instance, ArenaDefinition definition) {
+    private Component lines(ArenaInstance instance, ArenaDefinition definition, String warmup) {
         Map<String, String> placeholders = Map.of(
                 "boss", definition.displayName == null || definition.displayName.isEmpty()
                         ? definition.id : definition.displayName,
-                "warmup", warmup(instance, definition),
+                "warmup", warmup,
                 "boss-kills", Integer.toString(instance.bossesKilled()),
                 "max-bosses", definition.maxBosses > 0
                         ? Integer.toString(definition.maxBosses)

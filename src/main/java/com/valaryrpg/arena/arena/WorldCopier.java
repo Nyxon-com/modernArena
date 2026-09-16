@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -18,13 +19,16 @@ import java.util.function.Consumer;
 public final class WorldCopier {
 
     private final Tasks tasks;
+    private final int maxConcurrent;
     private final Object operationsMonitor = new Object();
     private final Object[] pathLocks = new Object[16];
+    private final ArrayDeque<Runnable> pending = new ArrayDeque<>();
     private volatile boolean accepting = true;
     private int activeOperations;
 
-    public WorldCopier(Tasks tasks) {
+    public WorldCopier(Tasks tasks, int maxConcurrent) {
         this.tasks = tasks;
+        this.maxConcurrent = Math.max(1, maxConcurrent);
         for (int index = 0; index < this.pathLocks.length; index++) {
             this.pathLocks[index] = new Object();
         }
@@ -84,6 +88,7 @@ public final class WorldCopier {
         long deadline = System.currentTimeMillis() + Math.max(0L, timeoutMillis);
         synchronized (this.operationsMonitor) {
             this.accepting = false;
+            this.pending.clear();
             while (this.activeOperations > 0) {
                 long remaining = deadline - System.currentTimeMillis();
                 if (remaining <= 0L) {
@@ -157,35 +162,37 @@ public final class WorldCopier {
             if (!this.accepting) {
                 return false;
             }
+            this.pending.addLast(operation);
+            pumpLocked();
+            return true;
         }
-        return this.tasks.async(() -> {
-            if (!beginOperation()) {
-                return;
-            }
-            try {
-                operation.run();
-            } finally {
-                endOperation();
-            }
-        });
     }
 
-    private boolean beginOperation() {
-        synchronized (this.operationsMonitor) {
-            if (!this.accepting) {
-                return false;
-            }
+    private void pumpLocked() {
+        while (this.accepting && this.activeOperations < this.maxConcurrent && !this.pending.isEmpty()) {
+            Runnable operation = this.pending.pollFirst();
             this.activeOperations++;
-            return true;
+            boolean started = this.tasks.async(() -> {
+                try {
+                    operation.run();
+                } finally {
+                    endOperation();
+                }
+            });
+            if (!started) {
+                this.activeOperations--;
+                break;
+            }
         }
     }
 
     private void endOperation() {
         synchronized (this.operationsMonitor) {
             this.activeOperations--;
-            if (this.activeOperations == 0) {
+            if (this.activeOperations == 0 && this.pending.isEmpty()) {
                 this.operationsMonitor.notifyAll();
             }
+            pumpLocked();
         }
     }
 

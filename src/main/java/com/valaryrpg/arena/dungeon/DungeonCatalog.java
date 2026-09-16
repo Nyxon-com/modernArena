@@ -36,7 +36,7 @@ public final class DungeonCatalog {
     private int entryCooldownSeconds;
     private int betweenCooldownSeconds;
     private boolean hologramEnabled = true;
-    private int hologramUpdateTicks = 20;
+    private int hologramUpdateTicks = 40;
     private double hologramOffsetY = 2.5;
 
     public DungeonCatalog(ValaryArenaPlugin plugin) {
@@ -67,7 +67,7 @@ public final class DungeonCatalog {
         this.leaveWorld = yaml.getString("leave.location.world", "world");
         this.leavePoint = point(yaml.getConfigurationSection("leave.location"), 0.5, 64, 0.5);
         this.hologramEnabled = yaml.getBoolean("settings.hologram.enabled", true);
-        this.hologramUpdateTicks = yaml.getInt("settings.hologram.update-ticks", 20);
+        this.hologramUpdateTicks = yaml.getInt("settings.hologram.update-ticks", 40);
         this.hologramOffsetY = yaml.getDouble("settings.hologram.offset-y", 2.5);
 
         ConfigurationSection section = yaml.getConfigurationSection("dungeons");
