@@ -146,6 +146,9 @@ public final class KillTracker {
             if (milestones.isEmpty()) {
                 return;
             }
+            int next = nextThreshold(milestones, kills);
+            int target = next > 0 ? next : lastThreshold(milestones);
+            this.plugin.tasks().sync(() -> progress(uuid, mobId, kills, target));
             for (MilestoneDefinition milestone : milestones) {
                 if (kills >= milestone.threshold
                         && this.repository.claim(uuid, mobId, milestone.threshold)) {
@@ -174,6 +177,19 @@ public final class KillTracker {
                 this.operationsMonitor.notifyAll();
             }
         }
+    }
+
+    private void progress(UUID uuid, String mobId, int kills, int threshold) {
+        Player player = Bukkit.getPlayer(uuid);
+        if (player == null || !player.isOnline()) {
+            return;
+        }
+        this.plugin.messages().send(player, "milestone.progress", Map.of(
+                "player", player.getName(),
+                "mob", label(mobId),
+                "kills", Integer.toString(kills),
+                "threshold", Integer.toString(Math.max(1, threshold))
+        ));
     }
 
     private void reward(UUID uuid, String mobId, int kills, MilestoneDefinition milestone) {
@@ -277,6 +293,13 @@ public final class KillTracker {
             }
         }
         return -1;
+    }
+
+    private int lastThreshold(List<MilestoneDefinition> milestones) {
+        if (milestones == null || milestones.isEmpty()) {
+            return 1;
+        }
+        return milestones.getLast().threshold;
     }
 
     private String label(String mobId) {

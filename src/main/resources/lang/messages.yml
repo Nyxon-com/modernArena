@@ -141,6 +141,7 @@ party:
   leader-passed: "{prefix}<gray><white>{player}</white> è il nuovo leader."
 
 milestone:
+  progress: "{prefix}<gray>Hai ucciso <white>[{kills}/{threshold}]</white> {mob}."
   reached: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white> (<white>{kills}</white> kill)."
   stats-header: "{prefix}<gray>Milestone di <white>{player}</white>:"
   stats-entry: "{prefix}<gray>{mob}: <white>{kills}</white> kill, prossimo <white>{next}</white>"
