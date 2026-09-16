@@ -3,7 +3,7 @@ package com.valaryrpg.arena.dungeon;
 import com.valaryrpg.arena.ValaryArenaPlugin;
 import com.valaryrpg.arena.arena.MythicSpawners;
 import com.valaryrpg.arena.arena.SlotState;
-import com.valaryrpg.arena.arena.SpawnerDefinition;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -11,7 +11,7 @@ import org.bukkit.entity.Player;
 import java.util.Locale;
 import java.util.Map;
 
-/** Stanza corrente: title, spawners, remaining, fill cubo. */
+/** Stanza corrente: title, pack Mythic (no spawner), remaining, fill cubo. */
 public final class DungeonRooms {
 
     private final ValaryArenaPlugin plugin;
@@ -42,9 +42,23 @@ public final class DungeonRooms {
         }
         instance.roomIndex(index);
         instance.deathsInRoom(0);
-        clearSpawners(instance);
+        instance.spawnedInRoom(0);
+        instance.packFires().clear();
+        stopPacks(instance);
         showIntro(instance, definition, room);
-        createSpawners(instance, definition, room, world);
+        for (DungeonPack pack : room.packs) {
+            if (pack.trigger == DungeonPackTrigger.IMMEDIATE) {
+                fire(instance, pack, world);
+            }
+        }
+        if (room.hasRadiusPacks()) {
+            int ticks = this.catalog.proximityCheckTicks();
+            instance.packTask(this.plugin.tasks().repeat(
+                    () -> tickRadius(instance, definition, world),
+                    ticks,
+                    ticks
+            ));
+        }
         for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
             if (instance.players().contains(member.getUniqueId())) {
                 this.plugin.sounds().play(member, "dungeon-room");
@@ -82,24 +96,92 @@ public final class DungeonRooms {
         if (room.objective == DungeonObjective.BOSS) {
             return alive;
         }
-        return Math.max(alive, Math.max(0, room.expectedMobs() - instance.deathsInRoom()));
+        int pending = 0;
+        for (DungeonPack pack : room.packs) {
+            int fired = instance.packFires().getOrDefault(pack.id, 0);
+            pending += Math.max(0, pack.times - fired) * pack.amount;
+        }
+        return pending + alive;
     }
 
     public void refreshSpawners(DungeonInstance instance, DungeonDefinition definition, World world) {
-        DungeonRoom room = definition.room(instance.roomIndex());
-        if (room == null || instance.completing()) {
+        // i pack non sono spawner Mythic: un reload non li riduplica
+    }
+
+    public void stopPacks(DungeonInstance instance) {
+        if (instance.packTask() != null) {
+            instance.packTask().cancel();
+            instance.packTask(null);
+        }
+    }
+
+    private void tickRadius(DungeonInstance instance, DungeonDefinition definition, World world) {
+        if (instance.state() != SlotState.ACTIVE || instance.completing()) {
             return;
         }
-        clearSpawners(instance);
-        createSpawners(instance, definition, room, world);
+        DungeonRoom room = definition.room(instance.roomIndex());
+        if (room == null) {
+            return;
+        }
+        for (DungeonPack pack : room.packs) {
+            if (pack.trigger != DungeonPackTrigger.RADIUS) {
+                continue;
+            }
+            int fired = instance.packFires().getOrDefault(pack.id, 0);
+            if (fired >= pack.times) {
+                continue;
+            }
+            if (this.mythic.countInWorld(world, pack::matches) > 0) {
+                continue;
+            }
+            if (!near(instance, pack.point.to(world), pack.radius)) {
+                continue;
+            }
+            fire(instance, pack, world);
+        }
+    }
+
+    private boolean near(DungeonInstance instance, Location point, double radius) {
+        double range = Math.max(1D, radius);
+        double rangeSq = range * range;
+        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
+            if (!instance.players().contains(member.getUniqueId())) {
+                continue;
+            }
+            if (!member.getWorld().equals(point.getWorld())) {
+                continue;
+            }
+            if (member.getLocation().distanceSquared(point) <= rangeSq) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void fire(DungeonInstance instance, DungeonPack pack, World world) {
+        int fired = instance.packFires().getOrDefault(pack.id, 0);
+        if (fired >= pack.times) {
+            return;
+        }
+        int spawned = this.mythic.spawn(pack.mob, pack.point.to(world), pack.amount, pack.scatter, pack.level);
+        instance.packFires().put(pack.id, fired + 1);
+        instance.spawnedInRoom(instance.spawnedInRoom() + spawned);
+        if (spawned == 0) {
+            this.plugin.getLogger().warning("Pack dungeon senza spawn: " + pack.mob + " (" + pack.id + ")");
+        }
     }
 
     private boolean cleared(DungeonInstance instance, DungeonRoom room, World world) {
-        return instance.deathsInRoom() >= room.expectedMobs() && alive(room, world) == 0;
+        for (DungeonPack pack : room.packs) {
+            if (instance.packFires().getOrDefault(pack.id, 0) < pack.times) {
+                return false;
+            }
+        }
+        return instance.deathsInRoom() >= instance.spawnedInRoom() && alive(room, world) == 0;
     }
 
     private void clear(DungeonInstance instance, DungeonDefinition definition, World world, DungeonRoom room) {
-        clearSpawners(instance);
+        stopPacks(instance);
         if (room.wall != null) {
             fill(room.wall, world);
         }
@@ -133,28 +215,6 @@ public final class DungeonRooms {
                     placeholders
             );
         }
-    }
-
-    private void createSpawners(
-            DungeonInstance instance,
-            DungeonDefinition definition,
-            DungeonRoom room,
-            World world
-    ) {
-        for (SpawnerDefinition spawner : room.spawners) {
-            String name = this.catalog.spawnerName(definition.id, instance.slot(), room.id, spawner.id);
-            String created = this.mythic.create(name, spawner.point.to(world), spawner);
-            if (created != null) {
-                instance.spawnerNames().add(created);
-            }
-        }
-    }
-
-    private void clearSpawners(DungeonInstance instance) {
-        for (String name : instance.spawnerNames()) {
-            this.mythic.remove(name);
-        }
-        instance.spawnerNames().clear();
     }
 
     private void fill(DungeonWall wall, World world) {

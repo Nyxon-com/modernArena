@@ -1,7 +1,6 @@
 package com.valaryrpg.arena.dungeon;
 
 import com.valaryrpg.arena.arena.Point;
-import com.valaryrpg.arena.arena.SpawnerDefinition;
 
 import java.util.List;
 
@@ -14,7 +13,7 @@ public final class DungeonRoom {
     public final DungeonIntro intro;
     public final DungeonWall wall;
     public final String bossMob;
-    public final List<SpawnerDefinition> spawners;
+    public final List<DungeonPack> packs;
     public final List<String> commands;
 
     public DungeonRoom(
@@ -24,7 +23,7 @@ public final class DungeonRoom {
             DungeonIntro intro,
             DungeonWall wall,
             String bossMob,
-            List<SpawnerDefinition> spawners,
+            List<DungeonPack> packs,
             List<String> commands
     ) {
         this.id = id;
@@ -33,7 +32,7 @@ public final class DungeonRoom {
         this.intro = intro;
         this.wall = wall;
         this.bossMob = bossMob == null ? "" : bossMob;
-        this.spawners = List.copyOf(spawners);
+        this.packs = List.copyOf(packs);
         this.commands = commands == null ? List.of() : List.copyOf(commands);
     }
 
@@ -41,8 +40,8 @@ public final class DungeonRoom {
         if (mythicName == null || mythicName.isBlank()) {
             return false;
         }
-        for (SpawnerDefinition spawner : this.spawners) {
-            if (spawner.mob != null && !spawner.mob.isBlank() && spawner.mob.equalsIgnoreCase(mythicName)) {
+        for (DungeonPack pack : this.packs) {
+            if (pack.matches(mythicName)) {
                 return true;
             }
         }
@@ -61,9 +60,18 @@ public final class DungeonRoom {
 
     public int expectedMobs() {
         int total = 0;
-        for (SpawnerDefinition spawner : this.spawners) {
-            total += Math.max(0, spawner.maxMobs);
+        for (DungeonPack pack : this.packs) {
+            total += pack.expected();
         }
         return total;
+    }
+
+    public boolean hasRadiusPacks() {
+        for (DungeonPack pack : this.packs) {
+            if (pack.trigger == DungeonPackTrigger.RADIUS) {
+                return true;
+            }
+        }
+        return false;
     }
 }

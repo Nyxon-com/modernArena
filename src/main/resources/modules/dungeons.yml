@@ -21,6 +21,7 @@ settings:
     enabled: true
     update-ticks: 40
     offset-y: 2.5
+  proximity-check-ticks: 10
 
 leave:
   command: spawn
@@ -73,18 +74,19 @@ dungeons:
             y: 66
             z: 6
           set-block: air
-        spawners:
+        mobs:
           pack:
-            source-spawner: ExampleSpawner
             mob: ExampleMob
+            trigger: immediate
+            amount: 10
+            times: 1
+            scatter: 2
+            level: 1
             x: 4.5
             y: 64.0
             z: 4.5
             yaw: 0.0
             pitch: 0.0
-            cooldown-seconds: 0
-            max-mobs: 10
-            spawn-radius: 2
       boss:
         objective: boss
         intro:
@@ -94,17 +96,19 @@ dungeons:
           fade-in-ticks: 10
           stay-ticks: 40
           fade-out-ticks: 10
-        spawners:
+        mobs:
           boss:
-            source-spawner: ExampleBossSpawner
             mob: ExampleBoss
+            trigger: radius
+            radius: 12
+            amount: 1
+            times: 1
+            scatter: 0
+            level: 1
             x: 20.5
             y: 64.0
             z: 20.5
             yaw: 0.0
             pitch: 0.0
-            cooldown-seconds: 0
-            max-mobs: 1
-            spawn-radius: 0
         commands:
           - "[console] kit starter {player}"

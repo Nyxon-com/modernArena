@@ -28,6 +28,29 @@ public final class MythicSpawners {
         this.logger = plugin.getLogger();
     }
 
+    public int spawn(String mob, Location location, int amount, double scatter, int level) {
+        if (mob == null || mob.isBlank() || location == null || amount <= 0) {
+            return 0;
+        }
+        int spawned = 0;
+        var api = MythicBukkit.inst().getAPIHelper();
+        for (int index = 0; index < amount; index++) {
+            Location at = location.clone();
+            if (scatter > 0D) {
+                at.add((Math.random() - 0.5D) * 2D * scatter, 0D, (Math.random() - 0.5D) * 2D * scatter);
+            }
+            try {
+                if (api.spawnMythicMob(mob, at, Math.max(1, level)) != null) {
+                    spawned++;
+                }
+            } catch (Exception exception) {
+                this.logger.warning("Spawn Mythic fallito: " + mob + " — " + exception.getMessage());
+                break;
+            }
+        }
+        return spawned;
+    }
+
     public String create(String name, Location location, SpawnerDefinition definition) {
         SpawnerManager manager = MythicBukkit.inst().getSpawnerManager();
         remove(name);

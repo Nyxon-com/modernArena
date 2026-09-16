@@ -7,8 +7,10 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -33,6 +35,9 @@ public final class DungeonInstance {
     private boolean completing;
     private int roomIndex;
     private int deathsInRoom;
+    private int spawnedInRoom;
+    private final Map<String, Integer> packFires = new HashMap<>();
+    private BukkitTask packTask;
 
     public DungeonInstance(String dungeonId, int slot, String worldName, Path folder, Party party) {
         this.dungeonId = dungeonId;
@@ -155,6 +160,26 @@ public final class DungeonInstance {
 
     public void deathsInRoom(int deathsInRoom) {
         this.deathsInRoom = deathsInRoom;
+    }
+
+    public int spawnedInRoom() {
+        return this.spawnedInRoom;
+    }
+
+    public void spawnedInRoom(int spawnedInRoom) {
+        this.spawnedInRoom = spawnedInRoom;
+    }
+
+    public Map<String, Integer> packFires() {
+        return this.packFires;
+    }
+
+    public BukkitTask packTask() {
+        return this.packTask;
+    }
+
+    public void packTask(BukkitTask packTask) {
+        this.packTask = packTask;
     }
 
     public boolean empty() {

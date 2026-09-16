@@ -8,6 +8,7 @@ Repo: `Nyxon-com/ValaryRPGarena-instances` (privata). Artifact: `ValaryRPG-Arena
 ## Stack
 
 Paper 1.21.11, Java 21, Gradle Shadow, MiniMessage, HikariCP (SQLite / MySQL / MariaDB).
+Il JAR imbusta SQL (serve alle kill). I native SQLite inutili (Android/Mac/ARM) sono esclusi: il peso residuo è sqlite-jdbc + MariaDB, non il codice plugin.
 Hard-depend: **MythicMobs**. Soft: ValaryRPG-Core, Vault, PlaceholderAPI, Multiverse-Core.
 Mai `compileOnly` sul Core: kit/eco = `[console] …` in YAML.
 Hologram = `TextDisplay` Paper, niente plugin extra.
@@ -33,7 +34,7 @@ In `lang/messages.yml` → `brand.*`. Mai hardcodare in Java.
 | `modules/arenas.yml` | Slot, coda, leave, boss, spawners, hologram, max-bosses, cooldown ingresso |
 | `modules/party.yml` | `invite-timeout-seconds`, `max-size` |
 | `modules/milestones.yml` | Soglie per Mythic internal name **o** id boss |
-| `modules/dungeons.yml` | Slot, coda, leave, dungeon, stanze, spawners, wall, intro, hologram |
+| `modules/dungeons.yml` | Slot, coda, leave, dungeon, stanze, pack Mythic, wall, intro, hologram |
 
 Testi, permessi, suoni, delay, coord, cap, nomi spawner: **solo YAML**. Se manca un testo, aggiungi la chiave, non un sistema nuovo.
 
@@ -55,7 +56,12 @@ Testi, permessi, suoni, delay, coord, cap, nomi spawner: **solo YAML**. Se manca
 - `settings.world-prefix` — `dungeon_` (Core/Multiverse devono ignorarlo come `arena_`)
 - `settings.max-instances-per-dungeon` (default 4), `max-instances-global`, `complete-leave-ticks`
 - `dungeons.<id>.rooms` — ordine YAML. Stanza 1: `spawn` TP. `objective: clear-mobs | boss`
-- `rooms.*.spawners` — come arene (`source-spawner` + `mob` + xyz + `max-mobs`)
+- `rooms.*.mobs.<id>` — **niente spawner Mythic**. Spawn diretto:
+  - `mob` internal name Mythic
+  - `trigger: immediate` (allo start stanza) **o** `radius` (player vivo a ≤ `radius` blocchi; check ogni `settings.proximity-check-ticks`, no `PlayerMoveEvent`)
+  - `amount` mob per fire, `times` quante volte quel punto può sparare (default 1 = una tantum)
+  - `scatter`, `level`, xyz
+- `rooms.*.spawners` — accettato come alias di `mobs` (`max-mobs` → `amount`). Non clona spawner Mythic.
 - `rooms.*.wall.from/to` + `set-block` (default air) — fill sync al clear, no restore
 - `rooms.*.intro` — title/subtitle/actionbar MiniMessage + fade ticks
 - Ultima stanza `objective: boss` + `commands: ["[console] …"]`
@@ -88,7 +94,7 @@ com.valaryrpg.arena
   party/                     Party, PartyService
   arena/                     Catalog, Service, Queue, Instance, WorldCopier,
                              MythicSpawners, Listener, Holograms, Cooldowns
-  dungeon/                   Catalog, Service, Rooms, Instance, Command-side Listener, Holograms
+  dungeon/                   Catalog, Service, Rooms, Packs, Instance, Listener, Holograms
   milestone/                 MilestoneCatalog, KillTracker
 ```
 
@@ -111,10 +117,10 @@ Riaggancia `Tasks`, `messages()`, `sounds()`, `console()`, `storage`. Non duplic
 
 1. Stesso flusso slot/coda/copy async delle arene. Mondi `dungeon_<id>_<slot>` in `plugins/ValaryRPG-Arena/instances/`.
 2. Occupato in arena o dungeon → rifiuto. Party condiviso.
-3. TP spawn stanza 1 → `ACTIVE` → title intro → **solo** spawners di quella stanza.
-4. `MythicMobDeathEvent` nel mondo dungeon: se mob della stanza, ricalcola alive. `clear-mobs` e remaining 0 → halt spawner → fill wall → stanza successiva.
+3. TP spawn stanza 1 → `ACTIVE` → title intro → pack `immediate` spawnano; pack `radius` aspettano il player.
+4. `MythicMobDeathEvent` nel mondo dungeon: se mob della stanza, ricalcola. Pack esausti + alive 0 → fill wall → stanza successiva. Niente spawner Mythic.
 5. Ultima stanza `objective: boss`: alla kill tracciata, `[console]` YAML, messaggio, dopo `complete-leave-ticks` TP e unload.
-6. Morte = eliminato come in arena. 0 vivi → chiude. Niente `PlayerMoveEvent`.
+6. Morte = eliminato come in arena. 0 vivi → chiude. Proximity = timer su slot ACTIVE, niente `PlayerMoveEvent`.
 
 ### Leave / morte / cap
 

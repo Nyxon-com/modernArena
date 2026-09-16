@@ -3,7 +3,6 @@ package com.valaryrpg.arena.dungeon;
 import com.valaryrpg.arena.ValaryArenaPlugin;
 import com.valaryrpg.arena.arena.HologramSettings;
 import com.valaryrpg.arena.arena.Point;
-import com.valaryrpg.arena.arena.SpawnerDefinition;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -38,6 +37,7 @@ public final class DungeonCatalog {
     private boolean hologramEnabled = true;
     private int hologramUpdateTicks = 40;
     private double hologramOffsetY = 2.5;
+    private int proximityCheckTicks = 10;
 
     public DungeonCatalog(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
@@ -69,6 +69,7 @@ public final class DungeonCatalog {
         this.hologramEnabled = yaml.getBoolean("settings.hologram.enabled", true);
         this.hologramUpdateTicks = yaml.getInt("settings.hologram.update-ticks", 40);
         this.hologramOffsetY = yaml.getDouble("settings.hologram.offset-y", 2.5);
+        this.proximityCheckTicks = Math.max(5, yaml.getInt("settings.proximity-check-ticks", 10));
 
         ConfigurationSection section = yaml.getConfigurationSection("dungeons");
         if (section == null) {
@@ -156,6 +157,10 @@ public final class DungeonCatalog {
         return this.completeLeaveTicks;
     }
 
+    public int proximityCheckTicks() {
+        return this.proximityCheckTicks;
+    }
+
     public String leaveCommand() {
         return this.leaveCommand;
     }
@@ -181,11 +186,11 @@ public final class DungeonCatalog {
             if (node == null) {
                 continue;
             }
-            List<SpawnerDefinition> spawners = spawners(node.getConfigurationSection("spawners"));
+            List<DungeonPack> packs = packs(node);
             DungeonObjective objective = DungeonObjective.parse(node.getString("objective", "clear-mobs"));
             String bossMob = node.getString("boss-mob", "");
-            if (bossMob.isBlank() && objective == DungeonObjective.BOSS && !spawners.isEmpty()) {
-                bossMob = spawners.getFirst().mob == null ? "" : spawners.getFirst().mob;
+            if (bossMob.isBlank() && objective == DungeonObjective.BOSS && !packs.isEmpty()) {
+                bossMob = packs.getFirst().mob;
             }
             rooms.add(new DungeonRoom(
                     id,
@@ -194,34 +199,41 @@ public final class DungeonCatalog {
                     intro(node.getConfigurationSection("intro")),
                     wall(node.getConfigurationSection("wall")),
                     bossMob,
-                    spawners,
+                    packs,
                     node.getStringList("commands")
             ));
         }
         return rooms;
     }
 
-    private List<SpawnerDefinition> spawners(ConfigurationSection section) {
-        List<SpawnerDefinition> spawners = new ArrayList<>();
+    private List<DungeonPack> packs(ConfigurationSection room) {
+        ConfigurationSection section = room.getConfigurationSection("mobs");
         if (section == null) {
-            return spawners;
+            section = room.getConfigurationSection("spawners");
+        }
+        List<DungeonPack> packs = new ArrayList<>();
+        if (section == null) {
+            return packs;
         }
         for (String id : section.getKeys(false)) {
             ConfigurationSection node = section.getConfigurationSection(id);
             if (node == null) {
                 continue;
             }
-            spawners.add(new SpawnerDefinition(
+            int amount = node.contains("amount") ? node.getInt("amount") : node.getInt("max-mobs", 1);
+            packs.add(new DungeonPack(
                     id,
-                    node.getString("source-spawner", ""),
                     node.getString("mob", id),
                     point(node, 0, 64, 0),
-                    node.getInt("cooldown-seconds", 0),
-                    node.getInt("max-mobs", 1),
-                    node.getInt("spawn-radius", 0)
+                    DungeonPackTrigger.parse(node.getString("trigger", "immediate")),
+                    node.getDouble("radius", 8D),
+                    amount,
+                    node.getInt("times", 1),
+                    node.getDouble("scatter", node.getDouble("spawn-radius", 0D)),
+                    node.getInt("level", 1)
             ));
         }
-        return spawners;
+        return packs;
     }
 
     private DungeonIntro intro(ConfigurationSection node) {

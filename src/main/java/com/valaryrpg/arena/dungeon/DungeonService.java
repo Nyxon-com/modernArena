@@ -335,6 +335,7 @@ public final class DungeonService {
             return;
         }
         instance.completing(true);
+        this.rooms.stopPacks(instance);
         if (instance.durationTask() != null) {
             instance.durationTask().cancel();
             instance.durationTask(null);
@@ -392,6 +393,7 @@ public final class DungeonService {
         this.queue.clear();
         for (DungeonInstance instance : new ArrayList<>(this.byWorld.values())) {
             instance.state(SlotState.UNLOADING);
+            this.rooms.stopPacks(instance);
             if (instance.durationTask() != null) {
                 instance.durationTask().cancel();
                 instance.durationTask(null);
@@ -555,6 +557,7 @@ public final class DungeonService {
             return;
         }
         instance.state(SlotState.UNLOADING);
+        this.rooms.stopPacks(instance);
         if (instance.durationTask() != null) {
             instance.durationTask().cancel();
             instance.durationTask(null);
