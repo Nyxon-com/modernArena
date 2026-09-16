@@ -1,19 +1,23 @@
 ---
-description: Ottimizzazione runtime — 4 istanze arena, I/O async, zero lavoro a vuoto
+description: Ottimizzazione runtime — tante istanze, I/O async, zero lavoro a vuoto
 alwaysApply: true
 ---
 
 # Ottimizzazione
 
-Pensato per più arene insieme, non per un player in creative.
+Pensato per più arene/dungeon insieme, non per un player in creative. Il limite è Paper (un mondo per slot), non un timer extra.
 
 - Copy/delete mondo **async**. Load/unload, TP, API Mythic **sync**. Slot `COPYING` non è libero.
-- Cap **4 istanze per boss** + `max-instances-global` se serve. Coda in RAM, niente poll: dequeue sullo unload.
-- SQL kill/milestone **async** + cache contatori online. Niente `SELECT` in death event sul main. Query per `(uuid, mob_id)` o lista kill di un uuid (comandi stats).
-- YAML boss/spawner/milestone/holo in memoria al load/reload. Zero `getConfigurationSection` in timer/kill.
+- Cap **4 istanze per boss/dungeon** + `max-instances-global` in produzione (0 = no cap, non usarlo se hai tanti id).
+- Coda in RAM, niente poll: dequeue sullo unload.
+- SQL kill/milestone **async** + cache contatori online. Niente `SELECT` in death event sul main.
+- YAML in RAM al load/reload. Zero `getConfigurationSection` in timer/kill.
 - Niente `PlayerMoveEvent`. Hologram `repeat` solo su slot `ACTIVE`, cancel allo unload.
-- Template **unloaded** in copy. Enable: cancella `arena_*` e `dungeon_*` orfani e spawners istanza Mythic.
-- Spawner solo nel mondo istanza; allo unload **deregistra**. Niente mob nel template.
+- Lookup istanza da World **O(1)** (cartella / nome caricato). Niente loop su tutte le istanze per hit.
+- Mythic: lookup per UUID/entity. Niente `getActiveMobs()` globale in damage/holo. Alive = living del **mondo istanza**.
+- Template **unloaded**. Enable: cancella `arena_*` e `dungeon_*` orfani e spawners istanza Mythic.
+- Spawner solo nel mondo istanza; allo unload **deregistra** e despawn **quel** mondo.
 - Timer solo su slot `ACTIVE`. Unload: despawn + **unloadWorld** + delete cartella solo se nessun World la usa.
 - Disable: unload sync, niente delete cartelle (cleanup al prossimo enable).
 - Core `worlds.yml` e Multiverse non devono importare `arena_*` / `dungeon_*`.
+- SQLite = test. Tante kill → MySQL/MariaDB. Muri dungeon = cubo piccolo.

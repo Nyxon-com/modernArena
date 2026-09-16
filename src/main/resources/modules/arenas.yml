@@ -12,7 +12,7 @@ settings:
   world-name-format: "arena_{boss}_{slot}"
   spawner-name-format: "arena_{boss}_{slot}_{spawner}"
   max-instances-per-boss: 4
-  # 0 = nessun cap globale oltre al per-boss
+  # 0 = nessun cap globale oltre al per-boss. In produzione metti un numero (RAM/TPS).
   max-instances-global: 0
   copy-exclude:
     - uid.dat

@@ -9,12 +9,14 @@ import io.lumine.mythic.core.spawning.spawners.SpawnerManager;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
 
 /** Crea e toglie spawners Mythic solo nel mondo istanza. */
@@ -87,25 +89,42 @@ public final class MythicSpawners {
     }
 
     public void despawnWorld(World world) {
-        for (ActiveMob mob : new ArrayList<>(MythicBukkit.inst().getMobManager().getActiveMobs())) {
-            Entity entity = bukkitEntity(mob);
-            if (entity == null || !entity.getWorld().equals(world)) {
+        for (Entity entity : world.getEntities()) {
+            if (entity instanceof Player) {
                 continue;
             }
-            mob.remove();
-            entity.remove();
-        }
-        for (Entity entity : world.getEntities()) {
-            if (!(entity instanceof Player)) {
-                entity.remove();
+            ActiveMob mob = activeOf(entity);
+            if (mob != null) {
+                mob.remove();
             }
+            entity.remove();
         }
     }
 
-    private Entity bukkitEntity(ActiveMob mob) {
-        if (mob.getEntity() == null) {
+    public ActiveMob activeOf(Entity entity) {
+        if (entity == null) {
             return null;
         }
-        return mob.getEntity().getBukkitEntity();
+        return MythicBukkit.inst().getMobManager().getActiveMob(entity.getUniqueId()).orElse(null);
+    }
+
+    public int countInWorld(World world, Predicate<String> mythicName) {
+        if (world == null || mythicName == null) {
+            return 0;
+        }
+        int alive = 0;
+        for (LivingEntity entity : world.getLivingEntities()) {
+            if (entity.isDead()) {
+                continue;
+            }
+            ActiveMob mob = activeOf(entity);
+            if (mob == null || mob.getType() == null) {
+                continue;
+            }
+            if (mythicName.test(mob.getType().getInternalName())) {
+                alive++;
+            }
+        }
+        return alive;
     }
 }

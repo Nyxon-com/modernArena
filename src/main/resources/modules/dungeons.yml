@@ -9,6 +9,7 @@ settings:
   world-name-format: "dungeon_{dungeon}_{slot}"
   spawner-name-format: "dungeon_{dungeon}_{slot}_{room}_{spawner}"
   max-instances-per-dungeon: 4
+  # 0 = nessun cap globale oltre al per-dungeon. In produzione metti un numero (RAM/TPS).
   max-instances-global: 0
   copy-exclude:
     - uid.dat

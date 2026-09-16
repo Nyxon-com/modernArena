@@ -34,6 +34,8 @@ public final class DungeonService {
     private final DungeonHolograms holograms;
     private final ArenaCooldowns joinCooldowns;
     private final Map<String, DungeonInstance> byWorld = new HashMap<>();
+    private final Map<Path, DungeonInstance> byFolder = new HashMap<>();
+    private final Map<String, DungeonInstance> byLoadedName = new HashMap<>();
     private final Map<UUID, DungeonInstance> byPlayer = new HashMap<>();
     private final Map<UUID, DungeonInstance> byParty = new HashMap<>();
     private final Map<UUID, Party> reservedByPlayer = new HashMap<>();
@@ -73,17 +75,15 @@ public final class DungeonService {
         if (world == null) {
             return null;
         }
-        Path folder = world.getWorldFolder().toPath().toAbsolutePath().normalize();
-        for (DungeonInstance instance : this.byWorld.values()) {
-            if (instance.folder().toAbsolutePath().normalize().equals(folder)) {
-                return instance;
-            }
-            String loaded = instance.loadedWorldName();
-            if (world.getName().equals(loaded) || world.getName().equals(instance.worldName())) {
-                return instance;
-            }
+        DungeonInstance loaded = this.byLoadedName.get(world.getName());
+        if (loaded != null) {
+            return loaded;
         }
-        return null;
+        DungeonInstance named = this.byWorld.get(world.getName());
+        if (named != null) {
+            return named;
+        }
+        return this.byFolder.get(world.getWorldFolder().toPath().toAbsolutePath().normalize());
     }
 
     public boolean occupies(UUID uuid) {
@@ -372,6 +372,8 @@ public final class DungeonService {
             }
         }
         this.byWorld.clear();
+        this.byFolder.clear();
+        this.byLoadedName.clear();
         this.byPlayer.clear();
         this.byParty.clear();
         this.reservedByPlayer.clear();
@@ -404,6 +406,8 @@ public final class DungeonService {
             }
         }
         this.byWorld.clear();
+        this.byFolder.clear();
+        this.byLoadedName.clear();
         this.byPlayer.clear();
         this.byParty.clear();
         this.reservedByPlayer.clear();
@@ -444,6 +448,7 @@ public final class DungeonService {
         }
         DungeonInstance instance = new DungeonInstance(definition.id, slot, worldName, destination, party);
         this.byWorld.put(worldName, instance);
+        this.byFolder.put(destination.toAbsolutePath().normalize(), instance);
         this.byParty.put(party.id(), instance);
         World loadedTemplate = Bukkit.getWorld(definition.template);
         if (loadedTemplate != null) {
@@ -453,6 +458,7 @@ public final class DungeonService {
         this.copier.copy(source, destination, this.catalog.copyExclude(), () -> activate(instance, definition), exception -> {
             this.plugin.getLogger().warning("Copia mondo dungeon fallita: " + exception.getMessage());
             this.byWorld.remove(worldName);
+            this.byFolder.remove(destination.toAbsolutePath().normalize());
             this.byParty.remove(party.id());
             clearReservations(party);
             for (Player member : this.plugin.parties().onlineMembers(party)) {
@@ -477,6 +483,7 @@ public final class DungeonService {
             return;
         }
         instance.loadedWorldName(world.getName());
+        this.byLoadedName.put(world.getName(), instance);
         world.setAutoSave(false);
         Location spawn = definition.entrySpawn().to(world);
         world.setSpawnLocation(spawn);
@@ -585,6 +592,10 @@ public final class DungeonService {
         if (world != null) {
             unloadLoadedWorld(world);
         }
+        String loaded = instance.loadedWorldName();
+        if (loaded != null) {
+            this.byLoadedName.remove(loaded, instance);
+        }
         instance.loadedWorldName(null);
         deleteFolderWhenSafe(instance);
     }
@@ -622,6 +633,7 @@ public final class DungeonService {
 
     private void release(DungeonInstance instance) {
         this.byWorld.remove(instance.worldName(), instance);
+        this.byFolder.remove(instance.folder().toAbsolutePath().normalize(), instance);
         this.byParty.remove(instance.party().id(), instance);
         clearReservations(instance.party());
     }

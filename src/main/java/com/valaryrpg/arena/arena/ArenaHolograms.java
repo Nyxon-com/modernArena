@@ -1,16 +1,12 @@
 package com.valaryrpg.arena.arena;
 
 import com.valaryrpg.arena.ValaryArenaPlugin;
-import io.lumine.mythic.bukkit.MythicBukkit;
-import io.lumine.mythic.core.mobs.ActiveMob;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Display;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.TextDisplay;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -128,21 +124,7 @@ public final class ArenaHolograms {
         if (world == null) {
             return 0;
         }
-        int alive = 0;
-        for (ActiveMob mob : new ArrayList<>(MythicBukkit.inst().getMobManager().getActiveMobs())) {
-            if (mob.getEntity() == null) {
-                continue;
-            }
-            Entity entity = mob.getEntity().getBukkitEntity();
-            if (entity == null || !entity.getWorld().equals(world) || entity.isDead()) {
-                continue;
-            }
-            String name = mob.getType() == null ? "" : mob.getType().getInternalName();
-            if (this.catalog.tracksMob(definition, name)) {
-                alive++;
-            }
-        }
-        return alive;
+        return this.mythic.countInWorld(world, name -> this.catalog.tracksMob(definition, name));
     }
 
     private String formatDamage(double damage) {

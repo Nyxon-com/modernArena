@@ -1,8 +1,4 @@
-# =============================================================================
-# Storage proprio del plugin. Tabelle: {table-prefix}kills, {table-prefix}milestones
-# =============================================================================
-
-type: sqlite
+# sqlite = un file, una connessione: ok in test. Produzione con tante kill: mysql/mariadb.
 
 sqlite:
   file: arena.db

@@ -102,18 +102,7 @@ public final class ArenaListener implements Listener {
         if (attacker == null || !instance.players().contains(attacker.getUniqueId())) {
             return;
         }
-        var manager = MythicBukkit.inst().getMobManager();
-        ActiveMob active = null;
-        for (ActiveMob candidate : manager.getActiveMobs()) {
-            if (candidate.getEntity() == null) {
-                continue;
-            }
-            Entity bukkit = candidate.getEntity().getBukkitEntity();
-            if (bukkit != null && bukkit.getUniqueId().equals(victim.getUniqueId())) {
-                active = candidate;
-                break;
-            }
-        }
+        ActiveMob active = MythicBukkit.inst().getMobManager().getActiveMob(victim.getUniqueId()).orElse(null);
         if (active == null) {
             return;
         }

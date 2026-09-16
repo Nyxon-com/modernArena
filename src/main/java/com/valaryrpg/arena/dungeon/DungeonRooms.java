@@ -4,14 +4,10 @@ import com.valaryrpg.arena.ValaryArenaPlugin;
 import com.valaryrpg.arena.arena.MythicSpawners;
 import com.valaryrpg.arena.arena.SlotState;
 import com.valaryrpg.arena.arena.SpawnerDefinition;
-import io.lumine.mythic.bukkit.MythicBukkit;
-import io.lumine.mythic.core.mobs.ActiveMob;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
 
@@ -176,20 +172,6 @@ public final class DungeonRooms {
     }
 
     private int alive(DungeonRoom room, World world) {
-        int alive = 0;
-        for (ActiveMob mob : new ArrayList<>(MythicBukkit.inst().getMobManager().getActiveMobs())) {
-            if (mob.getEntity() == null) {
-                continue;
-            }
-            Entity entity = mob.getEntity().getBukkitEntity();
-            if (entity == null || !entity.getWorld().equals(world) || entity.isDead()) {
-                continue;
-            }
-            String name = mob.getType() == null ? "" : mob.getType().getInternalName();
-            if (room.matchesMob(name)) {
-                alive++;
-            }
-        }
-        return alive;
+        return this.mythic.countInWorld(world, room::matchesMob);
     }
 }
