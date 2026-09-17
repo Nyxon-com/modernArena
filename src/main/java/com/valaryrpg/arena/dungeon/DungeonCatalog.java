@@ -47,6 +47,9 @@ public final class DungeonCatalog {
     private int waveDelaySeconds;
     private boolean waveRequireClear = true;
     private boolean waveHighlightLast = true;
+    private int waveAnnounceFadeInTicks = 10;
+    private int waveAnnounceStayTicks = 40;
+    private int waveAnnounceFadeOutTicks = 10;
 
     public DungeonCatalog(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
@@ -94,6 +97,9 @@ public final class DungeonCatalog {
                 yaml.getBoolean("settings.wave-require-clear", true)
         );
         this.waveHighlightLast = yaml.getBoolean("settings.waves.highlight-last", true);
+        this.waveAnnounceFadeInTicks = Math.max(0, yaml.getInt("settings.waves.announce-fade-in-ticks", 10));
+        this.waveAnnounceStayTicks = Math.max(1, yaml.getInt("settings.waves.announce-stay-ticks", 40));
+        this.waveAnnounceFadeOutTicks = Math.max(0, yaml.getInt("settings.waves.announce-fade-out-ticks", 10));
 
         ConfigurationSection section = yaml.getConfigurationSection("dungeons");
         if (section == null) {
@@ -195,6 +201,18 @@ public final class DungeonCatalog {
 
     public boolean waveHighlightLast() {
         return this.waveHighlightLast;
+    }
+
+    public int waveAnnounceFadeInTicks() {
+        return this.waveAnnounceFadeInTicks;
+    }
+
+    public int waveAnnounceStayTicks() {
+        return this.waveAnnounceStayTicks;
+    }
+
+    public int waveAnnounceFadeOutTicks() {
+        return this.waveAnnounceFadeOutTicks;
     }
 
     public double spawnSafeRadius() {

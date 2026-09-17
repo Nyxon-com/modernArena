@@ -63,7 +63,7 @@ public final class DungeonRooms {
             }
         }
         if (room.hasWaves() && room.objective == DungeonObjective.CLEAR_MOBS) {
-            fireWave(instance, definition, room, world);
+            startWaves(instance, definition, room, world);
         }
         if (room.hasRadiusPacks() || room.hasLeash()
                 || (room.hasWaves() && room.objective == DungeonObjective.CLEAR_MOBS)) {
@@ -347,12 +347,40 @@ public final class DungeonRooms {
         }
     }
 
+    private void startWaves(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room, World world) {
+        int delay = introHoldTicks(room);
+        if (delay <= 1) {
+            fireWave(instance, definition, room, world);
+            return;
+        }
+        instance.waveArmed(true);
+        instance.waveAt(System.currentTimeMillis() + delay * 50L + 2000L);
+        int roomIndex = instance.roomIndex();
+        this.plugin.tasks().later(() -> {
+            if (instance.state() != SlotState.ACTIVE || instance.completing() || instance.roomIndex() != roomIndex) {
+                return;
+            }
+            instance.waveArmed(false);
+            instance.waveAt(0L);
+            fireWave(instance, definition, room, world);
+        }, delay);
+    }
+
+    private int introHoldTicks(DungeonRoom room) {
+        if (room.intro == null || (room.intro.title.isBlank() && room.intro.subtitle.isBlank())) {
+            return 1;
+        }
+        return Math.max(1, room.intro.fadeInTicks + room.intro.stayTicks);
+    }
+
     private void fireWave(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room, World world) {
         if (instance.waveIndex() >= room.waves.size()) {
             return;
         }
         instance.lastMinionAnnounced(false);
         DungeonWave wave = room.waves.get(instance.waveIndex());
+        instance.waveIndex(instance.waveIndex() + 1);
+        announceWave(instance, definition);
         instance.waveLiving().clear();
         for (Map.Entry<String, Integer> spawn : wave.spawns.entrySet()) {
             DungeonPack pack = room.pack(spawn.getKey());
@@ -363,24 +391,12 @@ public final class DungeonRooms {
         }
         instance.waveAt(System.currentTimeMillis());
         if (instance.waveLiving().isEmpty()) {
+            instance.waveIndex(Math.max(0, instance.waveIndex() - 1));
             instance.waveArmed(false);
             return;
         }
         instance.waveArmed(true);
-        instance.waveIndex(instance.waveIndex() + 1);
-        int shown = instance.waveIndex();
         remaining(instance, definition, world);
-        if (shown <= 1) {
-            int roomIndex = instance.roomIndex();
-            this.plugin.tasks().later(() -> {
-                if (instance.roomIndex() != roomIndex || instance.waveIndex() != shown) {
-                    return;
-                }
-                announceWave(instance, definition);
-            }, 25);
-            return;
-        }
-        announceWave(instance, definition);
     }
 
     private boolean cleared(DungeonInstance instance, DungeonRoom room, World world) {
@@ -627,13 +643,29 @@ public final class DungeonRooms {
 
     private void announceWave(DungeonInstance instance, DungeonDefinition definition) {
         Map<String, String> placeholders = this.service.placeholders(instance, definition);
-        String line = this.plugin.messages().raw("dungeon.wave");
+        String title = screen("dungeon.wave-title");
+        String subtitle = screen("dungeon.wave-subtitle");
+        String actionbar = screen("dungeon.wave");
         for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
             if (!instance.players().contains(member.getUniqueId())) {
                 continue;
             }
-            this.plugin.messages().intro(member, "", "", line, 0, 50, 0, placeholders);
+            this.plugin.messages().intro(
+                    member,
+                    title,
+                    subtitle,
+                    actionbar,
+                    this.catalog.waveAnnounceFadeInTicks(),
+                    this.catalog.waveAnnounceStayTicks(),
+                    this.catalog.waveAnnounceFadeOutTicks(),
+                    placeholders
+            );
             this.plugin.sounds().play(member, "dungeon-wave");
         }
+    }
+
+    private String screen(String path) {
+        String value = this.plugin.messages().raw(path);
+        return value == null || value.isBlank() || value.equals(path) ? "" : value;
     }
 }

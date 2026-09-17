@@ -28,11 +28,14 @@ settings:
   spawn-safe-radius: 6
   # Non si applica ai pack trigger: wave (i xyz restano). Solo immediate/radius in stanza 1 se il punto è fuori dal raggio.
   # delay-seconds: attesa tra ondate (orologio server). require-clear: aspetta che l'onda sia morta.
-  # highlight-last: glow sull'ultimo minion. Piano per stanza: rooms.*.waves (id-posizione: quanti).
+  # highlight-last: glow sull'ultimo minion. Title/subtitle/actionbar: lang dungeon.wave-title / wave-subtitle / wave.
   waves:
     delay-seconds: 3
     require-clear: true
     highlight-last: true
+    announce-fade-in-ticks: 10
+    announce-stay-ticks: 40
+    announce-fade-out-ticks: 10
   leash:
     radius: 24
     heal: true

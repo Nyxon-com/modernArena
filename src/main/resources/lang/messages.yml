@@ -133,6 +133,8 @@ dungeon:
   timeout: "{prefix}<gray>Tempo scaduto. Uscita dal dungeon."
   empty-unload: "{prefix}<gray>Nessun giocatore rimasto. Dungeon chiuso."
   room-clear: "{prefix}<gray>Stanza <white>{room}</white> pulita."
+  wave-title: "<gradient:#5F22C3:#40099B>onda {wave}</gradient>"
+  wave-subtitle: "<white>{wave}<dark_gray>/<white>{waves}"
   wave: "<gray>onda <gradient:#5F22C3:#40099B>{wave}</gradient><dark_gray>/<white>{waves}"
   last-minion: "<gold>ultimo rimasto"
   complete: "{prefix}<gray>Dungeon <white>{dungeon}</white> completato."

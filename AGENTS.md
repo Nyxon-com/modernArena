@@ -90,7 +90,7 @@ Due pezzi: **posizioni** (`mobs` con `trigger: wave`) e **piano** (`waves:` list
 1. Default in `settings.waves`: `delay-seconds` (attesa dopo l’ondata, orologio server), `require-clear` (aspetta che i minion siano morti), `highlight-last` (glow sull’ultimo).
 2. Stanza `objective: clear-mobs`: punti con `trigger: wave`, `mob:` Mythic, xyz, `scatter`, `leash` opzionale. L’id (`gate`, `left`, …) è la chiave del piano.
 3. `waves:` è una **lista**. Ogni `-` è un’ondata: `id-posizione: quanti`.
-4. Title stanza all’ingresso. Actionbar `dungeon.wave` su **tutte** le ondate (la 1 dopo l’intro). Ultimo: actionbar `dungeon.last-minion` + glow. Unloaded ≠ morto (sim distance bassa). Spawn-safe **non** sposta i `trigger: wave`.
+4. Title stanza all’ingresso. Poi title `dungeon.wave-title` / `wave-subtitle` / actionbar `dungeon.wave` **prima di ogni ondata** (`{wave}` `{waves}`). Vuoto = off. Ticks: `settings.waves.announce-*-ticks`. Ultimo: actionbar `dungeon.last-minion` + glow. Spawn-safe **non** sposta i `trigger: wave`.
 5. Se `waves:` manca: una sola ondata, ogni pack `trigger: wave` usa il suo `amount` (default 1).
 6. Boss / avvicinamento: `trigger: radius`, **non** metterlo in `waves:`.
 
@@ -252,7 +252,7 @@ Il collo di bottiglia è **Paper + Mythic + disco** (un mondo Bukkit per slot), 
 - **Milestone**: `milestones.yml` → `mobs.<id>.<soglia>`. L’id deve matchare boss id o Mythic name. Testo progresso: `lang/messages.yml` → `milestone.progress`.
 - **Holo / cap / cooldown**: YAML arenas + testi `hologram.*` / `errors.entry-cooldown` / `errors.between-cooldown` / `arena.boss-cap`. Dungeon holo porta: `follow-door` + `fly-ticks`.
 - **Nuovo dungeon**: `modules/dungeons.yml` → `dungeons.<id>` + `rooms`. Template unloaded. Ingresso: `intro`. Fine stanza: `outro` + `commands`. Porta: `wall` + holo `follow-door`.
-- **Ondate**: posizioni `mobs.<id>` `trigger: wave` + piano `rooms.*.waves` (`id: quanti`). Default in `settings.waves`. Testi `dungeon.wave` / `dungeon.last-minion`. Non usare `amount`/`times`/raggio sul pack onda.
+- **Ondate**: posizioni `mobs.<id>` `trigger: wave` + piano `rooms.*.waves` (`id: quanti`). Default in `settings.waves`. Testi `dungeon.wave-title` / `wave-subtitle` / `wave` / `last-minion`. Non usare `amount`/`times`/raggio sul pack onda.
 - **Alzare il carico**: `instances.max-loaded`, `copy-max-concurrent`, max per-tipo, MySQL, hologram 40 tick o off, template piccoli, pochi mob.
 
 ## Fuori scope
