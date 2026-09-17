@@ -74,6 +74,7 @@ public final class DungeonRooms {
                 this.plugin.sounds().play(member, "dungeon-room");
             }
         }
+        remaining(instance, definition, world);
         if (room.objective == DungeonObjective.CLEAR_MOBS && room.expectedMobs() == 0) {
             clear(instance, definition, world, room);
         }
@@ -96,11 +97,13 @@ public final class DungeonRooms {
         }
         int roomIndex = instance.roomIndex();
         tryAdvance(instance, definition, world);
+        remaining(instance, definition, world);
         this.plugin.tasks().later(() -> {
             if (instance.roomIndex() != roomIndex) {
                 return;
             }
             tryAdvance(instance, definition, world);
+            remaining(instance, definition, world);
         }, 2);
     }
 
@@ -119,20 +122,25 @@ public final class DungeonRooms {
     }
 
     public int remaining(DungeonInstance instance, DungeonDefinition definition, World world) {
-        DungeonRoom room = definition.room(instance.roomIndex());
-        if (room == null || world == null) {
+        if (!Bukkit.isPrimaryThread()) {
+            return instance.cachedRemaining();
+        }
+        DungeonRoom room = definition == null ? null : definition.room(instance.roomIndex());
+        if (room == null) {
+            instance.cachedRemaining(0);
             return 0;
         }
-        int alive = alive(room, world);
-        if (room.objective == DungeonObjective.BOSS) {
-            return alive;
-        }
         int pending = 0;
-        for (DungeonPack pack : room.packs) {
-            int fired = instance.packFires().getOrDefault(pack.id, 0);
-            pending += Math.max(0, pack.times - fired) * pack.amount;
+        if (room.objective != DungeonObjective.BOSS) {
+            for (DungeonPack pack : room.packs) {
+                int fired = instance.packFires().getOrDefault(pack.id, 0);
+                pending += Math.max(0, pack.times - fired) * pack.amount;
+            }
         }
-        return pending + alive;
+        int alive = world == null ? 0 : alive(room, world);
+        int value = room.objective == DungeonObjective.BOSS ? alive : pending + alive;
+        instance.cachedRemaining(value);
+        return value;
     }
 
     public int remainingAt(DungeonInstance instance, DungeonDefinition definition, World world, int index) {
@@ -173,6 +181,7 @@ public final class DungeonRooms {
         tickWaves(instance, room, world);
         tickLeash(instance, room, world);
         tryAdvance(instance, definition, world);
+        remaining(instance, definition, world);
     }
 
     private void tickRadius(DungeonInstance instance, DungeonRoom room, World world) {
@@ -209,12 +218,9 @@ public final class DungeonRooms {
             if (pack.waveRequireClear && this.mythic.countInWorld(world, pack::matches) > 0) {
                 continue;
             }
-            long delayTicks = pack.waveDelaySeconds * 20L;
-            if (delayTicks <= 0L && !pack.waveRequireClear) {
-                delayTicks = 1L;
-            }
+            long delayMs = pack.waveDelaySeconds * 1000L;
             long last = instance.packWaveAt().getOrDefault(pack.id, 0L);
-            if (delayTicks > 0L && world.getFullTime() - last < delayTicks) {
+            if (delayMs > 0L && System.currentTimeMillis() - last < delayMs) {
                 continue;
             }
             fire(instance, pack, world);
@@ -288,7 +294,7 @@ public final class DungeonRooms {
                 instance.roomIndex() == 0 ? this.catalog.spawnSafeRadius() : 0D
         );
         instance.packFires().put(pack.id, fired + 1);
-        instance.packWaveAt().put(pack.id, world.getFullTime());
+        instance.packWaveAt().put(pack.id, System.currentTimeMillis());
         instance.spawnedInRoom(instance.spawnedInRoom() + spawned.size());
         if (pack.leashed()) {
             for (LivingEntity living : spawned) {

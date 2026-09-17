@@ -62,7 +62,7 @@ Kit/eco Core = `[console] …` in YAML. Hologram = `TextDisplay` Paper.
 - `settings.hologram` — `enabled`, `update-ticks`, `offset-y`, `follow-door`, `fly-ticks`, `spawn-forward` (blocchi avanti dallo spawn stanza 1, yaw della stanza)
 - `dungeons.<id>.hologram` — override. Ingresso: **sempre** spawn stanza 1 + `spawn-forward` + `offset-y` (niente xyz porta). Poi `follow-door` vola al wall di ogni stanza al clear
 - `settings.spawn-safe-radius` — intorno allo spawn stanza 1 i pack non spawnano (scatter spinto fuori). Solo allo spawn, niente push dopo
-- `settings.wave-delay-seconds` / `wave-require-clear` — default onde. Pack `trigger: wave` solo `clear-mobs`: `amount` = mob per onda, `times` = numero onde. Prossima onda se delay scaduto **e/o** onda precedente morta (`wave-require-clear`)
+- `settings.wave-delay-seconds` / `wave-require-clear` — default onde. Pack `trigger: wave` solo `clear-mobs`: `amount` = mob per onda, `times` = numero onde. Prossima onda se delay scaduto **e/o** onda precedente morta (`wave-require-clear`). Delay = orologio server, **non** `World.getFullTime()` (i mondi istanza hanno `doDaylightCycle false`, il tempo mondo non avanza)
 - `settings.proximity-check-ticks` — timer su slot `ACTIVE` per pack `radius` e leash (niente `PlayerMoveEvent`)
 - `settings.leash.radius` — default leash pack (0 = off). `settings.leash.heal` — cura al ritip (default true)
 - `dungeons.<id>.rooms` — ordine YAML. Stanza 1: `spawn` TP. `objective: clear-mobs | boss`
@@ -95,6 +95,7 @@ Altri player: `valary.arena.stats.other`. Bypass cooldown: `valary.arena.cooldow
 Comandi vietati in istanza: `config.yml` `blocked-commands` (primo token). `/arena` `/dungeon` `/party` sempre ok. Bypass: `valary.arena.command.bypass`.
 
 PAPI (softdepend): `%valary_time%` `%valary_room%` `%valary_remaining%` `%valary_remaining_<roomid>%` `%valary_mobs%` `%valary_name%` `%valary_type%`. Fuori istanza: vuoto.
+`%valary_remaining%` = cache RAM (pending wave + ultimo alive sul main). TAB refresha async: niente `getLivingEntities` / `countInWorld` dal placeholder.
 
 TAB (softdepend): una scoreboard (`lang/messages.yml` `scoreboard.*`) in arena e dungeon, tempo incluso. Leave → scoreboard TAB di default del server. Niente bossbar.
 

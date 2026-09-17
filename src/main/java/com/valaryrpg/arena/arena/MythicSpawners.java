@@ -178,7 +178,7 @@ public final class MythicSpawners {
     }
 
     public int countInWorld(World world, Predicate<String> mythicName) {
-        if (world == null || mythicName == null) {
+        if (world == null || mythicName == null || !org.bukkit.Bukkit.isPrimaryThread()) {
             return 0;
         }
         int alive = 0;

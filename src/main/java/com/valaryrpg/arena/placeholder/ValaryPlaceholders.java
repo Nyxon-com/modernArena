@@ -74,11 +74,7 @@ public final class ValaryPlaceholders extends PlaceholderExpansion {
             return room == null ? "" : room.id;
         }
         if (key.equals("remaining")) {
-            return Integer.toString(this.plugin.dungeons().rooms().remaining(
-                    instance,
-                    definition,
-                    player.getWorld()
-            ));
+            return Integer.toString(instance.cachedRemaining());
         }
         if (key.equals("mobs")) {
             return Integer.toString(room == null ? 0 : room.expectedMobs());
@@ -103,6 +99,9 @@ public final class ValaryPlaceholders extends PlaceholderExpansion {
             for (int index = 0; index < definition.rooms.size(); index++) {
                 DungeonRoom listed = definition.rooms.get(index);
                 if (listed.id.equalsIgnoreCase(roomId)) {
+                    if (index == instance.roomIndex()) {
+                        return Integer.toString(instance.cachedRemaining());
+                    }
                     return Integer.toString(this.plugin.dungeons().rooms().remainingAt(
                             instance,
                             definition,

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** Istanza dungeon: slot, mondo, party, stanza corrente. */
 public final class DungeonInstance {
@@ -42,6 +43,7 @@ public final class DungeonInstance {
     private final Map<UUID, String> leashed = new HashMap<>();
     private BukkitTask packTask;
     private long durationDeadline;
+    private final AtomicInteger cachedRemaining = new AtomicInteger();
 
     public DungeonInstance(String dungeonId, int slot, String worldName, Path folder, Party party) {
         this.dungeonId = dungeonId;
@@ -212,5 +214,13 @@ public final class DungeonInstance {
 
     public void durationDeadline(long durationDeadline) {
         this.durationDeadline = durationDeadline;
+    }
+
+    public int cachedRemaining() {
+        return this.cachedRemaining.get();
+    }
+
+    public void cachedRemaining(int remaining) {
+        this.cachedRemaining.set(Math.max(0, remaining));
     }
 }
