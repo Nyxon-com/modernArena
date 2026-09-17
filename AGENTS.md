@@ -61,13 +61,16 @@ Kit/eco Core = `[console] …` in YAML. Hologram = `TextDisplay` Paper.
 - `settings.max-instances-per-dungeon` (default 4), `max-instances-global`, `complete-leave-ticks`
 - `settings.hologram` — `enabled`, `update-ticks`, `offset-y`, `follow-door` (default true), `fly-ticks` (default 18, max 59)
 - `dungeons.<id>.hologram` — stessi campi; `follow-door` / `fly-ticks` override del settings. xyz = spawn holo (prima porta)
-- `settings.proximity-check-ticks` — timer su slot `ACTIVE` per pack `radius` (niente `PlayerMoveEvent`)
+- `settings.proximity-check-ticks` — timer su slot `ACTIVE` per pack `radius` e leash (niente `PlayerMoveEvent`)
+- `settings.leash.radius` — default leash pack (0 = off). `settings.leash.heal` — cura al ritip (default true)
 - `dungeons.<id>.rooms` — ordine YAML. Stanza 1: `spawn` TP. `objective: clear-mobs | boss`
 - `rooms.*.mobs.<id>` — **niente spawner Mythic**. Spawn diretto:
   - `mob` internal name Mythic
   - `trigger: immediate` (start stanza) **o** `radius` (player vivo a ≤ `radius` blocchi)
   - `amount` mob per fire, `times` quante volte quel punto spara (default 1)
   - `scatter`, `level`, xyz
+  - `leash` (numero **o** blocco `radius`/`heal`) — se il mob supera i blocchi dallo spawn, TP indietro. `0` = off. Default: `settings.leash.radius`
+  - `heal-on-leash` / `leash.heal` — cura a pieno HP al TP. Default: `settings.leash.heal`
 - `rooms.*.spawners` — alias di `mobs` (`max-mobs` → `amount`). Non clona spawner Mythic.
 - `rooms.*.wall.from/to` + `set-block` (default air) — fill sync al clear, no restore. Centro cubo = target holo se `follow-door`
 - `rooms.*.intro` — title/subtitle/actionbar + fade ticks **all’ingresso**
@@ -128,10 +131,10 @@ com.valaryrpg.arena
 
 1. Stesso slot/coda/copy async. Mondi `dungeon_<id>_<slot>`.
 2. Occupato in arena o dungeon → rifiuto. Party condiviso.
-3. TP spawn stanza 1 → `ACTIVE` → `intro` → pack `immediate` spawnano; pack `radius` aspettano il player.
+3. TP spawn stanza 1 → `ACTIVE` → `intro` → pack `immediate` spawnano; pack `radius` aspettano il player. Leash: se un mob esce dal raggio YAML, TP allo spawn del pack e opzionale heal.
 4. Kill Mythic nel mondo dungeon: pack esausti + 0 living della stanza → fill wall → `outro` + `commands` → se `follow-door` l’holo vola al centro wall → stanza successiva. Recheck 2 tick dopo la death e sul timer holo. Niente spawner Mythic.
 5. Ultima stanza `objective: boss`: alla kill, `outro` + `commands`, messaggio complete, dopo `complete-leave-ticks` TP e unload.
-6. Morte = eliminato. 0 vivi → chiude. Proximity = timer su slot `ACTIVE`.
+6. Morte = eliminato. 0 vivi → chiude. Proximity e leash = timer su slot `ACTIVE`.
 
 ### Leave / morte / cap
 

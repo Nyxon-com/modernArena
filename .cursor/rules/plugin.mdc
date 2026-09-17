@@ -11,7 +11,7 @@ Wiki: `AGENTS.md`. JAR proprio, package `com.valaryrpg.arena`. Non è un modulo 
 - Helper: `Tasks`, `MessageService`, `SoundService`, `ConsoleCommands`, `StorageManager`.
 - Async: copy/delete mondo, SQL kill/milestone. Sync: load/unload, TP, Mythic.
 - Max 4 per boss/dungeon, tetto `config.yml` `instances.max-loaded` (16). Coda RAM. Niente `PlayerMoveEvent`.
-- Arena: clone `source-spawner`. Dungeon: pack one-shot/raggio, `intro` / `outro` + `rooms.*.commands` a ogni clear. Clear = pack esausti + 0 living nel mondo istanza (recheck +2 tick / holo / proximity). Non `deaths >= spawned`.
+- Arena: clone `source-spawner`. Dungeon: pack one-shot/raggio, leash/heal-on-leash, `intro` / `outro` + `rooms.*.commands` a ogni clear. Clear = pack esausti + 0 living nel mondo istanza (recheck +2 tick / holo / proximity). Non `deaths >= spawned`.
 - Kill/milestone **per player**. Hologram TextDisplay solo su `ACTIVE`. Dungeon `follow-door` + `fly-ticks` → volo al centro wall. Cap `max-bosses` → stop + TP.
 - Mai `compileOnly` sul Core: kit/eco = `[console]` in YAML.
 - Commit come **Nyxon-com**, mai Haze/Cursor Agent. Non compilare se non chiesto.

@@ -77,4 +77,25 @@ public final class DungeonRoom {
         }
         return false;
     }
+
+    public boolean hasLeash() {
+        for (DungeonPack pack : this.packs) {
+            if (pack.leashed()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public DungeonPack pack(String id) {
+        if (id == null) {
+            return null;
+        }
+        for (DungeonPack pack : this.packs) {
+            if (pack.id.equals(id)) {
+                return pack;
+            }
+        }
+        return null;
+    }
 }

@@ -40,6 +40,8 @@ public final class DungeonCatalog {
     private boolean hologramFollowDoor = true;
     private int hologramFlyTicks = 18;
     private int proximityCheckTicks = 10;
+    private double leashRadius;
+    private boolean healOnLeash = true;
 
     public DungeonCatalog(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
@@ -74,6 +76,8 @@ public final class DungeonCatalog {
         this.hologramFollowDoor = yaml.getBoolean("settings.hologram.follow-door", true);
         this.hologramFlyTicks = yaml.getInt("settings.hologram.fly-ticks", 18);
         this.proximityCheckTicks = Math.max(5, yaml.getInt("settings.proximity-check-ticks", 10));
+        this.leashRadius = Math.max(0D, yaml.getDouble("settings.leash.radius", 0D));
+        this.healOnLeash = yaml.getBoolean("settings.leash.heal", true);
 
         ConfigurationSection section = yaml.getConfigurationSection("dungeons");
         if (section == null) {
@@ -235,10 +239,34 @@ public final class DungeonCatalog {
                     amount,
                     node.getInt("times", 1),
                     node.getDouble("scatter", node.getDouble("spawn-radius", 0D)),
-                    node.getInt("level", 1)
+                    node.getInt("level", 1),
+                    leashRadius(node),
+                    healOnLeash(node)
             ));
         }
         return packs;
+    }
+
+    private double leashRadius(ConfigurationSection node) {
+        ConfigurationSection leash = node.getConfigurationSection("leash");
+        if (leash != null) {
+            return Math.max(0D, leash.getDouble("radius", this.leashRadius));
+        }
+        if (node.contains("leash")) {
+            return Math.max(0D, node.getDouble("leash"));
+        }
+        return this.leashRadius;
+    }
+
+    private boolean healOnLeash(ConfigurationSection node) {
+        if (node.contains("heal-on-leash")) {
+            return node.getBoolean("heal-on-leash");
+        }
+        ConfigurationSection leash = node.getConfigurationSection("leash");
+        if (leash != null && leash.contains("heal")) {
+            return leash.getBoolean("heal");
+        }
+        return this.healOnLeash;
     }
 
     private DungeonIntro intro(ConfigurationSection node) {

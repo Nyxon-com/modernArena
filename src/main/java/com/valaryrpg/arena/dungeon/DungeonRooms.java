@@ -3,11 +3,17 @@ package com.valaryrpg.arena.dungeon;
 import com.valaryrpg.arena.ValaryArenaPlugin;
 import com.valaryrpg.arena.arena.MythicSpawners;
 import com.valaryrpg.arena.arena.SlotState;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -44,6 +50,7 @@ public final class DungeonRooms {
         instance.deathsInRoom(0);
         instance.spawnedInRoom(0);
         instance.packFires().clear();
+        instance.leashed().clear();
         stopPacks(instance);
         showIntro(instance, definition, room);
         for (DungeonPack pack : room.packs) {
@@ -51,10 +58,10 @@ public final class DungeonRooms {
                 fire(instance, pack, world);
             }
         }
-        if (room.hasRadiusPacks()) {
+        if (room.hasRadiusPacks() || room.hasLeash()) {
             int ticks = this.catalog.proximityCheckTicks();
             instance.packTask(this.plugin.tasks().repeat(
-                    () -> tickRadius(instance, definition, world),
+                    () -> tickRoom(instance, definition, world),
                     ticks,
                     ticks
             ));
@@ -134,9 +141,10 @@ public final class DungeonRooms {
             instance.packTask().cancel();
             instance.packTask(null);
         }
+        instance.leashed().clear();
     }
 
-    private void tickRadius(DungeonInstance instance, DungeonDefinition definition, World world) {
+    private void tickRoom(DungeonInstance instance, DungeonDefinition definition, World world) {
         if (instance.state() != SlotState.ACTIVE || instance.completing()) {
             return;
         }
@@ -144,6 +152,12 @@ public final class DungeonRooms {
         if (room == null) {
             return;
         }
+        tickRadius(instance, room, world);
+        tickLeash(instance, room, world);
+        tryAdvance(instance, definition, world);
+    }
+
+    private void tickRadius(DungeonInstance instance, DungeonRoom room, World world) {
         for (DungeonPack pack : room.packs) {
             if (pack.trigger != DungeonPackTrigger.RADIUS) {
                 continue;
@@ -160,7 +174,41 @@ public final class DungeonRooms {
             }
             fire(instance, pack, world);
         }
-        tryAdvance(instance, definition, world);
+    }
+
+    private void tickLeash(DungeonInstance instance, DungeonRoom room, World world) {
+        var iterator = instance.leashed().entrySet().iterator();
+        while (iterator.hasNext()) {
+            var entry = iterator.next();
+            Entity entity = Bukkit.getEntity(entry.getKey());
+            if (!(entity instanceof LivingEntity living)
+                    || living.isDead()
+                    || !living.getWorld().equals(world)) {
+                iterator.remove();
+                continue;
+            }
+            DungeonPack pack = room.pack(entry.getValue());
+            if (pack == null || !pack.leashed()) {
+                iterator.remove();
+                continue;
+            }
+            Location home = pack.point.to(world);
+            double max = pack.leashRadius * pack.leashRadius;
+            if (living.getLocation().distanceSquared(home) <= max) {
+                continue;
+            }
+            living.teleport(home);
+            if (pack.healOnLeash) {
+                heal(living);
+            }
+        }
+    }
+
+    private void heal(LivingEntity living) {
+        AttributeInstance max = living.getAttribute(Attribute.MAX_HEALTH);
+        if (max != null) {
+            living.setHealth(max.getValue());
+        }
     }
 
     private boolean near(DungeonInstance instance, Location point, double radius) {
@@ -185,10 +233,21 @@ public final class DungeonRooms {
         if (fired >= pack.times) {
             return;
         }
-        int spawned = this.mythic.spawn(pack.mob, pack.point.to(world), pack.amount, pack.scatter, pack.level);
+        List<LivingEntity> spawned = this.mythic.spawnLiving(
+                pack.mob,
+                pack.point.to(world),
+                pack.amount,
+                pack.scatter,
+                pack.level
+        );
         instance.packFires().put(pack.id, fired + 1);
-        instance.spawnedInRoom(instance.spawnedInRoom() + spawned);
-        if (spawned == 0) {
+        instance.spawnedInRoom(instance.spawnedInRoom() + spawned.size());
+        if (pack.leashed()) {
+            for (LivingEntity living : spawned) {
+                instance.leashed().put(living.getUniqueId(), pack.id);
+            }
+        }
+        if (spawned.isEmpty()) {
             this.plugin.getLogger().warning("Pack dungeon senza spawn: " + pack.mob + " (" + pack.id + ")");
         }
     }

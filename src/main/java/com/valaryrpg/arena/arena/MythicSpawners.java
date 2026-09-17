@@ -29,10 +29,14 @@ public final class MythicSpawners {
     }
 
     public int spawn(String mob, Location location, int amount, double scatter, int level) {
+        return spawnLiving(mob, location, amount, scatter, level).size();
+    }
+
+    public List<LivingEntity> spawnLiving(String mob, Location location, int amount, double scatter, int level) {
+        List<LivingEntity> spawned = new ArrayList<>();
         if (mob == null || mob.isBlank() || location == null || amount <= 0) {
-            return 0;
+            return spawned;
         }
-        int spawned = 0;
         var api = MythicBukkit.inst().getAPIHelper();
         for (int index = 0; index < amount; index++) {
             Location at = location.clone();
@@ -40,8 +44,13 @@ public final class MythicSpawners {
                 at.add((Math.random() - 0.5D) * 2D * scatter, 0D, (Math.random() - 0.5D) * 2D * scatter);
             }
             try {
-                if (api.spawnMythicMob(mob, at, Math.max(1, level)) != null) {
-                    spawned++;
+                ActiveMob active = api.spawnMythicMob(mob, at, Math.max(1, level));
+                if (active == null || active.getEntity() == null) {
+                    continue;
+                }
+                Entity entity = active.getEntity().getBukkitEntity();
+                if (entity instanceof LivingEntity living) {
+                    spawned.add(living);
                 }
             } catch (Exception exception) {
                 this.logger.warning("Spawn Mythic fallito: " + mob + " — " + exception.getMessage());

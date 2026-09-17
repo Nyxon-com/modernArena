@@ -24,6 +24,9 @@ settings:
     follow-door: true
     fly-ticks: 18
   proximity-check-ticks: 10
+  leash:
+    radius: 24
+    heal: true
 
 leave:
   command: spawn
@@ -91,6 +94,8 @@ dungeons:
             z: 4.5
             yaw: 0.0
             pitch: 0.0
+            leash: 24
+            heal-on-leash: true
         outro:
           title: "<gradient:#5F22C3:#40099B><bold>Stanza pulita</bold></gradient>"
           subtitle: "<gray>Il passaggio si apre"
@@ -123,6 +128,9 @@ dungeons:
             z: 20.5
             yaw: 0.0
             pitch: 0.0
+            leash:
+              radius: 32
+              heal: true
         outro:
           title: "<red><bold>Vittoria</bold></red>"
           subtitle: "<gray>Il dungeon è completo"

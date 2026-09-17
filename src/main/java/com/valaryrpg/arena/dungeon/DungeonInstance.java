@@ -38,6 +38,7 @@ public final class DungeonInstance {
     private int deathsInRoom;
     private int spawnedInRoom;
     private final Map<String, Integer> packFires = new HashMap<>();
+    private final Map<UUID, String> leashed = new HashMap<>();
     private BukkitTask packTask;
 
     public DungeonInstance(String dungeonId, int slot, String worldName, Path folder, Party party) {
@@ -181,6 +182,10 @@ public final class DungeonInstance {
 
     public Map<String, Integer> packFires() {
         return this.packFires;
+    }
+
+    public Map<UUID, String> leashed() {
+        return this.leashed;
     }
 
     public BukkitTask packTask() {

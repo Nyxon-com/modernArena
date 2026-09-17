@@ -14,6 +14,8 @@ public final class DungeonPack {
     public final int times;
     public final double scatter;
     public final int level;
+    public final double leashRadius;
+    public final boolean healOnLeash;
 
     public DungeonPack(
             String id,
@@ -24,7 +26,9 @@ public final class DungeonPack {
             int amount,
             int times,
             double scatter,
-            int level
+            int level,
+            double leashRadius,
+            boolean healOnLeash
     ) {
         this.id = id;
         this.mob = mob == null ? "" : mob;
@@ -35,6 +39,8 @@ public final class DungeonPack {
         this.times = Math.max(1, times);
         this.scatter = Math.max(0D, scatter);
         this.level = Math.max(1, level);
+        this.leashRadius = Math.max(0D, leashRadius);
+        this.healOnLeash = healOnLeash;
     }
 
     public int expected() {
@@ -43,5 +49,9 @@ public final class DungeonPack {
 
     public boolean matches(String mythicName) {
         return !this.mob.isBlank() && this.mob.equalsIgnoreCase(mythicName);
+    }
+
+    public boolean leashed() {
+        return this.leashRadius > 0D;
     }
 }
