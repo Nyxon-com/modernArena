@@ -42,6 +42,10 @@ public final class DungeonCatalog {
     private int proximityCheckTicks = 10;
     private double leashRadius;
     private boolean healOnLeash = true;
+    private double spawnSafeRadius = 6;
+    private double hologramSpawnForward = 2.5;
+    private int waveDelaySeconds;
+    private boolean waveRequireClear = true;
 
     public DungeonCatalog(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
@@ -78,6 +82,10 @@ public final class DungeonCatalog {
         this.proximityCheckTicks = Math.max(5, yaml.getInt("settings.proximity-check-ticks", 10));
         this.leashRadius = Math.max(0D, yaml.getDouble("settings.leash.radius", 0D));
         this.healOnLeash = yaml.getBoolean("settings.leash.heal", true);
+        this.spawnSafeRadius = Math.max(0D, yaml.getDouble("settings.spawn-safe-radius", 6D));
+        this.hologramSpawnForward = Math.max(0D, yaml.getDouble("settings.hologram.spawn-forward", 2.5));
+        this.waveDelaySeconds = Math.max(0, yaml.getInt("settings.wave-delay-seconds", 0));
+        this.waveRequireClear = yaml.getBoolean("settings.wave-require-clear", true);
 
         ConfigurationSection section = yaml.getConfigurationSection("dungeons");
         if (section == null) {
@@ -169,6 +177,10 @@ public final class DungeonCatalog {
         return this.proximityCheckTicks;
     }
 
+    public double spawnSafeRadius() {
+        return this.spawnSafeRadius;
+    }
+
     public String leaveCommand() {
         return this.leaveCommand;
     }
@@ -241,7 +253,11 @@ public final class DungeonCatalog {
                     node.getDouble("scatter", node.getDouble("spawn-radius", 0D)),
                     node.getInt("level", 1),
                     leashRadius(node),
-                    healOnLeash(node)
+                    healOnLeash(node),
+                    node.getInt("wave-delay-seconds", this.waveDelaySeconds),
+                    node.contains("wave-require-clear")
+                            ? node.getBoolean("wave-require-clear")
+                            : this.waveRequireClear
             ));
         }
         return packs;
@@ -337,7 +353,10 @@ public final class DungeonCatalog {
         int flyTicks = node == null
                 ? this.hologramFlyTicks
                 : node.getInt("fly-ticks", this.hologramFlyTicks);
-        return new HologramSettings(enabled, ticks, offsetY, point, followDoor, flyTicks);
+        double spawnForward = node == null
+                ? this.hologramSpawnForward
+                : node.getDouble("spawn-forward", this.hologramSpawnForward);
+        return new HologramSettings(enabled, ticks, offsetY, point, followDoor, flyTicks, spawnForward);
     }
 
     private Point point(ConfigurationSection section, double x, double y, double z) {

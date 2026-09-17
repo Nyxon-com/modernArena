@@ -26,6 +26,7 @@ dependencies {
     compileOnly("io.lumine:Mythic-Dist:5.10.0")
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
     compileOnly("me.clip:placeholderapi:2.11.6")
+    compileOnly("com.github.NEZNAMY:TAB-API:5.2.5")
 
     implementation("com.zaxxer:HikariCP:6.2.1")
     implementation("org.xerial:sqlite-jdbc:3.47.2.0")

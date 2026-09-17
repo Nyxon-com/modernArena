@@ -87,6 +87,15 @@ public final class DungeonRoom {
         return false;
     }
 
+    public boolean hasWavePacks() {
+        for (DungeonPack pack : this.packs) {
+            if (pack.trigger == DungeonPackTrigger.WAVE) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public DungeonPack pack(String id) {
         if (id == null) {
             return null;

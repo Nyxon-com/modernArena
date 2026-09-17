@@ -10,7 +10,7 @@ Repo: `Nyxon-com/ValaryRPGarena-instances` (privata). Artifact: `ValaryRPG-Arena
 
 - Paper **1.21.11**, Java **21**, Gradle Shadow, MiniMessage, HikariCP (SQLite / MySQL / MariaDB)
 - Hard-depend: **MythicMobs**
-- Soft: ValaryRPG-Core, Vault, PlaceholderAPI, Multiverse-Core
+- Soft: ValaryRPG-Core, Vault, PlaceholderAPI, Multiverse-Core, **TAB** (scoreboard)
 - Hologram: `TextDisplay` Paper (niente plugin extra)
 - Kit/eco Core: `[console] …` in YAML, mai `compileOnly` sul Core
 
@@ -37,7 +37,7 @@ Build: `gradlew.bat shadowJar` → `build/libs/ValaryRPG-Arena-1.0.0.jar`.
 | `/dungeon list` / `leave` | Lista / esci |
 | `/party` | create, invite, accept, leave, kick, disband |
 
-Un player non sta in arena e dungeon insieme. Bypass cooldown arena: `valary.arena.cooldown.bypass`.
+Un player non sta in arena e dungeon insieme. Bypass cooldown: `valary.arena.cooldown.bypass`. Bypass comandi bloccati: `valary.arena.command.bypass`.
 
 ## YAML
 
@@ -65,27 +65,24 @@ Brand (prefix/separator viola `#5F22C3` → `#40099B`) solo in `lang/messages.ym
 
 Stanze in ordine YAML. Stanza 1 = TP spawn. Obiettivo `clear-mobs` o `boss`.
 
-- Pack Mythic **senza spawner**: `trigger: immediate` o `radius`. `amount` + `times` (default 1).
-- Clear stanza: pack esausti **e** 0 living della stanza nel mondo. Poi fill `wall`, `outro` a schermo, `commands` per i vivi (`[console] kit … {player}`).
-- Hologram: `follow-door: true` → a ogni porta aperta vola al centro del wall (`fly-ticks`).
-- Leash: se il mob supera `leash` blocchi dallo spawn, TP indietro. `heal` / `heal-on-leash` lo cura.
+- Pack: `trigger: immediate` | `radius` | `wave` (solo clear-mobs). Onda: `amount` mob, `times` salve, `wave-delay-seconds` + `wave-require-clear`.
+- Spawn safe: `settings.spawn-safe-radius` (default 6) intorno allo spawn stanza 1 — i pack non spawnano lì.
+- Clear stanza: pack esausti **e** 0 living. Poi fill `wall`, `outro`, `commands`.
+- Hologram: all’ingresso spawn stanza 1 + `spawn-forward`. Poi `follow-door` vola al wall di ogni stanza.
+- Leash / heal-on-leash. Tempo istanza: `duration-seconds` (0 = off); fail senza reward.
+- Scoreboard TAB unica (tempo, stanza, remaining). PAPI `%valary_time%` `%valary_remaining%` `%valary_remaining_<room>%`.
+- Comandi vietati: `config.yml` `blocked-commands`. Bypass `valary.arena.command.bypass`.
 
 ```yaml
 settings:
+  spawn-safe-radius: 6
   hologram:
     follow-door: true
     fly-ticks: 18
+    spawn-forward: 2.5
   leash:
-    radius: 24   # 0 = off
+    radius: 24
     heal: true
-
-# per pack:
-leash: 24
-heal-on-leash: true
-# oppure
-leash:
-  radius: 32
-  heal: true
 ```
 
 ## Scala (8 GB, ~20 player)

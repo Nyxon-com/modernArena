@@ -23,7 +23,11 @@ settings:
     offset-y: 2.5
     follow-door: true
     fly-ticks: 18
+    spawn-forward: 2.5
   proximity-check-ticks: 10
+  spawn-safe-radius: 6
+  wave-delay-seconds: 0
+  wave-require-clear: true
   leash:
     radius: 24
     heal: true
@@ -52,9 +56,7 @@ dungeons:
       enabled: true
       follow-door: true
       fly-ticks: 18
-      x: 0.5
-      y: 66.5
-      z: 0.5
+      spawn-forward: 2.5
     rooms:
       room1:
         objective: clear-mobs
@@ -84,9 +86,11 @@ dungeons:
         mobs:
           pack:
             mob: ExampleMob
-            trigger: immediate
-            amount: 10
-            times: 1
+            trigger: wave
+            amount: 5
+            times: 2
+            wave-delay-seconds: 3
+            wave-require-clear: true
             scatter: 2
             level: 1
             x: 4.5

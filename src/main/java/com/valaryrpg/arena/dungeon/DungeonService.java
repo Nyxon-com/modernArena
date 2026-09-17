@@ -63,6 +63,18 @@ public final class DungeonService {
         return this.catalog;
     }
 
+    public DungeonRooms rooms() {
+        return this.rooms;
+    }
+
+    public Location entryWorldSpawn(DungeonInstance instance, World world) {
+        DungeonDefinition definition = this.catalog.dungeon(instance.dungeonId());
+        if (definition == null || world == null) {
+            return null;
+        }
+        return definition.entrySpawn().to(world);
+    }
+
     public boolean cleaning() {
         return this.cleaning;
     }
@@ -233,6 +245,7 @@ public final class DungeonService {
         }
         instance.players().remove(player.getUniqueId());
         instance.eliminated().remove(player.getUniqueId());
+        this.plugin.hud().hide(player);
         this.reservedByPlayer.remove(player.getUniqueId());
         this.joinCooldowns.mark(player.getUniqueId(), instance.dungeonId());
         if (teleport) {
@@ -258,6 +271,7 @@ public final class DungeonService {
             return;
         }
         instance.eliminated().add(player.getUniqueId());
+        this.plugin.hud().hide(player);
         if (instance.players().isEmpty()) {
             markTeamWipe(instance);
         }
@@ -515,7 +529,9 @@ public final class DungeonService {
         instance.state(SlotState.ACTIVE);
         this.holograms.spawn(instance, definition, world);
         this.rooms.start(instance, definition, world, 0);
+        this.plugin.hud().show(online);
         if (definition.durationSeconds > 0) {
+            instance.durationDeadline(System.currentTimeMillis() + definition.durationSeconds * 1000L);
             instance.durationTask(this.plugin.tasks().later(
                     () -> timeout(instance),
                     definition.durationSeconds * 20L

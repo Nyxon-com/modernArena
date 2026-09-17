@@ -33,6 +33,18 @@ public final class MythicSpawners {
     }
 
     public List<LivingEntity> spawnLiving(String mob, Location location, int amount, double scatter, int level) {
+        return spawnLiving(mob, location, amount, scatter, level, null, 0D);
+    }
+
+    public List<LivingEntity> spawnLiving(
+            String mob,
+            Location location,
+            int amount,
+            double scatter,
+            int level,
+            Location keepOut,
+            double keepOutRadius
+    ) {
         List<LivingEntity> spawned = new ArrayList<>();
         if (mob == null || mob.isBlank() || location == null || amount <= 0) {
             return spawned;
@@ -43,6 +55,7 @@ public final class MythicSpawners {
             if (scatter > 0D) {
                 at.add((Math.random() - 0.5D) * 2D * scatter, 0D, (Math.random() - 0.5D) * 2D * scatter);
             }
+            pushOut(at, keepOut, keepOutRadius);
             try {
                 Entity entity = api.spawnMythicMob(mob, at, Math.max(1, level));
                 if (entity instanceof LivingEntity living) {
@@ -54,6 +67,34 @@ public final class MythicSpawners {
             }
         }
         return spawned;
+    }
+
+    private static void pushOut(Location at, Location keepOut, double radius) {
+        if (at == null || keepOut == null || radius <= 0D || at.getWorld() == null || !at.getWorld().equals(keepOut.getWorld())) {
+            return;
+        }
+        double dx = at.getX() - keepOut.getX();
+        double dz = at.getZ() - keepOut.getZ();
+        double distSq = dx * dx + dz * dz;
+        double min = radius;
+        if (distSq >= min * min) {
+            return;
+        }
+        double dist = Math.sqrt(distSq);
+        if (dist < 1.0E-6) {
+            org.bukkit.util.Vector forward = keepOut.getDirection();
+            forward.setY(0);
+            if (forward.lengthSquared() < 1.0E-6) {
+                forward = new org.bukkit.util.Vector(0, 0, 1);
+            }
+            forward.normalize().multiply(min + 0.5);
+            at.setX(keepOut.getX() + forward.getX());
+            at.setZ(keepOut.getZ() + forward.getZ());
+            return;
+        }
+        double scale = (min + 0.5) / dist;
+        at.setX(keepOut.getX() + dx * scale);
+        at.setZ(keepOut.getZ() + dz * scale);
     }
 
     public String create(String name, Location location, SpawnerDefinition definition) {

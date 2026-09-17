@@ -32,6 +32,7 @@ public final class ArenaInstance {
     private String hologramFingerprint = "";
     private boolean closingAfterWipe;
     private boolean spawnersHalted;
+    private long durationDeadline;
     private int bossesKilled;
     private String previousTopDamager = "";
     private double previousTopDamage;
@@ -174,5 +175,13 @@ public final class ArenaInstance {
 
     public boolean empty() {
         return this.players.isEmpty();
+    }
+
+    public long durationDeadline() {
+        return this.durationDeadline;
+    }
+
+    public void durationDeadline(long durationDeadline) {
+        this.durationDeadline = durationDeadline;
     }
 }

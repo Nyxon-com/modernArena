@@ -44,6 +44,7 @@ errors:
   dungeon-cleaning: "{prefix}<gray>Cleanup delle istanze in corso. Riprova tra poco."
   entry-cooldown: "{prefix}<gray>{player} deve attendere <white>{seconds}s</white> prima di rientrare."
   between-cooldown: "{prefix}<gray>{player} deve attendere <white>{seconds}s</white> prima di cambiare arena."
+  command-blocked: "{prefix}<gray>Quel comando non si può usare qui."
 
 arena:
   help:
@@ -92,6 +93,14 @@ hologram:
     - "<gradient:#5F22C3:#40099B><bold>{dungeon}</bold></gradient>"
     - "<gray>Stanza <white>{room}</white>"
     - "<gray>Mob <white>{remaining}</white>"
+
+scoreboard:
+  title: "<gradient:#5F22C3:#40099B><bold>ValaryRPG</bold></gradient>"
+  lines:
+    - "<gray>%valary_name%"
+    - "<gray>Tempo <white>%valary_time%"
+    - "<gray>Stanza <white>%valary_room%"
+    - "<gray>Mob <white>%valary_remaining%"
 
 dungeon:
   help:

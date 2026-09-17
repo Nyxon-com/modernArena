@@ -38,8 +38,10 @@ public final class DungeonInstance {
     private int deathsInRoom;
     private int spawnedInRoom;
     private final Map<String, Integer> packFires = new HashMap<>();
+    private final Map<String, Long> packWaveAt = new HashMap<>();
     private final Map<UUID, String> leashed = new HashMap<>();
     private BukkitTask packTask;
+    private long durationDeadline;
 
     public DungeonInstance(String dungeonId, int slot, String worldName, Path folder, Party party) {
         this.dungeonId = dungeonId;
@@ -184,6 +186,10 @@ public final class DungeonInstance {
         return this.packFires;
     }
 
+    public Map<String, Long> packWaveAt() {
+        return this.packWaveAt;
+    }
+
     public Map<UUID, String> leashed() {
         return this.leashed;
     }
@@ -198,5 +204,13 @@ public final class DungeonInstance {
 
     public boolean empty() {
         return this.players.isEmpty();
+    }
+
+    public long durationDeadline() {
+        return this.durationDeadline;
+    }
+
+    public void durationDeadline(long durationDeadline) {
+        this.durationDeadline = durationDeadline;
     }
 }

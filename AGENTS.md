@@ -19,7 +19,7 @@ Repo: `Nyxon-com/ValaryRPGarena-instances` (privata). Artifact: `ValaryRPG-Arena
 
 Paper 1.21.11, Java 21, Gradle Shadow, MiniMessage, HikariCP (SQLite / MySQL / MariaDB).
 Il JAR imbusta i driver SQL (servono alle kill). Native SQLite inutili (Android/Mac/ARM) esclusi.
-Hard-depend: **MythicMobs**. Soft: ValaryRPG-Core, Vault, PlaceholderAPI, Multiverse-Core.
+Hard-depend: **MythicMobs**. Soft: ValaryRPG-Core, Vault, PlaceholderAPI, Multiverse-Core, TAB (scoreboard).
 Kit/eco Core = `[console] …` in YAML. Hologram = `TextDisplay` Paper.
 
 ## Brand (solo YAML)
@@ -34,7 +34,7 @@ Kit/eco Core = `[console] …` in YAML. Hologram = `TextDisplay` Paper.
 
 | File | Ruolo |
 |------|--------|
-| `config.yml` | Nomi sottocomandi, alias, permessi, tetto istanze (`instances.max-loaded`) |
+| `config.yml` | Nomi sottocomandi, permessi, tetto istanze (`instances.max-loaded`), `blocked-commands` |
 | `lang/messages.yml` | Testi MiniMessage, linee hologram, `milestone.progress` |
 | `sounds/sounds.yml` | Chiavi suono |
 | `storage.yml` | DB, `table-prefix: valary_arena_` |
@@ -59,14 +59,16 @@ Kit/eco Core = `[console] …` in YAML. Hologram = `TextDisplay` Paper.
 
 - `settings.world-prefix` — `dungeon_` (Core/Multiverse lo ignorano come `arena_`)
 - `settings.max-instances-per-dungeon` (default 4), `max-instances-global`, `complete-leave-ticks`
-- `settings.hologram` — `enabled`, `update-ticks`, `offset-y`, `follow-door` (default true), `fly-ticks` (default 18, max 59)
-- `dungeons.<id>.hologram` — stessi campi; `follow-door` / `fly-ticks` override del settings. xyz = spawn holo (prima porta)
+- `settings.hologram` — `enabled`, `update-ticks`, `offset-y`, `follow-door`, `fly-ticks`, `spawn-forward` (blocchi avanti dallo spawn stanza 1, yaw della stanza)
+- `dungeons.<id>.hologram` — override. Ingresso: **sempre** spawn stanza 1 + `spawn-forward` + `offset-y` (niente xyz porta). Poi `follow-door` vola al wall di ogni stanza al clear
+- `settings.spawn-safe-radius` — intorno allo spawn stanza 1 i pack non spawnano (scatter spinto fuori). Solo allo spawn, niente push dopo
+- `settings.wave-delay-seconds` / `wave-require-clear` — default onde. Pack `trigger: wave` solo `clear-mobs`: `amount` = mob per onda, `times` = numero onde. Prossima onda se delay scaduto **e/o** onda precedente morta (`wave-require-clear`)
 - `settings.proximity-check-ticks` — timer su slot `ACTIVE` per pack `radius` e leash (niente `PlayerMoveEvent`)
 - `settings.leash.radius` — default leash pack (0 = off). `settings.leash.heal` — cura al ritip (default true)
 - `dungeons.<id>.rooms` — ordine YAML. Stanza 1: `spawn` TP. `objective: clear-mobs | boss`
 - `rooms.*.mobs.<id>` — **niente spawner Mythic**. Spawn diretto:
   - `mob` internal name Mythic
-  - `trigger: immediate` (start stanza) **o** `radius` (player vivo a ≤ `radius` blocchi)
+  - `trigger: immediate` | `radius` | `wave` (`wave` solo clear-mobs; prima onda subito)
   - `amount` mob per fire, `times` quante volte quel punto spara (default 1)
   - `scatter`, `level`, xyz
   - `leash` (numero **o** blocco `radius`/`heal`) — se il mob supera i blocchi dallo spawn, TP indietro. `0` = off. Default: `settings.leash.radius`
@@ -89,6 +91,12 @@ Altri player: `valary.arena.stats.other`. Bypass cooldown: `valary.arena.cooldow
 `/arena reload` ricarica YAML + cataloghi (anche dungeon). Non tocca istanze vive né il DB.
 
 `/dungeon` — `start <id>`, `list`, `leave`. Solo o con party (leader). Un player non sta in arena e dungeon insieme.
+
+Comandi vietati in istanza: `config.yml` `blocked-commands` (primo token). `/arena` `/dungeon` `/party` sempre ok. Bypass: `valary.arena.command.bypass`.
+
+PAPI (softdepend): `%valary_time%` `%valary_room%` `%valary_remaining%` `%valary_remaining_<roomid>%` `%valary_mobs%` `%valary_name%` `%valary_type%`. Fuori istanza: vuoto.
+
+TAB (softdepend): una scoreboard (`lang/messages.yml` `scoreboard.*`) in arena e dungeon, tempo incluso. Leave → scoreboard TAB di default del server. Niente bossbar.
 
 `/party` — create / invite / accept / leave / kick / disband. Un player = un party. Leader leave → passa leader; ultimo → disband. Party in coda che si scioglie → fuori coda.
 
@@ -167,8 +175,7 @@ Dopo l’incremento, chat `milestone.progress` (`{kills}` `{threshold}` `{mob}`)
 
 Arena: warmup spawner Mythic, boss uccisi in questa istanza, top danno del boss **precedente**. Danno da `EntityDamageByEntityEvent` (melee, projectile, tameable). Linee: `hologram.lines`.
 
-Dungeon: `hologram.dungeon-lines` (`{dungeon}` `{room}` `{remaining}`). Spawn su xyz YAML o spawn stanza 1 + `offset-y`.
-`follow-door: true` (settings o per dungeon): a ogni wall clear volo interpolato (`teleportDuration` + hop scala) al centro della porta, poi si posa (`fly-ticks`). `false` = resta fermo.
+Dungeon: `hologram.dungeon-lines`. Ingresso: spawn stanza 1 + `spawn-forward` + `offset-y`. `follow-door: true` → dopo ogni clear vola al centro wall di quella stanza.
 Update-ticks default 40. Skip se il testo non è cambiato. Cancel allo unload.
 
 ## Scala (8 GB, ~20 player)
@@ -199,7 +206,7 @@ Il collo di bottiglia è **Paper + Mythic + disco** (un mondo Bukkit per slot), 
 
 ## Fuori scope
 
-Editor in-game, shop, wave AMA, spectator, party chat, friendly fire, PAPI expansion, dipendenza Java Core, plugin hologram terzi, editor MythicDungeons.
+Editor in-game, shop, wave AMA, spectator, party chat, friendly fire, dipendenza Java Core, plugin hologram terzi, editor MythicDungeons, bossbar.
 
 ## Convenzioni Java
 

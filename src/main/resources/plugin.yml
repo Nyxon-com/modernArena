@@ -15,6 +15,7 @@ softdepend:
   - Vault
   - PlaceholderAPI
   - Multiverse-Core
+  - TAB
 commands:
   arena:
     description: Avvia o lascia un'arena istanziata
@@ -52,6 +53,9 @@ permissions:
     default: op
   valary.arena.cooldown.bypass:
     description: Ignora i cooldown di ingresso arena
+    default: op
+  valary.arena.command.bypass:
+    description: Usa comandi bloccati dentro arena o dungeon
     default: op
   valary.dungeon:
     description: Usa /dungeon

@@ -8,16 +8,21 @@ import com.valaryrpg.arena.arena.MythicSpawners;
 import com.valaryrpg.arena.arena.WorldCopier;
 import com.valaryrpg.arena.command.ArenaCommand;
 import com.valaryrpg.arena.command.CommandCooldowns;
+import com.valaryrpg.arena.command.CommandGuard;
 import com.valaryrpg.arena.command.DungeonCommand;
 import com.valaryrpg.arena.command.PartyCommand;
 import com.valaryrpg.arena.config.ConfigManager;
 import com.valaryrpg.arena.dungeon.DungeonCatalog;
 import com.valaryrpg.arena.dungeon.DungeonListener;
 import com.valaryrpg.arena.dungeon.DungeonService;
+import com.valaryrpg.arena.hud.InstanceHud;
+import com.valaryrpg.arena.hud.NoopHud;
+import com.valaryrpg.arena.hud.TabScoreboards;
 import com.valaryrpg.arena.message.MessageService;
 import com.valaryrpg.arena.milestone.KillTracker;
 import com.valaryrpg.arena.milestone.MilestoneCatalog;
 import com.valaryrpg.arena.party.PartyService;
+import com.valaryrpg.arena.placeholder.ValaryPlaceholders;
 import com.valaryrpg.arena.sound.SoundService;
 import com.valaryrpg.arena.storage.KillRepository;
 import com.valaryrpg.arena.storage.StorageManager;
@@ -43,6 +48,7 @@ public final class ValaryArenaPlugin extends JavaPlugin {
     private ArenaService arenas;
     private DungeonService dungeons;
     private KillTracker kills;
+    private InstanceHud hud;
 
     @Override
     public void onLoad() {
@@ -55,6 +61,7 @@ public final class ValaryArenaPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         this.tasks = new Tasks(this);
+        this.hud = createHud();
         this.console = new ConsoleCommands();
         this.cooldowns = new CommandCooldowns(this);
         this.storage = new StorageManager(this);
@@ -107,6 +114,10 @@ public final class ValaryArenaPlugin extends JavaPlugin {
                 this
         );
         getServer().getPluginManager().registerEvents(new DungeonListener(this.dungeons, this.kills), this);
+        getServer().getPluginManager().registerEvents(new CommandGuard(this), this);
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new ValaryPlaceholders(this).register();
+        }
         bind("arena", new ArenaCommand(this));
         bind("dungeon", new DungeonCommand(this));
         bind("party", new PartyCommand(this));
@@ -191,6 +202,23 @@ public final class ValaryArenaPlugin extends JavaPlugin {
 
     public DungeonService dungeons() {
         return this.dungeons;
+    }
+
+    public InstanceHud hud() {
+        return this.hud == null ? new NoopHud() : this.hud;
+    }
+
+    private InstanceHud createHud() {
+        if (getServer().getPluginManager().getPlugin("TAB") == null) {
+            return new NoopHud();
+        }
+        try {
+            Class.forName("me.neznamy.tab.api.TabAPI");
+            return new TabScoreboards(this);
+        } catch (ClassNotFoundException | NoClassDefFoundError ignored) {
+            getLogger().warning("TAB presente ma API non trovata: scoreboard istanza disattivata.");
+            return new NoopHud();
+        }
     }
 
     public int loadedInstances() {

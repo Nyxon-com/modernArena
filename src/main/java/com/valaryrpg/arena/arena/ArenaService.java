@@ -222,6 +222,7 @@ public final class ArenaService {
         }
         instance.players().remove(player.getUniqueId());
         instance.eliminated().remove(player.getUniqueId());
+        this.plugin.hud().hide(player);
         this.reservedByPlayer.remove(player.getUniqueId());
         this.joinCooldowns.mark(player.getUniqueId(), instance.bossId());
         if (teleport) {
@@ -247,6 +248,7 @@ public final class ArenaService {
             return;
         }
         instance.eliminated().add(player.getUniqueId());
+        this.plugin.hud().hide(player);
         if (instance.players().isEmpty()) {
             markTeamWipe(instance);
         }
@@ -480,7 +482,9 @@ public final class ArenaService {
         }
         instance.state(SlotState.ACTIVE);
         this.holograms.spawn(instance, definition, world);
+        this.plugin.hud().show(online);
         if (definition.durationSeconds > 0) {
+            instance.durationDeadline(System.currentTimeMillis() + definition.durationSeconds * 1000L);
             instance.durationTask(this.plugin.tasks().later(
                     () -> timeout(instance),
                     definition.durationSeconds * 20L

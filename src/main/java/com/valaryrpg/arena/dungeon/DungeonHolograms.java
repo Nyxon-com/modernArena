@@ -8,6 +8,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.util.Transformation;
+import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -30,9 +31,7 @@ public final class DungeonHolograms {
         if (!definition.hologram.enabled) {
             return;
         }
-        Location location = definition.hologram.point != null
-                ? definition.hologram.point.to(world)
-                : definition.entrySpawn().to(world).add(0, definition.hologram.offsetY, 0);
+        Location location = spawnLocation(definition, world);
         TextDisplay display = world.spawn(location, TextDisplay.class, entity -> {
             style(entity);
             entity.setTeleportDuration(0);
@@ -162,5 +161,20 @@ public final class DungeonHolograms {
             result = result.append(this.plugin.messages().mini(raw.get(index), placeholders));
         }
         return result;
+    }
+
+    private static Location spawnLocation(DungeonDefinition definition, World world) {
+        Location spawn = definition.entrySpawn().to(world);
+        Location location = spawn.clone().add(0, definition.hologram.offsetY, 0);
+        double forward = definition.hologram.spawnForward;
+        if (forward <= 0D) {
+            return location;
+        }
+        Vector direction = spawn.getDirection();
+        direction.setY(0);
+        if (direction.lengthSquared() < 1.0E-6) {
+            direction = new Vector(0, 0, 1);
+        }
+        return location.add(direction.normalize().multiply(forward));
     }
 }

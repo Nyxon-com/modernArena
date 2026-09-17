@@ -51,14 +51,17 @@ public final class DungeonRooms {
         instance.spawnedInRoom(0);
         instance.packFires().clear();
         instance.leashed().clear();
+        instance.packWaveAt().clear();
         stopPacks(instance);
         showIntro(instance, definition, room);
         for (DungeonPack pack : room.packs) {
-            if (pack.trigger == DungeonPackTrigger.IMMEDIATE) {
+            if (pack.trigger == DungeonPackTrigger.IMMEDIATE
+                    || (pack.trigger == DungeonPackTrigger.WAVE && room.objective == DungeonObjective.CLEAR_MOBS)) {
                 fire(instance, pack, world);
             }
         }
-        if (room.hasRadiusPacks() || room.hasLeash()) {
+        if (room.hasRadiusPacks() || room.hasLeash()
+                || (room.hasWavePacks() && room.objective == DungeonObjective.CLEAR_MOBS)) {
             int ticks = this.catalog.proximityCheckTicks();
             instance.packTask(this.plugin.tasks().repeat(
                     () -> tickRoom(instance, definition, world),
@@ -132,6 +135,20 @@ public final class DungeonRooms {
         return pending + alive;
     }
 
+    public int remainingAt(DungeonInstance instance, DungeonDefinition definition, World world, int index) {
+        DungeonRoom room = definition.room(index);
+        if (room == null) {
+            return 0;
+        }
+        if (index < instance.roomIndex()) {
+            return 0;
+        }
+        if (index > instance.roomIndex()) {
+            return room.expectedMobs();
+        }
+        return remaining(instance, definition, world);
+    }
+
     public void refreshSpawners(DungeonInstance instance, DungeonDefinition definition, World world) {
         // i pack non sono spawner Mythic: un reload non li riduplica
     }
@@ -153,6 +170,7 @@ public final class DungeonRooms {
             return;
         }
         tickRadius(instance, room, world);
+        tickWaves(instance, room, world);
         tickLeash(instance, room, world);
         tryAdvance(instance, definition, world);
     }
@@ -170,6 +188,33 @@ public final class DungeonRooms {
                 continue;
             }
             if (!near(instance, pack.point.to(world), pack.radius)) {
+                continue;
+            }
+            fire(instance, pack, world);
+        }
+    }
+
+    private void tickWaves(DungeonInstance instance, DungeonRoom room, World world) {
+        if (room.objective != DungeonObjective.CLEAR_MOBS) {
+            return;
+        }
+        for (DungeonPack pack : room.packs) {
+            if (pack.trigger != DungeonPackTrigger.WAVE) {
+                continue;
+            }
+            int fired = instance.packFires().getOrDefault(pack.id, 0);
+            if (fired >= pack.times) {
+                continue;
+            }
+            if (pack.waveRequireClear && this.mythic.countInWorld(world, pack::matches) > 0) {
+                continue;
+            }
+            long delayTicks = pack.waveDelaySeconds * 20L;
+            if (delayTicks <= 0L && !pack.waveRequireClear) {
+                delayTicks = 1L;
+            }
+            long last = instance.packWaveAt().getOrDefault(pack.id, 0L);
+            if (delayTicks > 0L && world.getFullTime() - last < delayTicks) {
                 continue;
             }
             fire(instance, pack, world);
@@ -238,9 +283,12 @@ public final class DungeonRooms {
                 pack.point.to(world),
                 pack.amount,
                 pack.scatter,
-                pack.level
+                pack.level,
+                instance.roomIndex() == 0 ? this.service.entryWorldSpawn(instance, world) : null,
+                instance.roomIndex() == 0 ? this.catalog.spawnSafeRadius() : 0D
         );
         instance.packFires().put(pack.id, fired + 1);
+        instance.packWaveAt().put(pack.id, world.getFullTime());
         instance.spawnedInRoom(instance.spawnedInRoom() + spawned.size());
         if (pack.leashed()) {
             for (LivingEntity living : spawned) {

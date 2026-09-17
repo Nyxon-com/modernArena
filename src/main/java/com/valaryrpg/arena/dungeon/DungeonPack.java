@@ -16,6 +16,8 @@ public final class DungeonPack {
     public final int level;
     public final double leashRadius;
     public final boolean healOnLeash;
+    public final int waveDelaySeconds;
+    public final boolean waveRequireClear;
 
     public DungeonPack(
             String id,
@@ -28,7 +30,9 @@ public final class DungeonPack {
             double scatter,
             int level,
             double leashRadius,
-            boolean healOnLeash
+            boolean healOnLeash,
+            int waveDelaySeconds,
+            boolean waveRequireClear
     ) {
         this.id = id;
         this.mob = mob == null ? "" : mob;
@@ -41,6 +45,8 @@ public final class DungeonPack {
         this.level = Math.max(1, level);
         this.leashRadius = Math.max(0D, leashRadius);
         this.healOnLeash = healOnLeash;
+        this.waveDelaySeconds = Math.max(0, waveDelaySeconds);
+        this.waveRequireClear = waveRequireClear;
     }
 
     public int expected() {
