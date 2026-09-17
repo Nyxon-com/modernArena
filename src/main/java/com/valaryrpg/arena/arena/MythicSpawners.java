@@ -64,13 +64,16 @@ public final class MythicSpawners {
                 pushOut(at, keepOut, keepOutRadius);
             }
             try {
+                World world = at.getWorld();
+                if (world != null) {
+                    world.getChunkAt(at);
+                }
                 Entity entity = api.spawnMythicMob(mob, at, Math.max(1, level));
                 if (entity instanceof LivingEntity living) {
                     spawned.add(living);
                 }
             } catch (Exception exception) {
                 this.logger.warning("Spawn Mythic fallito: " + mob + " — " + exception.getMessage());
-                break;
             }
         }
         return spawned;

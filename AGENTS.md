@@ -90,7 +90,7 @@ Due pezzi: **posizioni** (`mobs` con `trigger: wave`) e **piano** (`waves:` list
 1. Default in `settings.waves`: `delay-seconds` (attesa dopo l’ondata, orologio server), `require-clear` (aspetta che i minion siano morti), `highlight-last` (glow sull’ultimo).
 2. Stanza `objective: clear-mobs`: punti con `trigger: wave`, `mob:` Mythic, xyz, `scatter`, `leash` opzionale. L’id (`gate`, `left`, …) è la chiave del piano.
 3. `waves:` è una **lista**. Ogni `-` è un’ondata: `id-posizione: quanti`.
-4. Prima ondata all’ingresso (title stanza, niente secondo title). Ondate dopo: actionbar `dungeon.wave`. Ultimo minion: actionbar `dungeon.last-minion` + glow. Spawn-safe **non** sposta i punti `trigger: wave` (solo pack immediate/radius in stanza 1, e solo se il punto YAML è **fuori** dal raggio).
+4. Title stanza all’ingresso. Actionbar `dungeon.wave` su **tutte** le ondate (la 1 dopo l’intro). Ultimo: actionbar `dungeon.last-minion` + glow. Unloaded ≠ morto (sim distance bassa). Spawn-safe **non** sposta i `trigger: wave`.
 5. Se `waves:` manca: una sola ondata, ogni pack `trigger: wave` usa il suo `amount` (default 1).
 6. Boss / avvicinamento: `trigger: radius`, **non** metterlo in `waves:`.
 
@@ -129,7 +129,7 @@ rooms:
 ```
 
 Holo/scoreboard: `{wave}` `{waves}` `{remaining}`. PAPI `%valary_wave%` `%valary_waves%` `%valary_remaining%` (remaining = cache RAM, TAB async).
-`/arena reload` aggiorna il catalogo; le istanze già aperte no.
+`/arena reload` aggiorna il catalogo; le istanze già aperte no. Ricrea le scoreboard TAB e le riassegna.
 
 Clear stanza `clear-mobs`: ondate/pack esausti **e** 0 living tracciati per UUID. **Non** usare `deaths >= spawned`. Recheck: death, +2 tick, timer stanza, timer holo se `{remaining}` è 0.
 
@@ -137,14 +137,14 @@ Clear stanza `clear-mobs`: ondate/pack esausti **e** 0 living tracciati per UUID
 
 `/arena` — `start <boss>`, `list`, `leave`, `stats [player] [boss]`, `milestones [player]`, `reload`.
 Altri player: `valary.arena.stats.other`. Bypass cooldown: `valary.arena.cooldown.bypass`.
-`/arena reload` ricarica YAML + cataloghi (anche dungeon). Non tocca istanze vive né il DB.
+`/arena reload` ricarica YAML + cataloghi (anche dungeon). Ricrea le scoreboard TAB e le riassegna ai player in istanza. Non tocca mondi aperti né il DB.
 
 `/dungeon` — `start <id>`, `list`, `leave`. Solo o con party (leader). Un player non sta in arena e dungeon insieme.
 
 Comandi vietati in istanza: `config.yml` `blocked-commands` (primo token). `/arena` `/dungeon` `/party` sempre ok. Bypass: `valary.arena.command.bypass`.
 
 PAPI (softdepend): `%valary_time%` `%valary_room%` `%valary_wave%` `%valary_waves%` `%valary_remaining%` `%valary_remaining_<roomid>%` `%valary_mobs%` `%valary_name%` `%valary_type%`. Fuori istanza: vuoto.
-`%valary_remaining%` = cache RAM (pending wave + ultimo alive sul main). TAB refresha async: niente `getLivingEntities` / `countInWorld` dal placeholder.
+`%valary_remaining%` = cache RAM (living dell’onda corrente, non le ondate future). TAB refresha async: niente `getLivingEntities` / `countInWorld` dal placeholder. Chunk ticket sui mob wave così `getEntity` non torna null a sim-distance 2.
 
 TAB (softdepend): due scoreboard in `lang/messages.yml` — `scoreboard.arena` e `scoreboard.dungeon`, ciascuna con `enabled`. Leave → scoreboard TAB di default. Niente bossbar.
 

@@ -1,10 +1,13 @@
 package com.valaryrpg.arena.hud;
 
 import com.valaryrpg.arena.ValaryArenaPlugin;
+import com.valaryrpg.arena.placeholder.ValaryPlaceholders;
 import me.neznamy.tab.api.TabAPI;
 import me.neznamy.tab.api.TabPlayer;
+import me.neznamy.tab.api.placeholder.PlaceholderManager;
 import me.neznamy.tab.api.scoreboard.Scoreboard;
 import me.neznamy.tab.api.scoreboard.ScoreboardManager;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -12,12 +15,18 @@ import java.util.List;
 /** Scoreboard TAB arena e dungeon, disattivabili da YAML. */
 public final class TabScoreboards implements InstanceHud {
 
+    private static final List<String> KEYS = List.of(
+            "name", "time", "remaining", "room", "wave", "waves", "type"
+    );
+
     private final ValaryArenaPlugin plugin;
     private Scoreboard arenaBoard;
     private Scoreboard dungeonBoard;
+    private boolean placeholdersBound;
 
     public TabScoreboards(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
+        bindPlaceholders();
     }
 
     @Override
@@ -40,6 +49,15 @@ public final class TabScoreboards implements InstanceHud {
         if (tab != null) {
             manager.resetScoreboard(tab);
         }
+    }
+
+    @Override
+    public void reload() {
+        drop(this.arenaBoard);
+        drop(this.dungeonBoard);
+        this.arenaBoard = null;
+        this.dungeonBoard = null;
+        bindPlaceholders();
     }
 
     private void show(Iterable<Player> players, Scoreboard scoreboard, String enabledPath) {
@@ -98,6 +116,51 @@ public final class TabScoreboards implements InstanceHud {
             this.plugin.getLogger().warning("TAB scoreboard non creata: " + exception.getMessage());
             return null;
         }
+    }
+
+    private void drop(Scoreboard board) {
+        if (board == null) {
+            return;
+        }
+        ScoreboardManager manager = manager();
+        if (manager == null) {
+            return;
+        }
+        try {
+            manager.removeScoreboard(board);
+        } catch (IllegalArgumentException ignored) {
+        }
+    }
+
+    private void bindPlaceholders() {
+        if (this.placeholdersBound) {
+            return;
+        }
+        try {
+            PlaceholderManager placeholders = TabAPI.getInstance().getPlaceholderManager();
+            if (placeholders == null) {
+                return;
+            }
+            for (String key : KEYS) {
+                placeholders.registerPlayerPlaceholder("%valary_" + key + "%", 200, tab -> value(tab, key));
+            }
+            this.placeholdersBound = true;
+        } catch (NoClassDefFoundError | Exception exception) {
+            this.plugin.getLogger().warning("TAB placeholder non registrati: " + exception.getMessage());
+        }
+    }
+
+    private String value(TabPlayer tab, String key) {
+        ValaryPlaceholders placeholders = this.plugin.placeholders();
+        if (placeholders == null || tab == null) {
+            return "";
+        }
+        Player player = Bukkit.getPlayer(tab.getUniqueId());
+        if (player == null) {
+            return "";
+        }
+        String resolved = placeholders.onRequest(player, key);
+        return resolved == null ? "" : resolved;
     }
 
     private ScoreboardManager manager() {

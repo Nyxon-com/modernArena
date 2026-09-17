@@ -4,6 +4,7 @@ import com.valaryrpg.arena.arena.SlotState;
 import com.valaryrpg.arena.party.Party;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.Location;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ public final class DungeonInstance {
     private UUID glowing;
     private final Map<String, Integer> packFires = new HashMap<>();
     private final Map<UUID, String> roomLiving = new HashMap<>();
+    private final Map<UUID, Location> livingAt = new HashMap<>();
     private final Set<UUID> waveLiving = new HashSet<>();
     private final Map<UUID, String> leashed = new HashMap<>();
     private BukkitTask packTask;
@@ -196,6 +198,10 @@ public final class DungeonInstance {
 
     public Map<UUID, String> roomLiving() {
         return this.roomLiving;
+    }
+
+    public Map<UUID, Location> livingAt() {
+        return this.livingAt;
     }
 
     public Set<UUID> waveLiving() {

@@ -10,4 +10,7 @@ public interface InstanceHud {
     void showDungeon(Iterable<Player> players);
 
     void hide(Player player);
+
+    default void reload() {
+    }
 }

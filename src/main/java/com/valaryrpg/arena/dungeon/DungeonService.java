@@ -337,13 +337,13 @@ public final class DungeonService {
         this.reservedByPlayer.remove(member, party);
     }
 
-    public void onMobDeath(DungeonInstance instance, String mythicName) {
+    public void onMobDeath(DungeonInstance instance, String mythicName, UUID entityId) {
         DungeonDefinition definition = this.catalog.dungeon(instance.dungeonId());
         World world = loadedWorld(instance);
         if (definition == null || world == null) {
             return;
         }
-        this.rooms.onMobDeath(instance, definition, world, mythicName);
+        this.rooms.onMobDeath(instance, definition, world, mythicName, entityId);
         this.holograms.refresh(instance, definition);
     }
 

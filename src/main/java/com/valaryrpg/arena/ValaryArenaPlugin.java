@@ -48,6 +48,7 @@ public final class ValaryArenaPlugin extends JavaPlugin {
     private ArenaService arenas;
     private DungeonService dungeons;
     private KillTracker kills;
+    private ValaryPlaceholders placeholders;
     private InstanceHud hud;
 
     @Override
@@ -61,7 +62,6 @@ public final class ValaryArenaPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         this.tasks = new Tasks(this);
-        this.hud = createHud();
         this.console = new ConsoleCommands();
         this.cooldowns = new CommandCooldowns(this);
         this.storage = new StorageManager(this);
@@ -115,9 +115,11 @@ public final class ValaryArenaPlugin extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(new DungeonListener(this.dungeons, this.kills), this);
         getServer().getPluginManager().registerEvents(new CommandGuard(this), this);
+        this.placeholders = new ValaryPlaceholders(this);
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            new ValaryPlaceholders(this).register();
+            this.placeholders.register();
         }
+        this.hud = createHud();
         bind("arena", new ArenaCommand(this));
         bind("dungeon", new DungeonCommand(this));
         bind("party", new PartyCommand(this));
@@ -160,6 +162,8 @@ public final class ValaryArenaPlugin extends JavaPlugin {
             this.arenaCatalog.load();
             this.dungeonCatalog.load();
             this.milestoneCatalog.load();
+            this.hud().reload();
+            reshowHud();
             return true;
         } catch (Exception exception) {
             getLogger().severe("Reload fallito: " + exception.getMessage());
@@ -204,8 +208,25 @@ public final class ValaryArenaPlugin extends JavaPlugin {
         return this.dungeons;
     }
 
+    public ValaryPlaceholders placeholders() {
+        return this.placeholders;
+    }
+
     public InstanceHud hud() {
         return this.hud == null ? new NoopHud() : this.hud;
+    }
+
+    private void reshowHud() {
+        if (this.arenas != null && this.parties != null) {
+            for (var instance : this.arenas.activeInstances()) {
+                this.hud().showArena(this.parties.onlineMembers(instance.party()));
+            }
+        }
+        if (this.dungeons != null && this.parties != null) {
+            for (var instance : this.dungeons.activeInstances()) {
+                this.hud().showDungeon(this.parties.onlineMembers(instance.party()));
+            }
+        }
     }
 
     private InstanceHud createHud() {

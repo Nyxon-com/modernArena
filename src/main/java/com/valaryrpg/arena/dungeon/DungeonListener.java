@@ -98,7 +98,7 @@ public final class DungeonListener implements Listener {
         } else if (killer != null && instance.players().contains(killer.getUniqueId())) {
             this.kills.record(killer, key);
         }
-        this.dungeons.onMobDeath(instance, mythicName);
+        this.dungeons.onMobDeath(instance, mythicName, entity == null ? null : entity.getUniqueId());
     }
 
     private Player killer(MythicMobDeathEvent event, Entity entity) {

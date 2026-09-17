@@ -47,6 +47,7 @@ public final class DungeonRooms {
             this.service.complete(instance, definition);
             return;
         }
+        stopPacks(instance);
         instance.roomIndex(index);
         instance.deathsInRoom(0);
         instance.spawnedInRoom(0);
@@ -55,10 +56,6 @@ public final class DungeonRooms {
         instance.waveArmed(false);
         instance.lastMinionAnnounced(false);
         instance.packFires().clear();
-        instance.leashed().clear();
-        instance.roomLiving().clear();
-        instance.waveLiving().clear();
-        stopPacks(instance);
         showIntro(instance, definition, room);
         for (DungeonPack pack : room.packs) {
             if (pack.trigger == DungeonPackTrigger.IMMEDIATE) {
@@ -88,13 +85,20 @@ public final class DungeonRooms {
         }
     }
 
-    public void onMobDeath(DungeonInstance instance, DungeonDefinition definition, World world, String mythicName) {
+    public void onMobDeath(DungeonInstance instance, DungeonDefinition definition, World world, String mythicName, UUID deadId) {
         if (instance.state() != SlotState.ACTIVE || instance.completing()) {
             return;
         }
         DungeonRoom room = definition.room(instance.roomIndex());
         if (room == null) {
             return;
+        }
+        if (deadId != null) {
+            boolean glow = deadId.equals(instance.glowing());
+            forget(instance, deadId);
+            if (glow) {
+                unglow(instance);
+            }
         }
         if (room.matchesMob(mythicName)) {
             instance.deathsInRoom(instance.deathsInRoom() + 1);
@@ -141,20 +145,21 @@ public final class DungeonRooms {
             return 0;
         }
         int pending = 0;
-        if (room.objective != DungeonObjective.BOSS) {
-            for (int index = instance.waveIndex(); index < room.waves.size(); index++) {
-                pending += room.waves.get(index).total();
-            }
+        if (room.objective != DungeonObjective.BOSS && !room.hasWaves()) {
             for (DungeonPack pack : room.packs) {
-                if (pack.trigger == DungeonPackTrigger.WAVE) {
-                    continue;
-                }
                 int fired = instance.packFires().getOrDefault(pack.id, 0);
                 pending += Math.max(0, pack.times - fired) * pack.amount;
             }
         }
         int alive = world == null ? 0 : pruneLiving(instance, world);
-        int value = room.objective == DungeonObjective.BOSS ? alive : pending + alive;
+        int value;
+        if (room.objective == DungeonObjective.BOSS) {
+            value = alive;
+        } else if (room.hasWaves()) {
+            value = instance.waveLiving().size();
+        } else {
+            value = pending + alive;
+        }
         instance.cachedRemaining(value);
         return value;
     }
@@ -183,8 +188,12 @@ public final class DungeonRooms {
             instance.packTask(null);
         }
         unglow(instance);
+        for (UUID id : List.copyOf(instance.roomLiving().keySet())) {
+            forget(instance, id);
+        }
         instance.leashed().clear();
         instance.roomLiving().clear();
+        instance.livingAt().clear();
         instance.waveLiving().clear();
         instance.lastMinionAnnounced(false);
         instance.waveArmed(false);
@@ -273,6 +282,7 @@ public final class DungeonRooms {
                 continue;
             }
             living.teleport(home);
+            pin(instance, living.getUniqueId(), living.getLocation().clone());
             if (pack.healOnLeash) {
                 heal(living);
             }
@@ -327,6 +337,7 @@ public final class DungeonRooms {
         instance.spawnedInRoom(instance.spawnedInRoom() + spawned.size());
         for (LivingEntity living : spawned) {
             instance.roomLiving().put(living.getUniqueId(), pack.id);
+            pin(instance, living.getUniqueId(), living.getLocation().clone());
             if (pack.trigger == DungeonPackTrigger.WAVE) {
                 instance.waveLiving().add(living.getUniqueId());
             }
@@ -334,23 +345,18 @@ public final class DungeonRooms {
                 instance.leashed().put(living.getUniqueId(), pack.id);
             }
         }
-        if (spawned.isEmpty()) {
-            this.plugin.getLogger().warning("Pack dungeon senza spawn: " + pack.mob + " (" + pack.id + ")");
-        }
     }
 
     private void fireWave(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room, World world) {
         if (instance.waveIndex() >= room.waves.size()) {
             return;
         }
-        unglow(instance);
-        instance.waveLiving().clear();
         instance.lastMinionAnnounced(false);
         DungeonWave wave = room.waves.get(instance.waveIndex());
+        instance.waveLiving().clear();
         for (Map.Entry<String, Integer> spawn : wave.spawns.entrySet()) {
             DungeonPack pack = room.pack(spawn.getKey());
             if (pack == null) {
-                this.plugin.getLogger().warning("Onda dungeon: posizione sconosciuta " + spawn.getKey());
                 continue;
             }
             fire(instance, pack, world, spawn.getValue());
@@ -358,13 +364,23 @@ public final class DungeonRooms {
         instance.waveAt(System.currentTimeMillis());
         if (instance.waveLiving().isEmpty()) {
             instance.waveArmed(false);
-            this.plugin.getLogger().warning("Onda dungeon vuota (spawn fallito), riprovo: " + room.id);
             return;
         }
         instance.waveArmed(true);
         instance.waveIndex(instance.waveIndex() + 1);
-        announceWave(instance, definition);
+        int shown = instance.waveIndex();
         remaining(instance, definition, world);
+        if (shown <= 1) {
+            int roomIndex = instance.roomIndex();
+            this.plugin.tasks().later(() -> {
+                if (instance.roomIndex() != roomIndex || instance.waveIndex() != shown) {
+                    return;
+                }
+                announceWave(instance, definition);
+            }, 25);
+            return;
+        }
+        announceWave(instance, definition);
     }
 
     private boolean cleared(DungeonInstance instance, DungeonRoom room, World world) {
@@ -471,19 +487,60 @@ public final class DungeonRooms {
         int alive = 0;
         while (iterator.hasNext()) {
             var entry = iterator.next();
-            Entity entity = Bukkit.getEntity(entry.getKey());
+            Entity entity = resolve(world, instance, entry.getKey());
             if (!(entity instanceof LivingEntity living)
                     || living.isDead()
-                    || world != null && !living.getWorld().equals(world)) {
+                    || (world != null && !living.getWorld().equals(world))) {
+                UUID gone = entry.getKey();
                 iterator.remove();
-                instance.waveLiving().remove(entry.getKey());
-                instance.leashed().remove(entry.getKey());
+                unpin(instance, gone);
                 continue;
             }
+            pin(instance, entry.getKey(), living.getLocation().clone());
             alive++;
         }
         instance.waveLiving().removeIf(uuid -> !instance.roomLiving().containsKey(uuid));
         return alive;
+    }
+
+    private Entity resolve(World world, DungeonInstance instance, UUID uuid) {
+        Location at = instance.livingAt().get(uuid);
+        if (at != null && at.getWorld() != null) {
+            at.getWorld().getChunkAt(at);
+        }
+        Entity entity = world == null ? null : world.getEntity(uuid);
+        return entity != null ? entity : Bukkit.getEntity(uuid);
+    }
+
+    private void pin(DungeonInstance instance, UUID id, Location now) {
+        Location old = instance.livingAt().put(id, now);
+        if (now != null && now.getWorld() != null) {
+            now.getChunk().addPluginChunkTicket(this.plugin);
+        }
+        if (old != null && old.getWorld() != null && (now == null || !sameChunk(old, now))) {
+            old.getChunk().removePluginChunkTicket(this.plugin);
+        }
+    }
+
+    private void forget(DungeonInstance instance, UUID id) {
+        instance.roomLiving().remove(id);
+        unpin(instance, id);
+    }
+
+    private void unpin(DungeonInstance instance, UUID id) {
+        Location at = instance.livingAt().remove(id);
+        if (at != null && at.getWorld() != null) {
+            at.getChunk().removePluginChunkTicket(this.plugin);
+        }
+        instance.waveLiving().remove(id);
+        instance.leashed().remove(id);
+    }
+
+    private boolean sameChunk(Location a, Location b) {
+        return a.getWorld() != null
+                && a.getWorld().equals(b.getWorld())
+                && (a.getBlockX() >> 4) == (b.getBlockX() >> 4)
+                && (a.getBlockZ() >> 4) == (b.getBlockZ() >> 4);
     }
 
     private int livingOf(DungeonInstance instance, World world, String packId) {
@@ -499,8 +556,11 @@ public final class DungeonRooms {
 
     private void highlightLast(DungeonInstance instance, DungeonDefinition definition, World world) {
         pruneLiving(instance, world);
-        if (!this.catalog.waveHighlightLast() || instance.waveLiving().size() != 1) {
-            if (instance.waveLiving().size() != 1) {
+        if (!this.catalog.waveHighlightLast()) {
+            return;
+        }
+        if (instance.waveLiving().size() != 1) {
+            if (instance.waveLiving().size() > 1) {
                 unglow(instance);
                 instance.lastMinionAnnounced(false);
             }
@@ -508,11 +568,14 @@ public final class DungeonRooms {
         }
         UUID uuid = instance.waveLiving().iterator().next();
         Entity entity = Bukkit.getEntity(uuid);
+        if (entity == null) {
+            return;
+        }
         if (!(entity instanceof LivingEntity living) || living.isDead()) {
             unglow(instance);
             return;
         }
-        living.setGlowing(true);
+        glow(living);
         instance.glowing(uuid);
         if (instance.lastMinionAnnounced()) {
             return;
@@ -529,12 +592,24 @@ public final class DungeonRooms {
                     "",
                     this.plugin.messages().raw("dungeon.last-minion"),
                     0,
-                    40,
+                    50,
                     0,
                     placeholders
             );
             this.plugin.sounds().play(member, "dungeon-last-minion");
         }
+    }
+
+    private void glow(LivingEntity living) {
+        living.setGlowing(true);
+        living.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                org.bukkit.potion.PotionEffectType.GLOWING,
+                20 * 60 * 30,
+                0,
+                false,
+                false,
+                false
+        ));
     }
 
     private void unglow(DungeonInstance instance) {
@@ -545,21 +620,19 @@ public final class DungeonRooms {
         Entity entity = Bukkit.getEntity(uuid);
         if (entity instanceof LivingEntity living) {
             living.setGlowing(false);
+            living.removePotionEffect(org.bukkit.potion.PotionEffectType.GLOWING);
         }
         instance.glowing(null);
     }
 
     private void announceWave(DungeonInstance instance, DungeonDefinition definition) {
-        if (instance.waveIndex() <= 1) {
-            return;
-        }
         Map<String, String> placeholders = this.service.placeholders(instance, definition);
         String line = this.plugin.messages().raw("dungeon.wave");
         for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
             if (!instance.players().contains(member.getUniqueId())) {
                 continue;
             }
-            this.plugin.messages().intro(member, "", "", line, 0, 40, 0, placeholders);
+            this.plugin.messages().intro(member, "", "", line, 0, 50, 0, placeholders);
             this.plugin.sounds().play(member, "dungeon-wave");
         }
     }
