@@ -1,26 +1,24 @@
 # ValaryArena — Paper 1.21.11
 
-Arena istanziata per **ValaryRPG** (viola `#5F22C3`/`#40099B` + nero). JAR proprio, non un modulo Core.
+Wiki completa: `AGENTS.md`. JAR proprio, package `com.valaryrpg.arena`. Non è un modulo Core.
 
 ## Stack
 Paper 1.21.11, Java 21, Gradle, MiniMessage, HikariCP. Hard: MythicMobs. Soft: Core, Vault, PAPI.
 
 ## Prodotto
-- Template su disco → max 4 mondi `arena_<boss>_<slot>` / `dungeon_<id>_<slot>` → coda se pieni.
-- Spawner Mythic da YAML: clone `source-spawner`; kill/milestone per player.
-- Hologram TextDisplay (warmup, kill istanza, top danno). Cap boss → TP fuori.
-- Dungeon: stanze sequentiali, fill cubo, title, boss finale + reward.
-- Cooldown rientro. Cleanup `arena_*` e `dungeon_*` a ogni enable.
-- Party custom. Kill + milestone in SQL async; reward = comandi console.
+- Template unloaded → max 4 mondi `arena_<boss>_<slot>` / `dungeon_<id>_<slot>` → coda se pieni. Tetto totale 16.
+- Arena: clone spawner Mythic (`source-spawner`). Dungeon: pack `immediate`/`radius`, niente spawner.
+- Hologram TextDisplay solo su `ACTIVE`. Cap boss → stop spawner + TP. Cooldown entry/between.
+- Dungeon: stanze sequentiali, fill cubo, `intro` ingresso, `outro` + `[console]` a ogni clear.
+- Party custom. Kill + milestone SQL async per player. Reward = comandi YAML.
 
 ## Regole
-1. Zero hardcoding. Java orchestra, YAML decide. Brand e separatore in `lang/messages.yml`.
-2. Classi autoesplicative, javadoc di una riga, `Tasks` per async/sync. Niente logica copiata.
-3. Leggero: copy mondo async; SQL/kill/milestone off-main; cache YAML; niente timer su slot vuoti.
-4. Soft-depend Core. Mai `compileOnly` sul Core per kit/eco: usa `[console] kit …` / eco.
-5. Dopo ogni feature: commit + push. Mai AI nei commit. Non compilare in locale.
+1. Zero hardcoding. Java orchestra, YAML decide. Brand in `lang/messages.yml`.
+2. Classi autoesplicative, javadoc di una riga. Riaggancia `Tasks` / messaggi / console / storage.
+3. Copy mondo async; SQL off-main; YAML in RAM; niente `PlayerMoveEvent`; niente timer su slot vuoti.
+4. Mai `compileOnly` sul Core: `[console] kit …` / eco.
+5. Feature finita → commit + push come **Nyxon-com**. Mai AI nel messaggio. Non compilare se non chiesto.
 
-## Dove sta cosa
+## YAML
 `config.yml`, `lang/messages.yml`, `sounds/sounds.yml`, `storage.yml`,
 `modules/arenas.yml`, `modules/dungeons.yml`, `modules/party.yml`, `modules/milestones.yml`.
-Package `com.valaryrpg.arena`.

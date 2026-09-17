@@ -5,14 +5,13 @@ alwaysApply: true
 
 # ValaryArena
 
-Guida completa: `AGENTS.md`. JAR proprio, package `com.valaryrpg.arena`. Non è un modulo Core.
+Wiki: `AGENTS.md`. JAR proprio, package `com.valaryrpg.arena`. Non è un modulo Core.
 
-- Testi/permessi/suoni/delay/coord/cap/nomi spawner → YAML. Java orchestra.
-- Brand e separator solo in `lang/messages.yml`.
+- Testi/permessi/suoni/delay/coord/cap/nomi mob → YAML. Java orchestra. Brand solo in `lang/messages.yml`.
 - Helper: `Tasks`, `MessageService`, `SoundService`, `ConsoleCommands`, `StorageManager`.
 - Async: copy/delete mondo, SQL kill/milestone. Sync: load/unload, TP, Mythic.
-- Max 4 per boss/dungeon, tetto totale 16 (`config.yml` `instances.max-loaded`). Coda RAM, dequeue sull’unload. Niente `PlayerMoveEvent`.
-- Kill/milestone **per player**. Hologram TextDisplay solo su `ACTIVE`.
-- Cap `max-bosses` → stop spawner + TP fuori. Cooldown entry/between in `arenas.yml`.
-- Reward Core = `[console]` in `milestones.yml` / `dungeons.yml` (`rooms.*.commands` a ogni clear). Mai compileOnly sul Core.
-- v1: party, arene, dungeon (stanze + pack Mythic one-shot/raggio, niente spawner dungeon), coda, kill/milestone, holo, cap, cooldown.
+- Max 4 per boss/dungeon, tetto `config.yml` `instances.max-loaded` (16). Coda RAM. Niente `PlayerMoveEvent`.
+- Arena: clone `source-spawner`. Dungeon: pack one-shot/raggio, `intro` / `outro` + `rooms.*.commands` a ogni clear.
+- Kill/milestone **per player**. Hologram TextDisplay solo su `ACTIVE`. Cap `max-bosses` → stop + TP.
+- Mai `compileOnly` sul Core: kit/eco = `[console]` in YAML.
+- Commit come **Nyxon-com**, mai Haze/Cursor Agent. Non compilare se non chiesto.

@@ -10,7 +10,8 @@ Ogni giro deve costare poco. Il Java e i YAML già aperti bastano.
 - Fai **solo** ciò che è stato chiesto. Niente README, test, refactor, “mentre ci sei”.
 - Non rileggere il repo. `Grep` / `Glob` mirati; niente Task/subagent se il file è noto.
 - Non ricreare file interi: `StrReplace` sul pezzo. Non riscrivere YAML per una chiave.
-- Non compilare, non `run`, non aprire il browser, non git se non chiesto (feature finita = commit+push come da progetto, e basta).
+- Non compilare, non `run`, non aprire il browser, non git se non chiesto (feature finita = commit+push come **Nyxon-com**, e basta).
+- Git: `git -c user.name="Nyxon-com" -c user.email="325790384+Nyxon-com@users.noreply.github.com"`. Non `git config`. Mai Haze / Cursor Agent.
 - Non duplicare helper (`Tasks`, messaggi, storage). Riaggancia.
 - Risposta breve: cosa è cambiato + file. Niente recap dell’architettura.
 - Se manca un YAML, aggiungi la chiave e il messaggio, non un nuovo sistema.
