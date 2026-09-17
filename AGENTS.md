@@ -39,7 +39,7 @@ Kit/eco Core = `[console] …` in YAML. Hologram = `TextDisplay` Paper.
 | `sounds/sounds.yml` | Chiavi suono |
 | `storage.yml` | DB, `table-prefix: valary_arena_` |
 | `modules/arenas.yml` | Slot, coda, leave, boss, spawners Mythic, hologram, cap, cooldown |
-| `modules/dungeons.yml` | Slot, coda, leave, dungeon, stanze, pack, wall, intro/outro, comandi |
+| `modules/dungeons.yml` | Slot, coda, leave, dungeon, stanze, pack, wall, intro/outro, comandi, holo `follow-door` |
 | `modules/party.yml` | `invite-timeout-seconds`, `max-size` |
 | `modules/milestones.yml` | Soglie per Mythic internal name **o** id boss |
 
@@ -59,7 +59,8 @@ Kit/eco Core = `[console] …` in YAML. Hologram = `TextDisplay` Paper.
 
 - `settings.world-prefix` — `dungeon_` (Core/Multiverse lo ignorano come `arena_`)
 - `settings.max-instances-per-dungeon` (default 4), `max-instances-global`, `complete-leave-ticks`
-- `settings.hologram.follow-door` — se true, a ogni wall clear l’holo vola al centro della porta (`fly-ticks`, max 59). Override per dungeon: `dungeons.<id>.hologram.follow-door`
+- `settings.hologram` — `enabled`, `update-ticks`, `offset-y`, `follow-door` (default true), `fly-ticks` (default 18, max 59)
+- `dungeons.<id>.hologram` — stessi campi; `follow-door` / `fly-ticks` override del settings. xyz = spawn holo (prima porta)
 - `settings.proximity-check-ticks` — timer su slot `ACTIVE` per pack `radius` (niente `PlayerMoveEvent`)
 - `dungeons.<id>.rooms` — ordine YAML. Stanza 1: `spawn` TP. `objective: clear-mobs | boss`
 - `rooms.*.mobs.<id>` — **niente spawner Mythic**. Spawn diretto:
@@ -68,13 +69,15 @@ Kit/eco Core = `[console] …` in YAML. Hologram = `TextDisplay` Paper.
   - `amount` mob per fire, `times` quante volte quel punto spara (default 1)
   - `scatter`, `level`, xyz
 - `rooms.*.spawners` — alias di `mobs` (`max-mobs` → `amount`). Non clona spawner Mythic.
-- `rooms.*.wall.from/to` + `set-block` (default air) — fill sync al clear, no restore
+- `rooms.*.wall.from/to` + `set-block` (default air) — fill sync al clear, no restore. Centro cubo = target holo se `follow-door`
 - `rooms.*.intro` — title/subtitle/actionbar + fade ticks **all’ingresso**
-- `rooms.*.outro` — stesso blocco **a fine stanza** (clear-mobs o kill boss)
+- `rooms.*.outro` — stesso blocco **a fine stanza** (clear-mobs o kill boss). Assente = niente title
 - `rooms.*.commands` (anche sotto `outro`) — ogni stanza, per i vivi:
   - `[console] kit starter {player}` = console
   - senza prefisso = comando del player
   - `{player}` `{name}` `{uuid}` `{dungeon}` `{room}`
+
+Clear stanza `clear-mobs`: pack tutti sparati **e** 0 living Mythic della stanza nel mondo istanza. **Non** usare `deaths >= spawned` (Mythic può non mandare la death). Recheck: death, +2 tick, timer proximity, timer holo se `{remaining}` è 0.
 
 ## Comandi
 
@@ -126,7 +129,7 @@ com.valaryrpg.arena
 1. Stesso slot/coda/copy async. Mondi `dungeon_<id>_<slot>`.
 2. Occupato in arena o dungeon → rifiuto. Party condiviso.
 3. TP spawn stanza 1 → `ACTIVE` → `intro` → pack `immediate` spawnano; pack `radius` aspettano il player.
-4. Kill Mythic nel mondo dungeon: se i pack sono esausti e i living della stanza sono 0, fill wall → `outro` + `commands` → stanza successiva. Recheck 2 tick dopo la death (l’entity può essere ancora in world). Niente spawner Mythic.
+4. Kill Mythic nel mondo dungeon: pack esausti + 0 living della stanza → fill wall → `outro` + `commands` → se `follow-door` l’holo vola al centro wall → stanza successiva. Recheck 2 tick dopo la death e sul timer holo. Niente spawner Mythic.
 5. Ultima stanza `objective: boss`: alla kill, `outro` + `commands`, messaggio complete, dopo `complete-leave-ticks` TP e unload.
 6. Morte = eliminato. 0 vivi → chiude. Proximity = timer su slot `ACTIVE`.
 
@@ -160,7 +163,9 @@ Dopo l’incremento, chat `milestone.progress` (`{kills}` `{threshold}` `{mob}`)
 ### Hologram (solo `ACTIVE`)
 
 Arena: warmup spawner Mythic, boss uccisi in questa istanza, top danno del boss **precedente**. Danno da `EntityDamageByEntityEvent` (melee, projectile, tameable). Linee: `hologram.lines`.
-Dungeon: `hologram.dungeon-lines` (`{dungeon}` `{room}` `{remaining}`). `follow-door: true` → volo interpolato al centro wall ad ogni apertura.
+
+Dungeon: `hologram.dungeon-lines` (`{dungeon}` `{room}` `{remaining}`). Spawn su xyz YAML o spawn stanza 1 + `offset-y`.
+`follow-door: true` (settings o per dungeon): a ogni wall clear volo interpolato (`teleportDuration` + hop scala) al centro della porta, poi si posa (`fly-ticks`). `false` = resta fermo.
 Update-ticks default 40. Skip se il testo non è cambiato. Cancel allo unload.
 
 ## Scala (8 GB, ~20 player)
@@ -179,14 +184,14 @@ Il collo di bottiglia è **Paper + Mythic + disco** (un mondo Bukkit per slot), 
 - Muri dungeon = cubo stretto (porta). Cubo enorme = lag di un tick.
 - Unload: despawn Mythic **di quel mondo** → `unloadWorld` → delete cartella solo se nessun World usa quella path.
 
-**Non reintrodurre:** `getActiveMobs()` globale; loop su tutte le istanze per hit; `PlayerMoveEvent`; SQL/`getConfigurationSection` sul main in timer/kill.
+**Non reintrodurre:** `getActiveMobs()` globale; loop su tutte le istanze per hit; `PlayerMoveEvent`; SQL/`getConfigurationSection` sul main in timer/kill; clear dungeon con `deaths >= spawned`.
 
 ## Come cambiare le cose
 
 - **Nuovo boss**: `modules/arenas.yml` → `bosses.<id>`. Template nella world container, **non caricato**. `source-spawner` + `mob:`.
 - **Milestone**: `milestones.yml` → `mobs.<id>.<soglia>`. L’id deve matchare boss id o Mythic name. Testo progresso: `lang/messages.yml` → `milestone.progress`.
-- **Holo / cap / cooldown**: YAML arenas + testi `hologram.*` / `errors.entry-cooldown` / `errors.between-cooldown` / `arena.boss-cap`.
-- **Nuovo dungeon**: `modules/dungeons.yml` → `dungeons.<id>` + `rooms`. Template unloaded. Ingresso: `intro`. Fine stanza: `outro` + `commands`.
+- **Holo / cap / cooldown**: YAML arenas + testi `hologram.*` / `errors.entry-cooldown` / `errors.between-cooldown` / `arena.boss-cap`. Dungeon holo porta: `follow-door` + `fly-ticks`.
+- **Nuovo dungeon**: `modules/dungeons.yml` → `dungeons.<id>` + `rooms`. Template unloaded. Ingresso: `intro`. Fine stanza: `outro` + `commands`. Porta: `wall` + holo `follow-door`.
 - **Alzare il carico**: `instances.max-loaded`, `copy-max-concurrent`, max per-tipo, MySQL, hologram 40 tick o off, template piccoli, pochi mob.
 
 ## Fuori scope

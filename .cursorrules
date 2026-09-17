@@ -8,8 +8,8 @@ Paper 1.21.11, Java 21, Gradle, MiniMessage, HikariCP. Hard: MythicMobs. Soft: C
 ## Prodotto
 - Template unloaded → max 4 mondi `arena_<boss>_<slot>` / `dungeon_<id>_<slot>` → coda se pieni. Tetto totale 16.
 - Arena: clone spawner Mythic (`source-spawner`). Dungeon: pack `immediate`/`radius`, niente spawner.
-- Hologram TextDisplay solo su `ACTIVE`. Cap boss → stop spawner + TP. Cooldown entry/between.
-- Dungeon: stanze sequentiali, fill cubo, `intro` ingresso, `outro` + `[console]` a ogni clear.
+- Hologram TextDisplay solo su `ACTIVE`. Dungeon: `follow-door` vola alla porta (`fly-ticks`). Cap boss → stop spawner + TP. Cooldown entry/between.
+- Dungeon: stanze sequentiali, fill cubo, `intro` ingresso, `outro` + `[console]` a ogni clear. Clear = pack esausti + 0 living (non death counter).
 - Party custom. Kill + milestone SQL async per player. Reward = comandi YAML.
 
 ## Regole

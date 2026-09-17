@@ -14,7 +14,7 @@ Pensato per più arene/dungeon insieme, non per un player in creative. Il limite
 - YAML in RAM al load/reload. Zero `getConfigurationSection` in timer/kill.
 - Niente `PlayerMoveEvent`. Hologram `repeat` solo su slot `ACTIVE`, cancel allo unload.
 - Lookup istanza da World **O(1)** (cartella / nome caricato). Niente loop su tutte le istanze per hit.
-- Mythic: lookup per UUID/entity. Niente `getActiveMobs()` globale in damage/holo. Alive = living del **mondo istanza**.
+- Mythic: lookup per UUID/entity. Niente `getActiveMobs()` globale in damage/holo. Alive = living del **mondo istanza**. Clear dungeon = quel conteggio a 0 + pack esausti, non un death counter.
 - Template **unloaded**. Enable: cancella `arena_*` e `dungeon_*` orfani e spawners istanza Mythic.
 - Spawner solo nel mondo istanza; allo unload **deregistra** e despawn **quel** mondo.
 - Timer solo su slot `ACTIVE`. Unload: despawn + **unloadWorld** + delete cartella solo se nessun World la usa.
