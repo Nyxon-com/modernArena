@@ -7,6 +7,9 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.util.Transformation;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import java.util.List;
 import java.util.Map;
@@ -31,14 +34,9 @@ public final class DungeonHolograms {
                 ? definition.hologram.point.to(world)
                 : definition.entrySpawn().to(world).add(0, definition.hologram.offsetY, 0);
         TextDisplay display = world.spawn(location, TextDisplay.class, entity -> {
-            entity.setBillboard(Display.Billboard.CENTER);
-            entity.setAlignment(TextDisplay.TextAlignment.CENTER);
-            entity.setDefaultBackground(false);
-            entity.setShadowed(true);
-            entity.setSeeThrough(false);
-            entity.setPersistent(false);
-            entity.setGravity(false);
-            entity.setInvulnerable(true);
+            style(entity);
+            entity.setTeleportDuration(0);
+            pulse(entity, 1f, 0f, 1);
             entity.addScoreboardTag("valary_dungeon_holo");
         });
         instance.hologram(display);
@@ -47,6 +45,26 @@ public final class DungeonHolograms {
                 () -> refresh(instance, definition),
                 definition.hologram.updateTicks,
                 definition.hologram.updateTicks
+        ));
+    }
+
+    public void flyToDoor(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room) {
+        if (!definition.hologram.followDoor || room == null || room.wall == null) {
+            return;
+        }
+        TextDisplay display = instance.hologram();
+        if (display == null || display.isDead()) {
+            return;
+        }
+        cancelFly(instance);
+        int ticks = definition.hologram.flyTicks;
+        Location target = room.wall.center(display.getWorld());
+        display.setTeleportDuration(ticks);
+        pulse(display, 1.14f, 0.9f, ticks);
+        display.teleport(target);
+        instance.hologramFlyTask(this.plugin.tasks().later(
+                () -> settle(instance, Math.max(1, ticks / 2)),
+                ticks
         ));
     }
 
@@ -60,6 +78,11 @@ public final class DungeonHolograms {
         }
         DungeonRoom room = definition.room(instance.roomIndex());
         int remaining = this.rooms.remaining(instance, definition, display.getWorld());
+        if (room != null && room.objective == DungeonObjective.CLEAR_MOBS && remaining == 0) {
+            this.rooms.tryAdvance(instance, definition, display.getWorld());
+            room = definition.room(instance.roomIndex());
+            remaining = this.rooms.remaining(instance, definition, display.getWorld());
+        }
         String fingerprint = (room == null ? "" : room.id) + "|" + remaining;
         if (fingerprint.equals(instance.hologramFingerprint())) {
             return;
@@ -69,6 +92,7 @@ public final class DungeonHolograms {
     }
 
     public void remove(DungeonInstance instance) {
+        cancelFly(instance);
         if (instance.hologramTask() != null) {
             instance.hologramTask().cancel();
             instance.hologramTask(null);
@@ -78,6 +102,47 @@ public final class DungeonHolograms {
             display.remove();
             instance.hologram(null);
         }
+    }
+
+    private void settle(DungeonInstance instance, int ticks) {
+        TextDisplay display = instance.hologram();
+        if (display == null || display.isDead()) {
+            return;
+        }
+        display.setTeleportDuration(ticks);
+        pulse(display, 1f, 0f, ticks);
+    }
+
+    private void cancelFly(DungeonInstance instance) {
+        if (instance.hologramFlyTask() != null) {
+            instance.hologramFlyTask().cancel();
+            instance.hologramFlyTask(null);
+        }
+    }
+
+    private static void style(TextDisplay entity) {
+        entity.setBillboard(Display.Billboard.CENTER);
+        entity.setAlignment(TextDisplay.TextAlignment.CENTER);
+        entity.setDefaultBackground(false);
+        entity.setShadowed(true);
+        entity.setSeeThrough(true);
+        entity.setPersistent(false);
+        entity.setGravity(false);
+        entity.setInvulnerable(true);
+        entity.setBrightness(new Display.Brightness(15, 15));
+        entity.setViewRange(1.2f);
+        entity.setLineWidth(220);
+    }
+
+    private static void pulse(TextDisplay display, float scale, float lift, int ticks) {
+        display.setInterpolationDelay(0);
+        display.setInterpolationDuration(Math.max(1, ticks));
+        display.setTransformation(new Transformation(
+                new Vector3f(0f, lift, 0f),
+                new Quaternionf(),
+                new Vector3f(scale, scale, scale),
+                new Quaternionf()
+        ));
     }
 
     private Component lines(DungeonInstance instance, DungeonDefinition definition, int remaining) {

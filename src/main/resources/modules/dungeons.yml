@@ -21,6 +21,8 @@ settings:
     enabled: true
     update-ticks: 40
     offset-y: 2.5
+    follow-door: true
+    fly-ticks: 18
   proximity-check-ticks: 10
 
 leave:
@@ -45,6 +47,8 @@ dungeons:
     duration-seconds: 0
     hologram:
       enabled: true
+      follow-door: true
+      fly-ticks: 18
       x: 0.5
       y: 66.5
       z: 0.5

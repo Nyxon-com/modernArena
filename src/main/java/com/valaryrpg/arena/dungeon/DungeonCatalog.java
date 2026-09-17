@@ -37,6 +37,8 @@ public final class DungeonCatalog {
     private boolean hologramEnabled = true;
     private int hologramUpdateTicks = 40;
     private double hologramOffsetY = 2.5;
+    private boolean hologramFollowDoor = true;
+    private int hologramFlyTicks = 18;
     private int proximityCheckTicks = 10;
 
     public DungeonCatalog(ValaryArenaPlugin plugin) {
@@ -69,6 +71,8 @@ public final class DungeonCatalog {
         this.hologramEnabled = yaml.getBoolean("settings.hologram.enabled", true);
         this.hologramUpdateTicks = yaml.getInt("settings.hologram.update-ticks", 40);
         this.hologramOffsetY = yaml.getDouble("settings.hologram.offset-y", 2.5);
+        this.hologramFollowDoor = yaml.getBoolean("settings.hologram.follow-door", true);
+        this.hologramFlyTicks = yaml.getInt("settings.hologram.fly-ticks", 18);
         this.proximityCheckTicks = Math.max(5, yaml.getInt("settings.proximity-check-ticks", 10));
 
         ConfigurationSection section = yaml.getConfigurationSection("dungeons");
@@ -299,7 +303,13 @@ public final class DungeonCatalog {
         if (node != null && node.contains("x") && node.contains("y") && node.contains("z")) {
             point = point(node, 0.5, 64, 0.5);
         }
-        return new HologramSettings(enabled, ticks, offsetY, point);
+        boolean followDoor = node == null
+                ? this.hologramFollowDoor
+                : node.getBoolean("follow-door", this.hologramFollowDoor);
+        int flyTicks = node == null
+                ? this.hologramFlyTicks
+                : node.getInt("fly-ticks", this.hologramFlyTicks);
+        return new HologramSettings(enabled, ticks, offsetY, point, followDoor, flyTicks);
     }
 
     private Point point(ConfigurationSection section, double x, double y, double z) {

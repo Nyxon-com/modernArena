@@ -1,5 +1,8 @@
 package com.valaryrpg.arena.dungeon;
 
+import org.bukkit.Location;
+import org.bukkit.World;
+
 /** Cubo da fillare al clear della stanza. */
 public final class DungeonWall {
 
@@ -19,5 +22,14 @@ public final class DungeonWall {
         this.maxY = Math.max(y1, y2);
         this.maxZ = Math.max(z1, z2);
         this.setBlock = setBlock == null || setBlock.isBlank() ? "air" : setBlock;
+    }
+
+    public Location center(World world) {
+        return new Location(
+                world,
+                (this.minX + this.maxX) / 2.0 + 0.5,
+                (this.minY + this.maxY) / 2.0 + 0.5,
+                (this.minZ + this.maxZ) / 2.0 + 0.5
+        );
     }
 }

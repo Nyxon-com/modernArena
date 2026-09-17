@@ -330,6 +330,10 @@ public final class DungeonService {
         this.holograms.refresh(instance, definition);
     }
 
+    public void moveHologramToDoor(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room) {
+        this.holograms.flyToDoor(instance, definition, room);
+    }
+
     public void complete(DungeonInstance instance, DungeonDefinition definition) {
         complete(instance, definition, false);
     }

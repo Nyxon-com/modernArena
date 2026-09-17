@@ -29,6 +29,7 @@ public final class DungeonInstance {
     private SlotState state = SlotState.COPYING;
     private BukkitTask durationTask;
     private BukkitTask hologramTask;
+    private BukkitTask hologramFlyTask;
     private TextDisplay hologram;
     private String hologramFingerprint = "";
     private boolean closingAfterWipe;
@@ -109,6 +110,14 @@ public final class DungeonInstance {
 
     public void hologramTask(BukkitTask hologramTask) {
         this.hologramTask = hologramTask;
+    }
+
+    public BukkitTask hologramFlyTask() {
+        return this.hologramFlyTask;
+    }
+
+    public void hologramFlyTask(BukkitTask hologramFlyTask) {
+        this.hologramFlyTask = hologramFlyTask;
     }
 
     public TextDisplay hologram() {

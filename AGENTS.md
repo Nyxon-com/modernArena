@@ -59,6 +59,7 @@ Kit/eco Core = `[console] …` in YAML. Hologram = `TextDisplay` Paper.
 
 - `settings.world-prefix` — `dungeon_` (Core/Multiverse lo ignorano come `arena_`)
 - `settings.max-instances-per-dungeon` (default 4), `max-instances-global`, `complete-leave-ticks`
+- `settings.hologram.follow-door` — se true, a ogni wall clear l’holo vola al centro della porta (`fly-ticks`, max 59). Override per dungeon: `dungeons.<id>.hologram.follow-door`
 - `settings.proximity-check-ticks` — timer su slot `ACTIVE` per pack `radius` (niente `PlayerMoveEvent`)
 - `dungeons.<id>.rooms` — ordine YAML. Stanza 1: `spawn` TP. `objective: clear-mobs | boss`
 - `rooms.*.mobs.<id>` — **niente spawner Mythic**. Spawn diretto:
@@ -125,7 +126,7 @@ com.valaryrpg.arena
 1. Stesso slot/coda/copy async. Mondi `dungeon_<id>_<slot>`.
 2. Occupato in arena o dungeon → rifiuto. Party condiviso.
 3. TP spawn stanza 1 → `ACTIVE` → `intro` → pack `immediate` spawnano; pack `radius` aspettano il player.
-4. Kill Mythic nel mondo dungeon: se mob della stanza, ricalcola. Pack esausti + alive 0 → fill wall → `outro` + `commands` → stanza successiva.
+4. Kill Mythic nel mondo dungeon: se i pack sono esausti e i living della stanza sono 0, fill wall → `outro` + `commands` → stanza successiva. Recheck 2 tick dopo la death (l’entity può essere ancora in world). Niente spawner Mythic.
 5. Ultima stanza `objective: boss`: alla kill, `outro` + `commands`, messaggio complete, dopo `complete-leave-ticks` TP e unload.
 6. Morte = eliminato. 0 vivi → chiude. Proximity = timer su slot `ACTIVE`.
 
@@ -159,7 +160,7 @@ Dopo l’incremento, chat `milestone.progress` (`{kills}` `{threshold}` `{mob}`)
 ### Hologram (solo `ACTIVE`)
 
 Arena: warmup spawner Mythic, boss uccisi in questa istanza, top danno del boss **precedente**. Danno da `EntityDamageByEntityEvent` (melee, projectile, tameable). Linee: `hologram.lines`.
-Dungeon: `hologram.dungeon-lines` (`{dungeon}` `{room}` `{remaining}`).
+Dungeon: `hologram.dungeon-lines` (`{dungeon}` `{room}` `{remaining}`). `follow-door: true` → volo interpolato al centro wall ad ogni apertura.
 Update-ticks default 40. Skip se il testo non è cambiato. Cancel allo unload.
 
 ## Scala (8 GB, ~20 player)

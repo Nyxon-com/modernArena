@@ -74,15 +74,36 @@ public final class DungeonRooms {
             return;
         }
         DungeonRoom room = definition.room(instance.roomIndex());
-        if (room == null || !room.matchesMob(mythicName)) {
+        if (room == null) {
             return;
         }
-        instance.deathsInRoom(instance.deathsInRoom() + 1);
-        if (room.objective == DungeonObjective.BOSS && room.isBoss(mythicName)) {
-            this.service.complete(instance, definition);
+        if (room.matchesMob(mythicName)) {
+            instance.deathsInRoom(instance.deathsInRoom() + 1);
+            if (room.objective == DungeonObjective.BOSS && room.isBoss(mythicName)) {
+                this.service.complete(instance, definition);
+                return;
+            }
+        }
+        int roomIndex = instance.roomIndex();
+        tryAdvance(instance, definition, world);
+        this.plugin.tasks().later(() -> {
+            if (instance.roomIndex() != roomIndex) {
+                return;
+            }
+            tryAdvance(instance, definition, world);
+        }, 2);
+    }
+
+    /** Avanza se i pack sono esausti e nel mondo non resta nessun mob della stanza. */
+    public void tryAdvance(DungeonInstance instance, DungeonDefinition definition, World world) {
+        if (instance.state() != SlotState.ACTIVE || instance.completing()) {
             return;
         }
-        if (room.objective == DungeonObjective.CLEAR_MOBS && cleared(instance, room, world)) {
+        DungeonRoom room = definition.room(instance.roomIndex());
+        if (room == null || room.objective != DungeonObjective.CLEAR_MOBS) {
+            return;
+        }
+        if (cleared(instance, room, world)) {
             clear(instance, definition, world, room);
         }
     }
@@ -139,6 +160,7 @@ public final class DungeonRooms {
             }
             fire(instance, pack, world);
         }
+        tryAdvance(instance, definition, world);
     }
 
     private boolean near(DungeonInstance instance, Location point, double radius) {
@@ -177,13 +199,14 @@ public final class DungeonRooms {
                 return false;
             }
         }
-        return instance.deathsInRoom() >= instance.spawnedInRoom() && alive(room, world) == 0;
+        return alive(room, world) == 0;
     }
 
     private void clear(DungeonInstance instance, DungeonDefinition definition, World world, DungeonRoom room) {
         stopPacks(instance);
         if (room.wall != null) {
             fill(room.wall, world);
+            this.service.moveHologramToDoor(instance, definition, room);
         }
         Map<String, String> placeholders = this.service.placeholders(instance, definition);
         celebrate(instance, definition, room);
