@@ -14,5 +14,5 @@ Guida completa: `AGENTS.md`. JAR proprio, package `com.valaryrpg.arena`. Non è 
 - Max 4 per boss/dungeon, tetto totale 16 (`config.yml` `instances.max-loaded`). Coda RAM, dequeue sull’unload. Niente `PlayerMoveEvent`.
 - Kill/milestone **per player**. Hologram TextDisplay solo su `ACTIVE`.
 - Cap `max-bosses` → stop spawner + TP fuori. Cooldown entry/between in `arenas.yml`.
-- Reward Core = `[console]` in `milestones.yml` / `dungeons.yml`. Mai compileOnly sul Core.
+- Reward Core = `[console]` in `milestones.yml` / `dungeons.yml` (`rooms.*.commands` a ogni clear). Mai compileOnly sul Core.
 - v1: party, arene, dungeon (stanze + pack Mythic one-shot/raggio, niente spawner dungeon), coda, kill/milestone, holo, cap, cooldown.

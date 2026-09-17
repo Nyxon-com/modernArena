@@ -197,10 +197,11 @@ public final class DungeonCatalog {
                     objective,
                     node.isConfigurationSection("spawn") ? point(node.getConfigurationSection("spawn"), 0.5, 64, 0.5) : null,
                     intro(node.getConfigurationSection("intro")),
+                    optionalIntro(node.getConfigurationSection("outro")),
                     wall(node.getConfigurationSection("wall")),
                     bossMob,
                     packs,
-                    node.getStringList("commands")
+                    commands(node)
             ));
         }
         return rooms;
@@ -248,6 +249,19 @@ public final class DungeonCatalog {
                 node.getInt("stay-ticks", 40),
                 node.getInt("fade-out-ticks", 10)
         );
+    }
+
+    private DungeonIntro optionalIntro(ConfigurationSection node) {
+        return node == null ? null : intro(node);
+    }
+
+    private List<String> commands(ConfigurationSection room) {
+        List<String> lines = new ArrayList<>(room.getStringList("commands"));
+        ConfigurationSection outro = room.getConfigurationSection("outro");
+        if (outro != null) {
+            lines.addAll(outro.getStringList("commands"));
+        }
+        return lines;
     }
 
     private DungeonWall wall(ConfigurationSection node) {

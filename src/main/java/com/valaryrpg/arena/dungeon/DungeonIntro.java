@@ -1,6 +1,6 @@
 package com.valaryrpg.arena.dungeon;
 
-/** Title/subtitle/actionbar all'ingresso stanza. */
+/** Title/subtitle/actionbar di stanza (ingresso o clear). */
 public final class DungeonIntro {
 
     public final String title;

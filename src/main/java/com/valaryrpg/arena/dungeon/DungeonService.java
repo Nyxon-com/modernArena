@@ -331,6 +331,10 @@ public final class DungeonService {
     }
 
     public void complete(DungeonInstance instance, DungeonDefinition definition) {
+        complete(instance, definition, false);
+    }
+
+    public void complete(DungeonInstance instance, DungeonDefinition definition, boolean roomAlreadyRewarded) {
         if (instance.state() != SlotState.ACTIVE || instance.completing()) {
             return;
         }
@@ -345,6 +349,9 @@ public final class DungeonService {
         }
         instance.spawnerNames().clear();
         DungeonRoom room = definition.room(instance.roomIndex());
+        if (!roomAlreadyRewarded) {
+            this.rooms.celebrate(instance, definition, room);
+        }
         Map<String, String> placeholders = placeholders(instance, definition);
         for (UUID uuid : instance.players()) {
             Player member = Bukkit.getPlayer(uuid);
@@ -353,9 +360,6 @@ public final class DungeonService {
             }
             this.plugin.messages().send(member, "dungeon.complete", placeholders);
             this.plugin.sounds().play(member, "dungeon-complete");
-            if (room != null) {
-                this.plugin.console().run(member, room.commands, placeholders);
-            }
         }
         this.plugin.tasks().later(() -> closeAfterComplete(instance), this.catalog.completeLeaveTicks());
     }

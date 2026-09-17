@@ -11,6 +11,7 @@ public final class DungeonRoom {
     public final DungeonObjective objective;
     public final Point spawn;
     public final DungeonIntro intro;
+    public final DungeonIntro outro;
     public final DungeonWall wall;
     public final String bossMob;
     public final List<DungeonPack> packs;
@@ -21,6 +22,7 @@ public final class DungeonRoom {
             DungeonObjective objective,
             Point spawn,
             DungeonIntro intro,
+            DungeonIntro outro,
             DungeonWall wall,
             String bossMob,
             List<DungeonPack> packs,
@@ -30,6 +32,7 @@ public final class DungeonRoom {
         this.objective = objective == null ? DungeonObjective.CLEAR_MOBS : objective;
         this.spawn = spawn;
         this.intro = intro;
+        this.outro = outro;
         this.wall = wall;
         this.bossMob = bossMob == null ? "" : bossMob;
         this.packs = List.copyOf(packs);

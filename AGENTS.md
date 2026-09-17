@@ -63,8 +63,9 @@ Testi, permessi, suoni, delay, coord, cap, nomi spawner: **solo YAML**. Se manca
   - `scatter`, `level`, xyz
 - `rooms.*.spawners` — accettato come alias di `mobs` (`max-mobs` → `amount`). Non clona spawner Mythic.
 - `rooms.*.wall.from/to` + `set-block` (default air) — fill sync al clear, no restore
-- `rooms.*.intro` — title/subtitle/actionbar MiniMessage + fade ticks
-- Ultima stanza `objective: boss` + `commands: ["[console] …"]`
+- `rooms.*.intro` — title/subtitle/actionbar MiniMessage + fade ticks all’ingresso
+- `rooms.*.outro` — stesso blocco a fine stanza (clear-mobs o kill boss)
+- `rooms.*.commands` (anche sotto `outro`) — ogni stanza, `[console] …` o comando player; `{player}` `{name}` `{uuid}` `{dungeon}` `{room}`
 
 ### Comandi `/arena`
 
@@ -119,7 +120,7 @@ Riaggancia `Tasks`, `messages()`, `sounds()`, `console()`, `storage`. Non duplic
 2. Occupato in arena o dungeon → rifiuto. Party condiviso.
 3. TP spawn stanza 1 → `ACTIVE` → title intro → pack `immediate` spawnano; pack `radius` aspettano il player.
 4. `MythicMobDeathEvent` nel mondo dungeon: se mob della stanza, ricalcola. Pack esausti + alive 0 → fill wall → stanza successiva. Niente spawner Mythic.
-5. Ultima stanza `objective: boss`: alla kill tracciata, `[console]` YAML, messaggio, dopo `complete-leave-ticks` TP e unload.
+5. Fine stanza: `outro` a schermo + `commands` YAML per i vivi. Ultima stanza `objective: boss`: stessa cosa alla kill, poi messaggio e dopo `complete-leave-ticks` TP e unload.
 6. Morte = eliminato come in arena. 0 vivi → chiude. Proximity = timer su slot ACTIVE, niente `PlayerMoveEvent`.
 
 ### Leave / morte / cap
@@ -222,7 +223,7 @@ Heap `-Xmx5G`. `instances.max-loaded: 16` (alza a 18 solo con template minuscoli
 - **Nuovo boss**: `modules/arenas.yml` → `bosses.<id>`. Template nella world container, **non caricato**. `source-spawner` + `mob:` = internal name Mythic.
 - **Milestone**: `milestones.yml` → `mobs.<id>.<soglia>`. L’id deve matchare boss id o Mythic name (`mob:`).
 - **Holo / cap / cooldown**: YAML arenas + testi `hologram.*` / `errors.entry-cooldown` / `errors.between-cooldown` / `arena.boss-cap`.
-- **Nuovo dungeon**: `modules/dungeons.yml` → `dungeons.<id>` + `rooms`. Template nella world container, **non caricato**.
+- **Nuovo dungeon**: `modules/dungeons.yml` → `dungeons.<id>` + `rooms`. Template nella world container, **non caricato**. Fine stanza: `outro` + `commands`.
 - **Reload**: `/arena reload` ricarica YAML + cataloghi (anche dungeon). Non tocca istanze vive né il DB.
 
 ## Fuori scope

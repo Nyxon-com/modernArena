@@ -186,13 +186,45 @@ public final class DungeonRooms {
             fill(room.wall, world);
         }
         Map<String, String> placeholders = this.service.placeholders(instance, definition);
+        celebrate(instance, definition, room);
         this.plugin.parties().broadcast(instance.party(), "dungeon.room-clear", placeholders);
         int next = instance.roomIndex() + 1;
         if (definition.room(next) == null) {
-            this.service.complete(instance, definition);
+            this.service.complete(instance, definition, true);
             return;
         }
         start(instance, definition, world, next);
+    }
+
+    /** Title + comandi YAML a fine stanza, una volta per player vivo. */
+    public void celebrate(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room) {
+        if (room == null) {
+            return;
+        }
+        Map<String, String> placeholders = this.service.placeholders(instance, definition);
+        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
+            if (!instance.players().contains(member.getUniqueId())) {
+                continue;
+            }
+            if (hasScreen(room.outro)) {
+                this.plugin.messages().intro(
+                        member,
+                        room.outro.title,
+                        room.outro.subtitle,
+                        room.outro.actionbar,
+                        room.outro.fadeInTicks,
+                        room.outro.stayTicks,
+                        room.outro.fadeOutTicks,
+                        placeholders
+                );
+            }
+            this.plugin.console().run(member, room.commands, placeholders);
+        }
+    }
+
+    private boolean hasScreen(DungeonIntro intro) {
+        return intro != null
+                && (!intro.title.isBlank() || !intro.subtitle.isBlank() || !intro.actionbar.isBlank());
     }
 
     private void showIntro(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room) {

@@ -87,6 +87,15 @@ dungeons:
             z: 4.5
             yaw: 0.0
             pitch: 0.0
+        outro:
+          title: "<gradient:#5F22C3:#40099B><bold>Stanza pulita</bold></gradient>"
+          subtitle: "<gray>Il passaggio si apre"
+          actionbar: ""
+          fade-in-ticks: 10
+          stay-ticks: 40
+          fade-out-ticks: 10
+        commands:
+          - "[console] kit starter {player}"
       boss:
         objective: boss
         intro:
@@ -110,5 +119,12 @@ dungeons:
             z: 20.5
             yaw: 0.0
             pitch: 0.0
+        outro:
+          title: "<red><bold>Vittoria</bold></red>"
+          subtitle: "<gray>Il dungeon è completo"
+          actionbar: ""
+          fade-in-ticks: 10
+          stay-ticks: 40
+          fade-out-ticks: 10
         commands:
           - "[console] kit starter {player}"
