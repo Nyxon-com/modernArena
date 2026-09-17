@@ -44,11 +44,7 @@ public final class MythicSpawners {
                 at.add((Math.random() - 0.5D) * 2D * scatter, 0D, (Math.random() - 0.5D) * 2D * scatter);
             }
             try {
-                ActiveMob active = api.spawnMythicMob(mob, at, Math.max(1, level));
-                if (active == null || active.getEntity() == null) {
-                    continue;
-                }
-                Entity entity = active.getEntity().getBukkitEntity();
+                Entity entity = api.spawnMythicMob(mob, at, Math.max(1, level));
                 if (entity instanceof LivingEntity living) {
                     spawned.add(living);
                 }
