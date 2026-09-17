@@ -1,7 +1,8 @@
 # =============================================================================
 # Suoni. Chiavi usate dal Java: party-invite, arena-start, arena-leave,
 # arena-queue, milestone, command-denied, arena-cooldown, arena-boss-cap,
-# dungeon-start, dungeon-leave, dungeon-queue, dungeon-complete, dungeon-room.
+# dungeon-start, dungeon-leave, dungeon-queue, dungeon-complete, dungeon-room,
+# dungeon-wave, dungeon-last-minion.
 # =============================================================================
 
 party-invite:
@@ -75,6 +76,18 @@ dungeon-room:
   sound: BLOCK_NOTE_BLOCK_CHIME
   volume: 0.8
   pitch: 1.1
+
+dungeon-wave:
+  enabled: true
+  sound: ENTITY_EVOKER_CAST_SPELL
+  volume: 0.7
+  pitch: 1.15
+
+dungeon-last-minion:
+  enabled: true
+  sound: BLOCK_BELL_USE
+  volume: 0.9
+  pitch: 1.4
 
 dungeon-complete:
   enabled: true

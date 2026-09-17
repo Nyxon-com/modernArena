@@ -1,8 +1,14 @@
 package com.valaryrpg.arena.arena;
 
+import com.valaryrpg.arena.util.Tasks;
 import org.bukkit.GameRule;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /** Limiti e gamerule dei mondi istanza, da config.yml. */
 public final class InstanceWorlds {
@@ -62,5 +68,22 @@ public final class InstanceWorlds {
         world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
         world.setGameRule(GameRule.DO_FIRE_TICK, false);
         world.setSpawnFlags(this.vanillaMobSpawning, this.vanillaMobSpawning);
+    }
+
+    /** Carica i chunk spawn async, poi TP/Mythic sul main. */
+    public void prepareSpawn(World world, Location spawn, Tasks tasks, Runnable onReady) {
+        if (world == null || spawn == null || tasks == null || onReady == null) {
+            return;
+        }
+        int cx = spawn.getBlockX() >> 4;
+        int cz = spawn.getBlockZ() >> 4;
+        List<CompletableFuture<?>> loads = new ArrayList<>();
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                loads.add(world.getChunkAtAsync(cx + dx, cz + dz));
+            }
+        }
+        CompletableFuture.allOf(loads.toArray(CompletableFuture[]::new))
+                .whenComplete((ignored, error) -> tasks.sync(onReady));
     }
 }

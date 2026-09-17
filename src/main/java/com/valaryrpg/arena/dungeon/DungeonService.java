@@ -120,6 +120,7 @@ public final class DungeonService {
 
     public Map<String, String> placeholders(DungeonInstance instance, DungeonDefinition definition) {
         DungeonRoom room = definition.room(instance.roomIndex());
+        int waves = room == null ? 0 : room.waves.size();
         return Map.of(
                 "dungeon", display(definition),
                 "display", display(definition),
@@ -127,7 +128,9 @@ public final class DungeonService {
                 "world", instance.worldName(),
                 "room", room == null ? "" : room.id,
                 "remaining", Integer.toString(this.rooms.remaining(instance, definition, loadedWorld(instance))),
-                "players", Integer.toString(instance.players().size())
+                "players", Integer.toString(instance.players().size()),
+                "wave", Integer.toString(instance.waveIndex()),
+                "waves", Integer.toString(waves)
         );
     }
 
@@ -520,6 +523,23 @@ public final class DungeonService {
             unload(instance, null);
             return;
         }
+        this.plugin.configs().instances().prepareSpawn(
+                world,
+                spawn,
+                this.plugin.tasks(),
+                () -> enter(instance, definition, world, spawn)
+        );
+    }
+
+    private void enter(DungeonInstance instance, DungeonDefinition definition, World world, Location spawn) {
+        if (instance.state() == SlotState.UNLOADING) {
+            return;
+        }
+        List<Player> online = this.plugin.parties().onlineMembers(instance.party());
+        if (online.isEmpty()) {
+            unload(instance, null);
+            return;
+        }
         for (Player member : online) {
             member.teleport(spawn);
             instance.players().add(member.getUniqueId());
@@ -529,7 +549,7 @@ public final class DungeonService {
         instance.state(SlotState.ACTIVE);
         this.holograms.spawn(instance, definition, world);
         this.rooms.start(instance, definition, world, 0);
-        this.plugin.hud().show(online);
+        this.plugin.hud().showDungeon(online);
         if (definition.durationSeconds > 0) {
             instance.durationDeadline(System.currentTimeMillis() + definition.durationSeconds * 1000L);
             instance.durationTask(this.plugin.tasks().later(

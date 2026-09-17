@@ -38,8 +38,14 @@ public final class DungeonInstance {
     private int roomIndex;
     private int deathsInRoom;
     private int spawnedInRoom;
+    private int waveIndex;
+    private long waveAt;
+    private boolean lastMinionAnnounced;
+    private boolean waveArmed;
+    private UUID glowing;
     private final Map<String, Integer> packFires = new HashMap<>();
-    private final Map<String, Long> packWaveAt = new HashMap<>();
+    private final Map<UUID, String> roomLiving = new HashMap<>();
+    private final Set<UUID> waveLiving = new HashSet<>();
     private final Map<UUID, String> leashed = new HashMap<>();
     private BukkitTask packTask;
     private long durationDeadline;
@@ -188,8 +194,52 @@ public final class DungeonInstance {
         return this.packFires;
     }
 
-    public Map<String, Long> packWaveAt() {
-        return this.packWaveAt;
+    public Map<UUID, String> roomLiving() {
+        return this.roomLiving;
+    }
+
+    public Set<UUID> waveLiving() {
+        return this.waveLiving;
+    }
+
+    public int waveIndex() {
+        return this.waveIndex;
+    }
+
+    public void waveIndex(int waveIndex) {
+        this.waveIndex = Math.max(0, waveIndex);
+    }
+
+    public long waveAt() {
+        return this.waveAt;
+    }
+
+    public void waveAt(long waveAt) {
+        this.waveAt = waveAt;
+    }
+
+    public boolean lastMinionAnnounced() {
+        return this.lastMinionAnnounced;
+    }
+
+    public void lastMinionAnnounced(boolean lastMinionAnnounced) {
+        this.lastMinionAnnounced = lastMinionAnnounced;
+    }
+
+    public boolean waveArmed() {
+        return this.waveArmed;
+    }
+
+    public void waveArmed(boolean waveArmed) {
+        this.waveArmed = waveArmed;
+    }
+
+    public UUID glowing() {
+        return this.glowing;
+    }
+
+    public void glowing(UUID glowing) {
+        this.glowing = glowing;
     }
 
     public Map<UUID, String> leashed() {

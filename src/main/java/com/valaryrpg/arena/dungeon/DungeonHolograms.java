@@ -82,7 +82,7 @@ public final class DungeonHolograms {
             room = definition.room(instance.roomIndex());
             remaining = this.rooms.remaining(instance, definition, display.getWorld());
         }
-        String fingerprint = (room == null ? "" : room.id) + "|" + remaining;
+        String fingerprint = (room == null ? "" : room.id) + "|" + remaining + "|" + instance.waveIndex();
         if (fingerprint.equals(instance.hologramFingerprint())) {
             return;
         }
@@ -150,7 +150,9 @@ public final class DungeonHolograms {
                 "dungeon", definition.displayName == null || definition.displayName.isEmpty()
                         ? definition.id : definition.displayName,
                 "room", room == null ? "" : room.id,
-                "remaining", Integer.toString(remaining)
+                "remaining", Integer.toString(remaining),
+                "wave", Integer.toString(instance.waveIndex()),
+                "waves", Integer.toString(room == null ? 0 : room.waves.size())
         );
         List<String> raw = this.plugin.messages().list("hologram.dungeon-lines");
         Component result = Component.empty();

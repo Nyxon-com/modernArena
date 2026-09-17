@@ -26,8 +26,13 @@ settings:
     spawn-forward: 2.5
   proximity-check-ticks: 10
   spawn-safe-radius: 6
-  wave-delay-seconds: 0
-  wave-require-clear: true
+  # Non si applica ai pack trigger: wave (i xyz restano). Solo immediate/radius in stanza 1 se il punto è fuori dal raggio.
+  # delay-seconds: attesa tra ondate (orologio server). require-clear: aspetta che l'onda sia morta.
+  # highlight-last: glow sull'ultimo minion. Piano per stanza: rooms.*.waves (id-posizione: quanti).
+  waves:
+    delay-seconds: 3
+    require-clear: true
+    highlight-last: true
   leash:
     radius: 24
     heal: true
@@ -84,13 +89,9 @@ dungeons:
             z: 6
           set-block: air
         mobs:
-          pack:
-            mob: ExampleMob
+          gate:
             trigger: wave
-            amount: 5
-            times: 2
-            wave-delay-seconds: 3
-            wave-require-clear: true
+            mob: ExampleMob
             scatter: 2
             level: 1
             x: 4.5
@@ -99,7 +100,23 @@ dungeons:
             yaw: 0.0
             pitch: 0.0
             leash: 24
-            heal-on-leash: true
+          left:
+            trigger: wave
+            mob: ExampleMob
+            scatter: 2
+            level: 1
+            x: -4.5
+            y: 64.0
+            z: 4.5
+            yaw: 180.0
+            pitch: 0.0
+            leash: 24
+        # Ogni "-" è un'ondata. Chiavi = id in mobs (solo trigger: wave). Valore = quanti spawnano da quel punto.
+        waves:
+          - gate: 3
+            left: 2
+          - gate: 4
+            left: 1
         outro:
           title: "<gradient:#5F22C3:#40099B><bold>Stanza pulita</bold></gradient>"
           subtitle: "<gray>Il passaggio si apre"

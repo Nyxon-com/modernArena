@@ -73,6 +73,12 @@ public final class ValaryPlaceholders extends PlaceholderExpansion {
         if (key.equals("room")) {
             return room == null ? "" : room.id;
         }
+        if (key.equals("wave")) {
+            return Integer.toString(instance.waveIndex());
+        }
+        if (key.equals("waves")) {
+            return Integer.toString(room == null ? 0 : room.waves.size());
+        }
         if (key.equals("remaining")) {
             return Integer.toString(instance.cachedRemaining());
         }
@@ -127,7 +133,7 @@ public final class ValaryPlaceholders extends PlaceholderExpansion {
             return definition == null || definition.displayName == null || definition.displayName.isBlank()
                     ? instance.bossId() : definition.displayName;
         }
-        if (key.equals("room")) {
+        if (key.equals("room") || key.equals("wave") || key.equals("waves")) {
             return "";
         }
         if (key.equals("remaining") || key.equals("mobs")) {

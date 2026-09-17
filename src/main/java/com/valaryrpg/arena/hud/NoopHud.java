@@ -6,7 +6,11 @@ import org.bukkit.entity.Player;
 public final class NoopHud implements InstanceHud {
 
     @Override
-    public void show(Iterable<Player> players) {
+    public void showArena(Iterable<Player> players) {
+    }
+
+    @Override
+    public void showDungeon(Iterable<Player> players) {
     }
 
     @Override

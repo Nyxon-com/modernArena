@@ -5,7 +5,9 @@ import org.bukkit.entity.Player;
 /** Scoreboard in istanza. TAB se presente, altrimenti no-op. */
 public interface InstanceHud {
 
-    void show(Iterable<Player> players);
+    void showArena(Iterable<Player> players);
+
+    void showDungeon(Iterable<Player> players);
 
     void hide(Player player);
 }

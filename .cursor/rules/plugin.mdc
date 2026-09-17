@@ -9,10 +9,10 @@ Wiki: `AGENTS.md`. JAR proprio, package `com.valaryrpg.arena`. Non è un modulo 
 
 - Testi/permessi/suoni/delay/coord/cap/nomi mob → YAML. Java orchestra. Brand solo in `lang/messages.yml`.
 - Helper: `Tasks`, `MessageService`, `SoundService`, `ConsoleCommands`, `StorageManager`.
-- Async: copy/delete mondo, SQL kill/milestone. Sync: load/unload, TP, Mythic.
+- Async: copy/delete mondo, SQL kill/milestone, chunk spawn. Sync: load/unload, TP, Mythic.
 - Max 4 per boss/dungeon, tetto `config.yml` `instances.max-loaded` (16). Coda RAM. Niente `PlayerMoveEvent`.
-- Arena: clone `source-spawner`. Dungeon: pack immediate/radius/wave, leash, `intro`/`outro`, spawn-safe stanza 1, holo spawn-forward poi follow-door. Clear = pack esausti + 0 living.
-- Scoreboard TAB unica (softdepend) con tempo. PAPI `%valary_*%`. `config.yml` `blocked-commands`. Niente bossbar.
+- Arena: clone `source-spawner`. Dungeon: posizioni `wave` + piano `waves:`, glow ultimo minion, leash, `intro`/`outro`, spawn-safe stanza 1, holo spawn-forward poi follow-door. Clear = ondate/pack esausti + 0 living UUID.
+- Scoreboard TAB (softdepend): `scoreboard.arena` e `scoreboard.dungeon`, `enabled: false` per spegnerle. PAPI `%valary_*%`. `config.yml` `blocked-commands`. Niente bossbar.
 - Kill/milestone **per player**. Cap `max-bosses` → stop + TP.
 - Mai `compileOnly` sul Core: kit/eco = `[console]` in YAML.
 - Commit come **Nyxon-com**, mai Haze/Cursor Agent. Non compilare se non chiesto.

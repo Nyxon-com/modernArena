@@ -46,6 +46,7 @@ public final class DungeonCatalog {
     private double hologramSpawnForward = 2.5;
     private int waveDelaySeconds;
     private boolean waveRequireClear = true;
+    private boolean waveHighlightLast = true;
 
     public DungeonCatalog(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
@@ -84,8 +85,15 @@ public final class DungeonCatalog {
         this.healOnLeash = yaml.getBoolean("settings.leash.heal", true);
         this.spawnSafeRadius = Math.max(0D, yaml.getDouble("settings.spawn-safe-radius", 6D));
         this.hologramSpawnForward = Math.max(0D, yaml.getDouble("settings.hologram.spawn-forward", 2.5));
-        this.waveDelaySeconds = Math.max(0, yaml.getInt("settings.wave-delay-seconds", 0));
-        this.waveRequireClear = yaml.getBoolean("settings.wave-require-clear", true);
+        this.waveDelaySeconds = Math.max(0, yaml.getInt(
+                "settings.waves.delay-seconds",
+                yaml.getInt("settings.wave-delay-seconds", 0)
+        ));
+        this.waveRequireClear = yaml.getBoolean(
+                "settings.waves.require-clear",
+                yaml.getBoolean("settings.wave-require-clear", true)
+        );
+        this.waveHighlightLast = yaml.getBoolean("settings.waves.highlight-last", true);
 
         ConfigurationSection section = yaml.getConfigurationSection("dungeons");
         if (section == null) {
@@ -177,6 +185,18 @@ public final class DungeonCatalog {
         return this.proximityCheckTicks;
     }
 
+    public int waveDelaySeconds() {
+        return this.waveDelaySeconds;
+    }
+
+    public boolean waveRequireClear() {
+        return this.waveRequireClear;
+    }
+
+    public boolean waveHighlightLast() {
+        return this.waveHighlightLast;
+    }
+
     public double spawnSafeRadius() {
         return this.spawnSafeRadius;
     }
@@ -221,6 +241,7 @@ public final class DungeonCatalog {
                     wall(node.getConfigurationSection("wall")),
                     bossMob,
                     packs,
+                    waves(node, packs),
                     commands(node)
             ));
         }
@@ -253,14 +274,52 @@ public final class DungeonCatalog {
                     node.getDouble("scatter", node.getDouble("spawn-radius", 0D)),
                     node.getInt("level", 1),
                     leashRadius(node),
-                    healOnLeash(node),
-                    node.getInt("wave-delay-seconds", this.waveDelaySeconds),
-                    node.contains("wave-require-clear")
-                            ? node.getBoolean("wave-require-clear")
-                            : this.waveRequireClear
+                    healOnLeash(node)
             ));
         }
         return packs;
+    }
+
+    private List<DungeonWave> waves(ConfigurationSection room, List<DungeonPack> packs) {
+        List<DungeonWave> waves = new ArrayList<>();
+        List<Map<?, ?>> rows = room.getMapList("waves");
+        if (rows.isEmpty()) {
+            Map<String, Integer> fallback = new LinkedHashMap<>();
+            for (DungeonPack pack : packs) {
+                if (pack.trigger == DungeonPackTrigger.WAVE) {
+                    fallback.put(pack.id, pack.amount);
+                }
+            }
+            if (!fallback.isEmpty()) {
+                waves.add(new DungeonWave(fallback));
+            }
+            return waves;
+        }
+        for (Map<?, ?> row : rows) {
+            Map<String, Integer> spawns = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : row.entrySet()) {
+                if (entry.getKey() == null || entry.getValue() == null) {
+                    continue;
+                }
+                int amount = 0;
+                if (entry.getValue() instanceof Number number) {
+                    amount = number.intValue();
+                } else {
+                    try {
+                        amount = Integer.parseInt(String.valueOf(entry.getValue()));
+                    } catch (NumberFormatException ignored) {
+                        continue;
+                    }
+                }
+                if (amount > 0) {
+                    spawns.put(String.valueOf(entry.getKey()), amount);
+                }
+            }
+            if (!spawns.isEmpty()) {
+                waves.add(new DungeonWave(spawns));
+            }
+        }
+        return waves;
     }
 
     private double leashRadius(ConfigurationSection node) {

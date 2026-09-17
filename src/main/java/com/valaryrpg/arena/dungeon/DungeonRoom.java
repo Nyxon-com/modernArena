@@ -15,6 +15,7 @@ public final class DungeonRoom {
     public final DungeonWall wall;
     public final String bossMob;
     public final List<DungeonPack> packs;
+    public final List<DungeonWave> waves;
     public final List<String> commands;
 
     public DungeonRoom(
@@ -26,6 +27,7 @@ public final class DungeonRoom {
             DungeonWall wall,
             String bossMob,
             List<DungeonPack> packs,
+            List<DungeonWave> waves,
             List<String> commands
     ) {
         this.id = id;
@@ -36,6 +38,7 @@ public final class DungeonRoom {
         this.wall = wall;
         this.bossMob = bossMob == null ? "" : bossMob;
         this.packs = List.copyOf(packs);
+        this.waves = waves == null ? List.of() : List.copyOf(waves);
         this.commands = commands == null ? List.of() : List.copyOf(commands);
     }
 
@@ -63,6 +66,17 @@ public final class DungeonRoom {
 
     public int expectedMobs() {
         int total = 0;
+        if (!this.waves.isEmpty()) {
+            for (DungeonWave wave : this.waves) {
+                total += wave.total();
+            }
+            for (DungeonPack pack : this.packs) {
+                if (pack.trigger != DungeonPackTrigger.WAVE) {
+                    total += pack.expected();
+                }
+            }
+            return total;
+        }
         for (DungeonPack pack : this.packs) {
             total += pack.expected();
         }
@@ -87,13 +101,8 @@ public final class DungeonRoom {
         return false;
     }
 
-    public boolean hasWavePacks() {
-        for (DungeonPack pack : this.packs) {
-            if (pack.trigger == DungeonPackTrigger.WAVE) {
-                return true;
-            }
-        }
-        return false;
+    public boolean hasWaves() {
+        return !this.waves.isEmpty();
     }
 
     public DungeonPack pack(String id) {

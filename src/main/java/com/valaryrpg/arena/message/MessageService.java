@@ -116,16 +116,19 @@ public final class MessageService {
             int fadeOutTicks,
             Map<String, String> placeholders
     ) {
-        Title.Times times = Title.Times.times(
-                Duration.ofMillis(Math.max(0, fadeInTicks) * 50L),
-                Duration.ofMillis(Math.max(1, stayTicks) * 50L),
-                Duration.ofMillis(Math.max(0, fadeOutTicks) * 50L)
-        );
-        player.showTitle(Title.title(
-                mini(title == null ? "" : title, placeholders),
-                mini(subtitle == null ? "" : subtitle, placeholders),
-                times
-        ));
+        boolean titled = (title != null && !title.isBlank()) || (subtitle != null && !subtitle.isBlank());
+        if (titled) {
+            Title.Times times = Title.Times.times(
+                    Duration.ofMillis(Math.max(0, fadeInTicks) * 50L),
+                    Duration.ofMillis(Math.max(1, stayTicks) * 50L),
+                    Duration.ofMillis(Math.max(0, fadeOutTicks) * 50L)
+            );
+            player.showTitle(Title.title(
+                    mini(title == null ? "" : title, placeholders),
+                    mini(subtitle == null ? "" : subtitle, placeholders),
+                    times
+            ));
+        }
         if (actionbar != null && !actionbar.isBlank()) {
             player.sendActionBar(mini(actionbar, placeholders));
         }

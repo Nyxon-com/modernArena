@@ -474,6 +474,23 @@ public final class ArenaService {
             unload(instance, null);
             return;
         }
+        this.plugin.configs().instances().prepareSpawn(
+                world,
+                spawn,
+                this.plugin.tasks(),
+                () -> enter(instance, definition, world, spawn)
+        );
+    }
+
+    private void enter(ArenaInstance instance, ArenaDefinition definition, World world, Location spawn) {
+        if (instance.state() == SlotState.UNLOADING) {
+            return;
+        }
+        List<Player> online = this.plugin.parties().onlineMembers(instance.party());
+        if (online.isEmpty()) {
+            unload(instance, null);
+            return;
+        }
         for (Player member : online) {
             member.teleport(spawn);
             instance.players().add(member.getUniqueId());
@@ -482,7 +499,7 @@ public final class ArenaService {
         }
         instance.state(SlotState.ACTIVE);
         this.holograms.spawn(instance, definition, world);
-        this.plugin.hud().show(online);
+        this.plugin.hud().showArena(online);
         if (definition.durationSeconds > 0) {
             instance.durationDeadline(System.currentTimeMillis() + definition.durationSeconds * 1000L);
             instance.durationTask(this.plugin.tasks().later(

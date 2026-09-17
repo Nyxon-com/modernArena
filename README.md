@@ -65,24 +65,40 @@ Brand (prefix/separator viola `#5F22C3` → `#40099B`) solo in `lang/messages.ym
 
 Stanze in ordine YAML. Stanza 1 = TP spawn. Obiettivo `clear-mobs` o `boss`.
 
-- Pack: `trigger: immediate` | `radius` | `wave` (solo clear-mobs). Onda: `amount` mob, `times` salve, `wave-delay-seconds` + `wave-require-clear`.
+- Ondate: posizioni `mobs.<id>` con `trigger: wave`, poi `waves:` lista (`gate: 3` = 3 da quel punto). Default in `settings.waves`. Glow ultimo minion. `radius` solo boss.
 - Spawn safe: `settings.spawn-safe-radius` (default 6) intorno allo spawn stanza 1 — i pack non spawnano lì.
 - Clear stanza: pack esausti **e** 0 living. Poi fill `wall`, `outro`, `commands`.
 - Hologram: all’ingresso spawn stanza 1 + `spawn-forward`. Poi `follow-door` vola al wall di ogni stanza.
 - Leash / heal-on-leash. Tempo istanza: `duration-seconds` (0 = off); fail senza reward.
-- Scoreboard TAB unica (tempo, stanza, remaining). PAPI `%valary_time%` `%valary_remaining%` `%valary_remaining_<room>%`.
+- Scoreboard TAB: `scoreboard.arena` e `scoreboard.dungeon` (`enabled: false` per off). PAPI `%valary_time%` `%valary_remaining%` `%valary_wave%`.
 - Comandi vietati: `config.yml` `blocked-commands`. Bypass `valary.arena.command.bypass`.
 
 ```yaml
 settings:
-  spawn-safe-radius: 6
-  hologram:
-    follow-door: true
-    fly-ticks: 18
-    spawn-forward: 2.5
-  leash:
-    radius: 24
-    heal: true
+  waves:
+    delay-seconds: 3
+    require-clear: true
+    highlight-last: true
+rooms:
+  ingresso:
+    mobs:
+      gate:
+        trigger: wave
+        mob: TerraMinion
+        x: 4.5
+        y: 64.0
+        z: 4.5
+      left:
+        trigger: wave
+        mob: TerraMinion
+        x: -4.5
+        y: 64.0
+        z: 4.5
+    waves:
+      - gate: 3
+        left: 2
+      - gate: 4
+        left: 1
 ```
 
 ## Scala (8 GB, ~20 player)

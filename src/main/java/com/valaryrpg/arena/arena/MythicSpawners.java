@@ -50,12 +50,19 @@ public final class MythicSpawners {
             return spawned;
         }
         var api = MythicBukkit.inst().getAPIHelper();
+        boolean originInside = inside(location, keepOut, keepOutRadius);
         for (int index = 0; index < amount; index++) {
             Location at = location.clone();
             if (scatter > 0D) {
                 at.add((Math.random() - 0.5D) * 2D * scatter, 0D, (Math.random() - 0.5D) * 2D * scatter);
             }
-            pushOut(at, keepOut, keepOutRadius);
+            if (originInside) {
+                if (inside(at, keepOut, keepOutRadius)) {
+                    at = location.clone();
+                }
+            } else {
+                pushOut(at, keepOut, keepOutRadius);
+            }
             try {
                 Entity entity = api.spawnMythicMob(mob, at, Math.max(1, level));
                 if (entity instanceof LivingEntity living) {
@@ -95,6 +102,15 @@ public final class MythicSpawners {
         double scale = (min + 0.5) / dist;
         at.setX(keepOut.getX() + dx * scale);
         at.setZ(keepOut.getZ() + dz * scale);
+    }
+
+    private static boolean inside(Location at, Location keepOut, double radius) {
+        if (at == null || keepOut == null || radius <= 0D || at.getWorld() == null || !at.getWorld().equals(keepOut.getWorld())) {
+            return false;
+        }
+        double dx = at.getX() - keepOut.getX();
+        double dz = at.getZ() - keepOut.getZ();
+        return dx * dx + dz * dz < radius * radius;
     }
 
     public String create(String name, Location location, SpawnerDefinition definition) {
