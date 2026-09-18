@@ -139,7 +139,9 @@ Clear stanza `clear-mobs`: ondate/pack esausti **e** 0 living tracciati per UUID
 Altri player: `valary.arena.stats.other`. Bypass cooldown: `valary.arena.cooldown.bypass`.
 `/arena reload` ricarica YAML + cataloghi (anche dungeon). Ricrea le scoreboard TAB e le riassegna ai player in istanza. Non tocca mondi aperti né il DB.
 
-`/dungeon` — `start <id>`, `list`, `leave`. Solo o con party (leader). Un player non sta in arena e dungeon insieme.
+`/dungeon` — `start <id> [player]`, `list`, `leave`, `spawn`. Solo o con party (leader). Un player non sta in arena e dungeon insieme.
+Console o staff (`valary.dungeon.start.other`): `/dungeon start <id> <player>`. Così i player possono restare senza `valary.dungeon.start`.
+`/dungeon spawn` TP allo spawn stanza 1 del mondo istanza. Serve essere dentro.
 
 Comandi vietati in istanza: `config.yml` `blocked-commands` (primo token). `/arena` `/dungeon` `/party` sempre ok. Bypass: `valary.arena.command.bypass`.
 
@@ -185,7 +187,7 @@ com.valaryrpg.arena
 7. Timer durata solo se `duration-seconds` > 0 e solo su `ACTIVE`.
 8. Reload Mythic: spawner delle istanze `ACTIVE` ricreati (skip se `spawnersHalted`).
 
-### `/dungeon start <id>` (leader)
+### `/dungeon start <id>` (leader) — o da console `/dungeon start <id> <player>`.
 
 1. Stesso slot/coda/copy async. Mondi `dungeon_<id>_<slot>`.
 2. Occupato in arena o dungeon → rifiuto. Party condiviso.

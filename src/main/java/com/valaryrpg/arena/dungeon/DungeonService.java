@@ -11,6 +11,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.nio.file.Files;
@@ -83,6 +84,22 @@ public final class DungeonService {
         return this.byPlayer.get(player.getUniqueId());
     }
 
+    public void teleportSpawn(Player player) {
+        DungeonInstance instance = instanceOf(player);
+        if (instance == null || !instance.players().contains(player.getUniqueId())) {
+            this.plugin.messages().send(player, "errors.not-in-dungeon");
+            return;
+        }
+        World world = loadedWorld(instance);
+        Location spawn = entryWorldSpawn(instance, world);
+        if (world == null || spawn == null) {
+            this.plugin.messages().send(player, "errors.not-in-dungeon");
+            return;
+        }
+        player.teleport(spawn);
+        this.plugin.messages().send(player, "dungeon.spawn");
+    }
+
     public DungeonInstance instanceOf(World world) {
         if (world == null) {
             return null;
@@ -151,30 +168,37 @@ public final class DungeonService {
     }
 
     public void start(Player leader, String dungeonId) {
+        start(leader, dungeonId, leader);
+    }
+
+    public void start(Player leader, String dungeonId, CommandSender reporter) {
+        if (reporter == null) {
+            reporter = leader;
+        }
         if (this.cleaning || this.shuttingDown) {
-            this.plugin.messages().send(leader, "errors.dungeon-cleaning");
+            tell(reporter, leader, "errors.dungeon-cleaning");
             return;
         }
         if (this.plugin.arenas() != null && this.plugin.arenas().cleaning()) {
-            this.plugin.messages().send(leader, "errors.arena-cleaning");
+            tell(reporter, leader, "errors.arena-cleaning");
             return;
         }
         DungeonDefinition definition = this.catalog.dungeon(dungeonId);
         if (definition == null) {
-            this.plugin.messages().send(leader, "errors.unknown-dungeon", Map.of("dungeon", dungeonId));
+            tell(reporter, leader, "errors.unknown-dungeon", Map.of("dungeon", dungeonId));
             return;
         }
         if (definition.permission != null && !definition.permission.isEmpty() && !leader.hasPermission(definition.permission)) {
-            this.plugin.messages().send(leader, "errors.no-permission");
+            tell(reporter, leader, "errors.no-permission");
             this.plugin.sounds().play(leader, "command-denied");
             return;
         }
         if (occupies(leader.getUniqueId())) {
-            this.plugin.messages().send(leader, "errors.already-in-dungeon");
+            tell(reporter, leader, "errors.already-in-dungeon");
             return;
         }
         if (this.plugin.arenas() != null && this.plugin.arenas().occupies(leader.getUniqueId())) {
-            this.plugin.messages().send(leader, "errors.already-in-arena");
+            tell(reporter, leader, "errors.already-in-arena");
             return;
         }
         Party party = this.plugin.parties().partyOf(leader);
@@ -182,44 +206,47 @@ public final class DungeonService {
             party = new Party(leader.getUniqueId());
         }
         if (!party.isLeader(leader.getUniqueId())) {
-            this.plugin.messages().send(leader, "errors.not-leader");
+            tell(reporter, leader, "errors.not-leader");
             return;
         }
         for (UUID member : party.members()) {
             if (occupies(member)) {
-                this.plugin.messages().send(leader, "errors.already-in-dungeon");
+                tell(reporter, leader, "errors.already-in-dungeon");
                 return;
             }
             if (this.plugin.arenas() != null && this.plugin.arenas().occupies(member)) {
-                this.plugin.messages().send(leader, "errors.already-in-arena");
+                tell(reporter, leader, "errors.already-in-arena");
                 return;
             }
         }
         if (busy(party)) {
-            this.plugin.messages().send(leader, this.queue.contains(party) ? "errors.already-in-queue" : "errors.already-in-dungeon");
+            tell(reporter, leader, this.queue.contains(party) ? "errors.already-in-queue" : "errors.already-in-dungeon");
             return;
         }
         if (this.plugin.arenas() != null && this.plugin.arenas().busy(party)) {
-            this.plugin.messages().send(leader, "errors.already-in-arena");
+            tell(reporter, leader, "errors.already-in-arena");
             return;
         }
         if (party.size() > definition.maxPartySize) {
-            this.plugin.messages().send(leader, "errors.party-too-big", Map.of("max", Integer.toString(definition.maxPartySize)));
+            tell(reporter, leader, "errors.party-too-big", Map.of("max", Integer.toString(definition.maxPartySize)));
             return;
         }
         if (blockedByCooldown(party, definition, leader)) {
+            if (reporter != leader) {
+                this.plugin.messages().send(reporter, "errors.cooldown");
+            }
             return;
         }
         Path template = worldContainer().resolve(definition.template);
         if (!Files.isDirectory(template)) {
-            this.plugin.messages().send(leader, "errors.template-missing", Map.of("world", definition.template));
+            tell(reporter, leader, "errors.template-missing", Map.of("world", definition.template));
             return;
         }
         int slot = freeSlot(definition.id);
         if (slot < 0) {
             int position = this.queue.enqueue(definition.id, party, this.catalog.queueMax());
             if (position < 0) {
-                this.plugin.messages().send(leader, "errors.queue-full", Map.of(
+                tell(reporter, leader, "errors.queue-full", Map.of(
                         "boss", definition.id,
                         "dungeon", display(definition)
                 ));
@@ -230,12 +257,35 @@ public final class DungeonService {
                     "dungeon", display(definition),
                     "position", Integer.toString(position)
             ));
+            if (reporter != leader) {
+                this.plugin.messages().send(reporter, "dungeon.queued", Map.of(
+                        "dungeon", display(definition),
+                        "position", Integer.toString(position)
+                ));
+            }
             for (Player member : this.plugin.parties().onlineMembers(party)) {
                 this.plugin.sounds().play(member, "dungeon-queue");
             }
             return;
         }
         begin(party, definition, slot);
+        if (reporter != leader) {
+            this.plugin.messages().send(reporter, "dungeon.started-for", Map.of(
+                    "player", leader.getName(),
+                    "dungeon", display(definition)
+            ));
+        }
+    }
+
+    private void tell(CommandSender reporter, Player leader, String path) {
+        tell(reporter, leader, path, Map.of());
+    }
+
+    private void tell(CommandSender reporter, Player leader, String path, Map<String, String> placeholders) {
+        this.plugin.messages().send(leader, path, placeholders);
+        if (reporter != null && reporter != leader) {
+            this.plugin.messages().send(reporter, path, placeholders);
+        }
     }
 
     public void leave(Player player, boolean teleport) {

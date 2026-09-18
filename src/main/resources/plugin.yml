@@ -63,11 +63,17 @@ permissions:
   valary.dungeon.start:
     description: /dungeon start
     default: true
+  valary.dungeon.start.other:
+    description: /dungeon start <id> <player> (console o staff)
+    default: op
   valary.dungeon.list:
     description: /dungeon list
     default: true
   valary.dungeon.leave:
     description: /dungeon leave
+    default: true
+  valary.dungeon.spawn:
+    description: /dungeon spawn
     default: true
   valary.party:
     description: Usa /party

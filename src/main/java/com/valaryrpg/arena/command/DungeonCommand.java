@@ -1,6 +1,7 @@
 package com.valaryrpg.arena.command;
 
 import com.valaryrpg.arena.ValaryArenaPlugin;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -9,8 +10,9 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
-/** /dungeon start|list|leave. Nomi e permessi da config.yml. */
+/** /dungeon start|list|leave|spawn. Start da console: id + player. */
 public final class DungeonCommand implements TabExecutor {
 
     private final ValaryArenaPlugin plugin;
@@ -21,33 +23,28 @@ public final class DungeonCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            this.plugin.messages().send(sender, "errors.player-only");
-            return true;
-        }
-        if (!player.hasPermission(this.plugin.configs().permission("dungeon", "valary.dungeon"))) {
-            deny(player);
-            return true;
-        }
         if (args.length == 0) {
-            this.plugin.messages().send(player, "dungeon.help");
-            return true;
-        }
-        if (this.plugin.cooldowns().cooling(player, "dungeon")) {
-            this.plugin.messages().send(player, "errors.cooldown");
+            if (sender instanceof Player player && !hasDungeon(player)) {
+                deny(player);
+                return true;
+            }
+            this.plugin.messages().send(sender, "dungeon.help");
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (sub.equals(this.plugin.configs().command("dungeon-start", "start"))) {
-            if (!player.hasPermission(this.plugin.configs().permission("dungeon-start", "valary.dungeon.start"))) {
-                deny(player);
-                return true;
-            }
-            if (args.length < 2) {
-                this.plugin.messages().send(player, "dungeon.help");
-                return true;
-            }
-            this.plugin.dungeons().start(player, args[1]);
+            return start(sender, args);
+        }
+        if (!(sender instanceof Player player)) {
+            this.plugin.messages().send(sender, "errors.player-only");
+            return true;
+        }
+        if (!hasDungeon(player)) {
+            deny(player);
+            return true;
+        }
+        if (this.plugin.cooldowns().cooling(player, "dungeon")) {
+            this.plugin.messages().send(player, "errors.cooldown");
             return true;
         }
         if (sub.equals("list") || sub.equals(this.plugin.configs().command("dungeon-list", "list"))) {
@@ -70,6 +67,14 @@ public final class DungeonCommand implements TabExecutor {
             this.plugin.dungeons().leave(player, true);
             return true;
         }
+        if (sub.equals(this.plugin.configs().command("dungeon-spawn", "spawn"))) {
+            if (!player.hasPermission(this.plugin.configs().permission("dungeon-spawn", "valary.dungeon.spawn"))) {
+                deny(player);
+                return true;
+            }
+            this.plugin.dungeons().teleportSpawn(player);
+            return true;
+        }
         this.plugin.messages().send(player, "errors.unknown-command");
         return true;
     }
@@ -81,14 +86,61 @@ public final class DungeonCommand implements TabExecutor {
             suggest(out, args[0], this.plugin.configs().command("dungeon-start", "start"));
             suggest(out, args[0], this.plugin.configs().command("dungeon-list", "list"));
             suggest(out, args[0], this.plugin.configs().command("dungeon-leave", "leave"));
+            suggest(out, args[0], this.plugin.configs().command("dungeon-spawn", "spawn"));
             return out;
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase(this.plugin.configs().command("dungeon-start", "start"))) {
+        if (!args[0].equalsIgnoreCase(this.plugin.configs().command("dungeon-start", "start"))) {
+            return out;
+        }
+        if (args.length == 2) {
             for (String id : this.plugin.dungeons().catalog().dungeonIds()) {
                 suggest(out, args[1], id);
             }
+            return out;
+        }
+        if (args.length == 3 && canStartOther(sender)) {
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                suggest(out, args[2], online.getName());
+            }
         }
         return out;
+    }
+
+    private boolean start(CommandSender sender, String[] args) {
+        boolean other = args.length >= 3;
+        if (sender instanceof Player player) {
+            String perm = other
+                    ? this.plugin.configs().permission("dungeon-start-other", "valary.dungeon.start.other")
+                    : this.plugin.configs().permission("dungeon-start", "valary.dungeon.start");
+            if (!player.hasPermission(perm)) {
+                deny(player);
+                return true;
+            }
+            if (!other && !hasDungeon(player)) {
+                deny(player);
+                return true;
+            }
+            if (this.plugin.cooldowns().cooling(player, "dungeon")) {
+                this.plugin.messages().send(player, "errors.cooldown");
+                return true;
+            }
+        }
+        if (args.length < 2 || (!(sender instanceof Player) && !other)) {
+            this.plugin.messages().send(sender, "dungeon.usage-start");
+            return true;
+        }
+        Player target;
+        if (other) {
+            target = Bukkit.getPlayerExact(args[2]);
+            if (target == null) {
+                this.plugin.messages().send(sender, "errors.player-offline", Map.of("player", args[2]));
+                return true;
+            }
+        } else {
+            target = (Player) sender;
+        }
+        this.plugin.dungeons().start(target, args[1], sender);
+        return true;
     }
 
     private void list(Player player) {
@@ -110,6 +162,18 @@ public final class DungeonCommand implements TabExecutor {
             this.plugin.messages().send(player, "dungeon.list-entry", this.plugin.dungeons().placeholders(instance, definition));
         }
         this.plugin.messages().send(player, found ? "dungeon.list-footer" : "dungeon.list-empty");
+    }
+
+    private boolean hasDungeon(Player player) {
+        return player.hasPermission(this.plugin.configs().permission("dungeon", "valary.dungeon"));
+    }
+
+    private boolean canStartOther(CommandSender sender) {
+        return !(sender instanceof Player player)
+                || player.hasPermission(this.plugin.configs().permission(
+                "dungeon-start-other",
+                "valary.dungeon.start.other"
+        ));
     }
 
     private void deny(Player player) {
