@@ -270,6 +270,8 @@ public final class DungeonCatalog {
             if (bossMob.isBlank() && objective == DungeonObjective.BOSS && !packs.isEmpty()) {
                 bossMob = packs.getFirst().mob;
             }
+            boolean startOnRadius = "radius".equalsIgnoreCase(node.getString("start-on", "immediate"))
+                    || "enter".equalsIgnoreCase(node.getString("start-on", "immediate"));
             rooms.add(new DungeonRoom(
                     id,
                     node.getString("display-name", id),
@@ -281,7 +283,10 @@ public final class DungeonCatalog {
                     bossMob,
                     packs,
                     waves(node, packs),
-                    commands(node)
+                    commands(node),
+                    startOnRadius,
+                    node.getDouble("start-radius", 12D),
+                    node.isConfigurationSection("start") ? point(node.getConfigurationSection("start"), 0.5, 64, 0.5) : null
             ));
         }
         return rooms;

@@ -58,21 +58,16 @@ public final class DungeonRooms {
         instance.waveIndex(0);
         instance.waveAt(0L);
         instance.waveArmed(false);
+        instance.combatStarted(!room.startOnRadius);
         instance.lastMinionAnnounced(false);
         instance.packFires().clear();
-        showIntro(instance, definition, room);
         if (room.wall != null && room.wall.openOnStart) {
             openDoor(instance, room.wall, world);
         }
-        for (DungeonPack pack : room.packs) {
-            if (pack.trigger == DungeonPackTrigger.IMMEDIATE) {
-                fire(instance, pack, world, pack.amount);
-            }
+        if (instance.combatStarted()) {
+            beginCombat(instance, definition, room, world);
         }
-        if (room.hasWaves() && room.objective == DungeonObjective.CLEAR_MOBS) {
-            startWaves(instance, definition, room, world);
-        }
-        if (room.hasRadiusPacks() || room.hasLeash()
+        if (room.startOnRadius || room.hasRadiusPacks() || room.hasLeash()
                 || (room.hasWaves() && room.objective == DungeonObjective.CLEAR_MOBS)
                 || (room.wall != null && (room.wall.openOnStart || room.wall.closes()))
                 || !instance.pendingDoors().isEmpty()) {
@@ -83,13 +78,10 @@ public final class DungeonRooms {
                     ticks
             ));
         }
-        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
-            if (instance.players().contains(member.getUniqueId())) {
-                this.plugin.sounds().play(member, "dungeon-room");
-            }
-        }
         remaining(instance, definition, world);
-        if (room.objective == DungeonObjective.CLEAR_MOBS && room.expectedMobs() == 0) {
+        if (instance.combatStarted()
+                && room.objective == DungeonObjective.CLEAR_MOBS
+                && room.expectedMobs() == 0) {
             clear(instance, definition, world, room);
         }
     }
@@ -137,6 +129,9 @@ public final class DungeonRooms {
         }
         DungeonRoom room = definition.room(instance.roomIndex());
         if (room == null || room.objective != DungeonObjective.CLEAR_MOBS) {
+            return;
+        }
+        if (room.startOnRadius && !instance.combatStarted()) {
             return;
         }
         if (cleared(instance, room, world)) {
@@ -216,6 +211,14 @@ public final class DungeonRooms {
         if (room == null) {
             return;
         }
+        if (!instance.combatStarted()) {
+            tickDoors(instance, world);
+            if (!room.startOnRadius || !entered(instance, room, world)) {
+                return;
+            }
+            instance.combatStarted(true);
+            beginCombat(instance, definition, room, world);
+        }
         tickRadius(instance, room, world);
         tickWaves(instance, definition, room, world);
         tickLeash(instance, room, world);
@@ -223,6 +226,42 @@ public final class DungeonRooms {
         highlightLast(instance, definition, world);
         tryAdvance(instance, definition, world);
         remaining(instance, definition, world);
+    }
+
+    private void beginCombat(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room, World world) {
+        showIntro(instance, definition, room);
+        for (DungeonPack pack : room.packs) {
+            if (pack.trigger == DungeonPackTrigger.IMMEDIATE) {
+                fire(instance, pack, world, pack.amount);
+            }
+        }
+        if (room.hasWaves() && room.objective == DungeonObjective.CLEAR_MOBS) {
+            startWaves(instance, definition, room, world);
+        }
+        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
+            if (instance.players().contains(member.getUniqueId())) {
+                this.plugin.sounds().play(member, "dungeon-room");
+            }
+        }
+        remaining(instance, definition, world);
+    }
+
+    private boolean entered(DungeonInstance instance, DungeonRoom room, World world) {
+        if (room.startPoint != null) {
+            return near(instance, room.startPoint.to(world), room.startRadius);
+        }
+        if (room.wall != null && room.wall.openOnStart) {
+            return near(instance, room.wall.center(world), room.startRadius);
+        }
+        for (DungeonPack pack : room.packs) {
+            if (near(instance, pack.point.to(world), room.startRadius)) {
+                return true;
+            }
+        }
+        if (room.spawn != null) {
+            return near(instance, room.spawn.to(world), room.startRadius);
+        }
+        return false;
     }
 
     private void tickRadius(DungeonInstance instance, DungeonRoom room, World world) {
@@ -248,7 +287,7 @@ public final class DungeonRooms {
         if (room.objective != DungeonObjective.CLEAR_MOBS || !room.hasWaves()) {
             return;
         }
-        if (instance.waveIndex() >= room.waves.size()) {
+        if (!instance.combatStarted() || instance.waveIndex() >= room.waves.size()) {
             return;
         }
         pruneLiving(instance, world);

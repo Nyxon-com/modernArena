@@ -68,6 +68,7 @@ Stanze in ordine YAML. Stanza 1 = TP spawn. Obiettivo `clear-mobs` o `boss`.
 - Ondate: posizioni `mobs.<id>` con `trigger: wave`, poi `waves:` lista (`gate: 3` = 3 da quel punto). Default in `settings.waves`. Glow ultimo minion. `radius` solo boss.
 - Spawn safe: `settings.spawn-safe-radius` (default 6) intorno allo spawn stanza 1 — i pack non spawnano lì.
 - Clear stanza: pack esausti **e** 0 living. Poi fill `wall` (`open-block`, default air), `outro`, `commands`. `close-block` (default `iron_bars`) si chiude quando tutto il party vivo ha superato la porta (`close-on: pass`). Override per stanza o in `settings.wall`.
+- `start-on: radius` — i minion aspettano che un player sia vicino alla porta/`start-radius`. `immediate` = spawn subito.
 - Hologram: all’ingresso spawn stanza 1 + `spawn-forward`. Poi `follow-door` vola al wall di ogni stanza.
 - Leash / heal-on-leash. Tempo istanza: `duration-seconds` (0 = off); fail senza reward.
 - Scoreboard TAB: `scoreboard.arena` e `scoreboard.dungeon` (`enabled: false` per off). PAPI `%valary_time%` `%valary_remaining%` `%valary_wave%`.

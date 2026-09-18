@@ -18,6 +18,9 @@ public final class DungeonRoom {
     public final List<DungeonPack> packs;
     public final List<DungeonWave> waves;
     public final List<String> commands;
+    public final boolean startOnRadius;
+    public final double startRadius;
+    public final Point startPoint;
 
     public DungeonRoom(
             String id,
@@ -30,7 +33,10 @@ public final class DungeonRoom {
             String bossMob,
             List<DungeonPack> packs,
             List<DungeonWave> waves,
-            List<String> commands
+            List<String> commands,
+            boolean startOnRadius,
+            double startRadius,
+            Point startPoint
     ) {
         this.id = id;
         this.displayName = displayName == null || displayName.isBlank() ? id : displayName;
@@ -43,6 +49,9 @@ public final class DungeonRoom {
         this.packs = List.copyOf(packs);
         this.waves = waves == null ? List.of() : List.copyOf(waves);
         this.commands = commands == null ? List.of() : List.copyOf(commands);
+        this.startOnRadius = startOnRadius;
+        this.startRadius = Math.max(1D, startRadius);
+        this.startPoint = startPoint;
     }
 
     public boolean matchesMob(String mythicName) {

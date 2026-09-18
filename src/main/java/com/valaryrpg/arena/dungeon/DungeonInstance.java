@@ -43,6 +43,7 @@ public final class DungeonInstance {
     private long waveAt;
     private boolean lastMinionAnnounced;
     private boolean waveArmed;
+    private boolean combatStarted;
     private UUID glowing;
     private final Map<String, Integer> packFires = new HashMap<>();
     private final Map<UUID, String> roomLiving = new HashMap<>();
@@ -239,6 +240,14 @@ public final class DungeonInstance {
 
     public void waveArmed(boolean waveArmed) {
         this.waveArmed = waveArmed;
+    }
+
+    public boolean combatStarted() {
+        return this.combatStarted;
+    }
+
+    public void combatStarted(boolean combatStarted) {
+        this.combatStarted = combatStarted;
     }
 
     public UUID glowing() {

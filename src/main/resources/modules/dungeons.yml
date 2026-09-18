@@ -77,6 +77,8 @@ dungeons:
     rooms:
       room1:
         objective: clear-mobs
+        start-on: radius
+        start-radius: 12
         spawn:
           x: 0.5
           y: 64.0
