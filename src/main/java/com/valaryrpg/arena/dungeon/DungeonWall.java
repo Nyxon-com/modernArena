@@ -22,6 +22,7 @@ public final class DungeonWall {
     public final double passMargin;
     public final boolean physics;
     public final List<String> closeFaces;
+    public final double passDetect;
 
     public DungeonWall(
             int x1,
@@ -37,7 +38,8 @@ public final class DungeonWall {
             int closeDelayTicks,
             double passMargin,
             boolean physics,
-            List<String> closeFaces
+            List<String> closeFaces,
+            double passDetect
     ) {
         this.minX = Math.min(x1, x2);
         this.minY = Math.min(y1, y2);
@@ -53,6 +55,7 @@ public final class DungeonWall {
         this.passMargin = Math.max(0D, passMargin);
         this.physics = physics;
         this.closeFaces = closeFaces == null ? List.of() : List.copyOf(closeFaces);
+        this.passDetect = Math.max(1D, passDetect);
     }
 
     public boolean closes() {

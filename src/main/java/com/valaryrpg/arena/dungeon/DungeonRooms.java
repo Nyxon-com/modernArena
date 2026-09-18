@@ -17,9 +17,11 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /** Stanza corrente: title, pack Mythic (no spawner), remaining, fill cubo. */
@@ -203,6 +205,14 @@ public final class DungeonRooms {
         instance.waveArmed(false);
     }
 
+    public void stopDoors(DungeonInstance instance) {
+        if (instance.doorTask() != null) {
+            instance.doorTask().cancel();
+            instance.doorTask(null);
+        }
+        instance.pendingDoors().clear();
+    }
+
     private void tickRoom(DungeonInstance instance, DungeonDefinition definition, World world) {
         if (instance.state() != SlotState.ACTIVE || instance.completing()) {
             return;
@@ -212,7 +222,6 @@ public final class DungeonRooms {
             return;
         }
         if (!instance.combatStarted()) {
-            tickDoors(instance, world);
             if (!room.startOnRadius || !entered(instance, room, world)) {
                 return;
             }
@@ -222,7 +231,6 @@ public final class DungeonRooms {
         tickRadius(instance, room, world);
         tickWaves(instance, definition, room, world);
         tickLeash(instance, room, world);
-        tickDoors(instance, world);
         highlightLast(instance, definition, world);
         tryAdvance(instance, definition, world);
         remaining(instance, definition, world);
@@ -544,6 +552,7 @@ public final class DungeonRooms {
                 for (int z = wall.minZ; z <= wall.maxZ; z++) {
                     BlockData data = template.clone();
                     applyFaces(data, wall, block);
+                    world.getChunkAt(x >> 4, z >> 4).load();
                     world.getBlockAt(x, y, z).setBlockData(data, wall.physics);
                 }
             }
@@ -552,10 +561,13 @@ public final class DungeonRooms {
 
     private static BlockData parseBlock(String spec) {
         String raw = spec == null || spec.isBlank() ? "air" : spec.trim();
+        if (!raw.contains(":")) {
+            raw = "minecraft:" + raw.toLowerCase(Locale.ROOT);
+        }
         try {
             return Bukkit.createBlockData(raw);
         } catch (IllegalArgumentException ignored) {
-            Material material = Material.matchMaterial(raw.toUpperCase(Locale.ROOT));
+            Material material = Material.matchMaterial(spec == null ? "AIR" : spec.toUpperCase(Locale.ROOT));
             return (material == null ? Material.AIR : material).createBlockData();
         }
     }
@@ -603,29 +615,20 @@ public final class DungeonRooms {
         if (!wall.closes()) {
             return;
         }
-        double x = 0;
-        double y = 0;
-        double z = 0;
-        int count = 0;
-        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
-            if (!instance.players().contains(member.getUniqueId()) || member.isDead()) {
-                continue;
-            }
-            if (!member.getWorld().equals(world)) {
-                continue;
-            }
-            Location loc = member.getLocation();
-            x += loc.getX();
-            y += loc.getY();
-            z += loc.getZ();
-            count++;
-        }
-        if (count == 0) {
-            Location center = wall.center(world);
-            instance.pendingDoors().add(new DungeonPendingDoor(wall, center.getX(), center.getY(), center.getZ() + 8));
+        instance.pendingDoors().add(new DungeonPendingDoor(wall));
+        ensureDoorTicker(instance, world);
+    }
+
+    private void ensureDoorTicker(DungeonInstance instance, World world) {
+        if (instance.doorTask() != null) {
             return;
         }
-        instance.pendingDoors().add(new DungeonPendingDoor(wall, x / count, y / count, z / count));
+        int ticks = this.catalog.proximityCheckTicks();
+        instance.doorTask(this.plugin.tasks().repeat(
+                () -> tickDoors(instance, world),
+                ticks,
+                ticks
+        ));
     }
 
     private void tickDoors(DungeonInstance instance, World world) {
@@ -646,41 +649,107 @@ public final class DungeonRooms {
             fill(door.wall, world, door.wall.closeBlock);
             iterator.remove();
         }
+        if (instance.pendingDoors().isEmpty() && instance.doorTask() != null) {
+            instance.doorTask().cancel();
+            instance.doorTask(null);
+        }
     }
 
     private boolean partyPassed(DungeonInstance instance, World world, DungeonPendingDoor door) {
-        int living = 0;
-        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
-            if (!instance.players().contains(member.getUniqueId()) || member.isDead()) {
-                continue;
-            }
-            if (!member.getWorld().equals(world)) {
-                return false;
-            }
-            living++;
-            if (!passed(member.getLocation(), door)) {
+        List<Player> living = livingMembers(instance, world);
+        if (living.isEmpty()) {
+            return false;
+        }
+        Set<UUID> alive = new HashSet<>();
+        for (Player member : living) {
+            alive.add(member.getUniqueId());
+            if (!crossed(member.getLocation(), door, member.getUniqueId())) {
                 return false;
             }
         }
-        return living > 0;
+        door.crossed.retainAll(alive);
+        door.lastPositive.keySet().retainAll(alive);
+        return true;
     }
 
-    private static boolean passed(Location loc, DungeonPendingDoor door) {
+    private static boolean crossed(Location loc, DungeonPendingDoor door, UUID id) {
         DungeonWall wall = door.wall;
+        int axis = thinAxis(wall);
+        double mid = axisMid(wall, axis);
+        boolean positive = coord(loc, axis) > mid;
+        Boolean previous = door.lastPositive.put(id, positive);
+        if (aabbDistance(loc, wall) <= wall.passDetect && previous != null && previous != positive) {
+            door.crossed.add(id);
+        }
+        return door.crossed.contains(id);
+    }
+
+    private static int thinAxis(DungeonWall wall) {
         int spanX = wall.maxX - wall.minX;
         int spanY = wall.maxY - wall.minY;
         int spanZ = wall.maxZ - wall.minZ;
-        double margin = wall.passMargin;
         if (spanZ <= spanX && spanZ <= spanY) {
-            double mid = (wall.minZ + wall.maxZ) / 2.0;
-            return door.fromZ > mid ? loc.getZ() < wall.minZ - margin : loc.getZ() > wall.maxZ + margin;
+            return 2;
         }
         if (spanX <= spanY) {
-            double mid = (wall.minX + wall.maxX) / 2.0;
-            return door.fromX > mid ? loc.getX() < wall.minX - margin : loc.getX() > wall.maxX + margin;
+            return 0;
         }
-        double mid = (wall.minY + wall.maxY) / 2.0;
-        return door.fromY > mid ? loc.getY() < wall.minY - margin : loc.getY() > wall.maxY + margin;
+        return 1;
+    }
+
+    private static double axisMid(DungeonWall wall, int axis) {
+        if (axis == 0) {
+            return (wall.minX + wall.maxX + 1) / 2.0;
+        }
+        if (axis == 1) {
+            return (wall.minY + wall.maxY + 1) / 2.0;
+        }
+        return (wall.minZ + wall.maxZ + 1) / 2.0;
+    }
+
+    private static double coord(Location loc, int axis) {
+        if (axis == 0) {
+            return loc.getX();
+        }
+        if (axis == 1) {
+            return loc.getY();
+        }
+        return loc.getZ();
+    }
+
+    private static double aabbDistance(Location loc, DungeonWall wall) {
+        double dx = outside(loc.getX(), wall.minX, wall.maxX + 1);
+        double dy = outside(loc.getY(), wall.minY, wall.maxY + 1);
+        double dz = outside(loc.getZ(), wall.minZ, wall.maxZ + 1);
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    private static double outside(double value, double min, double max) {
+        if (value < min) {
+            return min - value;
+        }
+        if (value > max) {
+            return value - max;
+        }
+        return 0D;
+    }
+
+    private List<Player> livingMembers(DungeonInstance instance, World world) {
+        List<Player> living = new ArrayList<>();
+        for (UUID uuid : instance.players()) {
+            if (instance.eliminated().contains(uuid)) {
+                continue;
+            }
+            Player member = Bukkit.getPlayer(uuid);
+            if (member == null || !member.isOnline() || member.isDead()) {
+                continue;
+            }
+            if (world != null && !member.getWorld().equals(world)) {
+                continue;
+            }
+            living.add(member);
+        }
+        return living;
     }
 
     private int pruneLiving(DungeonInstance instance, World world) {

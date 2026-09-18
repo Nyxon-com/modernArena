@@ -58,6 +58,7 @@ public final class DungeonCatalog {
     private double wallPassMargin = 0.4;
     private boolean wallPhysics;
     private List<String> wallCloseFaces = List.of();
+    private double wallPassDetect = 8;
 
     public DungeonCatalog(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
@@ -120,6 +121,7 @@ public final class DungeonCatalog {
         this.wallPassMargin = Math.max(0D, yaml.getDouble("settings.wall.pass-margin", 0.4));
         this.wallPhysics = yaml.getBoolean("settings.wall.physics", false);
         this.wallCloseFaces = List.copyOf(yaml.getStringList("settings.wall.close-faces"));
+        this.wallPassDetect = Math.max(1D, yaml.getDouble("settings.wall.pass-detect", 8D));
 
         ConfigurationSection section = yaml.getConfigurationSection("dungeons");
         if (section == null) {
@@ -451,7 +453,10 @@ public final class DungeonCatalog {
                         ? Math.max(0D, node.getDouble("pass-margin"))
                         : this.wallPassMargin,
                 node.contains("physics") ? node.getBoolean("physics") : this.wallPhysics,
-                faces
+                faces,
+                node.contains("pass-detect")
+                        ? Math.max(1D, node.getDouble("pass-detect"))
+                        : this.wallPassDetect
         );
     }
 

@@ -46,6 +46,7 @@ settings:
     close-on: pass
     close-delay-ticks: 0
     pass-margin: 0.4
+    pass-detect: 8
     physics: false
     close-faces: []
 

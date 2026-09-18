@@ -1,18 +1,20 @@
 package com.valaryrpg.arena.dungeon;
 
-/** Porta aperta: si chiude quando tutto il party vivo è oltre il piano. */
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+/** Porta aperta: si chiude quando i vivi in istanza hanno attraversato il piano. */
 public final class DungeonPendingDoor {
 
     public final DungeonWall wall;
-    public final double fromX;
-    public final double fromY;
-    public final double fromZ;
     public long closeAtMillis;
+    public final Map<UUID, Boolean> lastPositive = new HashMap<>();
+    public final Set<UUID> crossed = new HashSet<>();
 
-    public DungeonPendingDoor(DungeonWall wall, double fromX, double fromY, double fromZ) {
+    public DungeonPendingDoor(DungeonWall wall) {
         this.wall = wall;
-        this.fromX = fromX;
-        this.fromY = fromY;
-        this.fromZ = fromZ;
     }
 }

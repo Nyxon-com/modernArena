@@ -51,6 +51,7 @@ public final class DungeonInstance {
     private final Set<UUID> waveLiving = new HashSet<>();
     private final Map<UUID, String> leashed = new HashMap<>();
     private BukkitTask packTask;
+    private BukkitTask doorTask;
     private long durationDeadline;
     private final AtomicInteger cachedRemaining = new AtomicInteger();
     private final List<DungeonPendingDoor> pendingDoors = new ArrayList<>();
@@ -268,6 +269,14 @@ public final class DungeonInstance {
 
     public void packTask(BukkitTask packTask) {
         this.packTask = packTask;
+    }
+
+    public BukkitTask doorTask() {
+        return this.doorTask;
+    }
+
+    public void doorTask(BukkitTask doorTask) {
+        this.doorTask = doorTask;
     }
 
     public List<DungeonPendingDoor> pendingDoors() {
