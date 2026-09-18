@@ -3,7 +3,7 @@ package com.valaryrpg.arena.dungeon;
 import org.bukkit.Location;
 import org.bukkit.World;
 
-/** Cubo da fillare al clear della stanza. */
+/** Cubo porta: open `set-block`, poi `close-block` quando il party ha superato il piano. */
 public final class DungeonWall {
 
     public final int minX;
@@ -13,8 +13,20 @@ public final class DungeonWall {
     public final int maxY;
     public final int maxZ;
     public final String setBlock;
+    public final String closeBlock;
+    public final boolean openOnStart;
 
-    public DungeonWall(int x1, int y1, int z1, int x2, int y2, int z2, String setBlock) {
+    public DungeonWall(
+            int x1,
+            int y1,
+            int z1,
+            int x2,
+            int y2,
+            int z2,
+            String setBlock,
+            String closeBlock,
+            boolean openOnStart
+    ) {
         this.minX = Math.min(x1, x2);
         this.minY = Math.min(y1, y2);
         this.minZ = Math.min(z1, z2);
@@ -22,6 +34,12 @@ public final class DungeonWall {
         this.maxY = Math.max(y1, y2);
         this.maxZ = Math.max(z1, z2);
         this.setBlock = setBlock == null || setBlock.isBlank() ? "air" : setBlock;
+        this.closeBlock = closeBlock == null ? "" : closeBlock;
+        this.openOnStart = openOnStart;
+    }
+
+    public boolean closes() {
+        return !this.closeBlock.isBlank();
     }
 
     public Location center(World world) {

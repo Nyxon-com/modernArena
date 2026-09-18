@@ -406,7 +406,10 @@ public final class DungeonCatalog {
                 to.getInt("x", (int) to.getDouble("x")),
                 to.getInt("y", (int) to.getDouble("y")),
                 to.getInt("z", (int) to.getDouble("z")),
-                node.getString("set-block", "air")
+                node.getString("set-block", "air"),
+                node.getString("close-block", ""),
+                "start".equalsIgnoreCase(node.getString("open-on", "clear"))
+        );
         );
     }
 

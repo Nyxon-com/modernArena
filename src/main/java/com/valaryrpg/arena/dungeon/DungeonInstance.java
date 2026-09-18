@@ -52,6 +52,7 @@ public final class DungeonInstance {
     private BukkitTask packTask;
     private long durationDeadline;
     private final AtomicInteger cachedRemaining = new AtomicInteger();
+    private final List<DungeonPendingDoor> pendingDoors = new ArrayList<>();
 
     public DungeonInstance(String dungeonId, int slot, String worldName, Path folder, Party party) {
         this.dungeonId = dungeonId;
@@ -258,6 +259,10 @@ public final class DungeonInstance {
 
     public void packTask(BukkitTask packTask) {
         this.packTask = packTask;
+    }
+
+    public List<DungeonPendingDoor> pendingDoors() {
+        return this.pendingDoors;
     }
 
     public boolean empty() {

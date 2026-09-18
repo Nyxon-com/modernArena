@@ -75,7 +75,7 @@ Kit/eco Core = `[console] …` in YAML. Hologram = `TextDisplay` Paper.
   - `heal-on-leash` / `leash.heal` — cura a pieno HP al TP. Default: `settings.leash.heal`
 - `rooms.*.waves` — piano ondate (vedi sezione sotto)
 - `rooms.*.spawners` — alias di `mobs` (`max-mobs` → `amount`). Non clona spawner Mythic.
-- `rooms.*.wall.from/to` + `set-block` (default air) — fill sync al clear, no restore. Centro cubo = target holo se `follow-door`
+- `rooms.*.wall.from/to` + `set-block` (default air) — fill sync. `open-on: clear` (default, al clear stanza) o `start` (all’ingresso stanza). `close-block` — dopo che **tutti** i vivi del party hanno superato il cubo, fill di chiusura (timer stanza, niente `PlayerMoveEvent`). Centro cubo = target holo se `follow-door`
 - `rooms.*.intro` — title/subtitle/actionbar + fade ticks **all’ingresso**
 - `rooms.*.outro` — stesso blocco **a fine stanza** (clear-mobs o kill boss). Assente = niente title
 - `rooms.*.commands` (anche sotto `outro`) — ogni stanza, per i vivi:

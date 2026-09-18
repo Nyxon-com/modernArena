@@ -57,6 +57,9 @@ public final class DungeonRooms {
         instance.lastMinionAnnounced(false);
         instance.packFires().clear();
         showIntro(instance, definition, room);
+        if (room.wall != null && room.wall.openOnStart) {
+            openDoor(instance, room.wall, world);
+        }
         for (DungeonPack pack : room.packs) {
             if (pack.trigger == DungeonPackTrigger.IMMEDIATE) {
                 fire(instance, pack, world, pack.amount);
@@ -66,7 +69,9 @@ public final class DungeonRooms {
             startWaves(instance, definition, room, world);
         }
         if (room.hasRadiusPacks() || room.hasLeash()
-                || (room.hasWaves() && room.objective == DungeonObjective.CLEAR_MOBS)) {
+                || (room.hasWaves() && room.objective == DungeonObjective.CLEAR_MOBS)
+                || (room.wall != null && (room.wall.openOnStart || room.wall.closes()))
+                || !instance.pendingDoors().isEmpty()) {
             int ticks = this.catalog.proximityCheckTicks();
             instance.packTask(this.plugin.tasks().repeat(
                     () -> tickRoom(instance, definition, world),
@@ -210,6 +215,7 @@ public final class DungeonRooms {
         tickRadius(instance, room, world);
         tickWaves(instance, definition, room, world);
         tickLeash(instance, room, world);
+        tickDoors(instance, world);
         highlightLast(instance, definition, world);
         tryAdvance(instance, definition, world);
         remaining(instance, definition, world);
@@ -417,7 +423,7 @@ public final class DungeonRooms {
     private void clear(DungeonInstance instance, DungeonDefinition definition, World world, DungeonRoom room) {
         stopPacks(instance);
         if (room.wall != null) {
-            fill(room.wall, world);
+            openDoor(instance, room.wall, world);
             this.service.moveHologramToDoor(instance, definition, room);
         }
         Map<String, String> placeholders = this.service.placeholders(instance, definition);
@@ -485,7 +491,11 @@ public final class DungeonRooms {
     }
 
     private void fill(DungeonWall wall, World world) {
-        Material material = Material.matchMaterial(wall.setBlock.toUpperCase(Locale.ROOT));
+        fill(wall, world, wall.setBlock);
+    }
+
+    private void fill(DungeonWall wall, World world, String block) {
+        Material material = Material.matchMaterial(block == null ? "AIR" : block.toUpperCase(Locale.ROOT));
         if (material == null) {
             material = Material.AIR;
         }
@@ -496,6 +506,82 @@ public final class DungeonRooms {
                 }
             }
         }
+    }
+
+    private void openDoor(DungeonInstance instance, DungeonWall wall, World world) {
+        fill(wall, world, wall.setBlock);
+        if (!wall.closes()) {
+            return;
+        }
+        double x = 0;
+        double y = 0;
+        double z = 0;
+        int count = 0;
+        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
+            if (!instance.players().contains(member.getUniqueId()) || member.isDead()) {
+                continue;
+            }
+            if (!member.getWorld().equals(world)) {
+                continue;
+            }
+            Location loc = member.getLocation();
+            x += loc.getX();
+            y += loc.getY();
+            z += loc.getZ();
+            count++;
+        }
+        if (count == 0) {
+            Location center = wall.center(world);
+            instance.pendingDoors().add(new DungeonPendingDoor(wall, center.getX(), center.getY(), center.getZ() + 8));
+            return;
+        }
+        instance.pendingDoors().add(new DungeonPendingDoor(wall, x / count, y / count, z / count));
+    }
+
+    private void tickDoors(DungeonInstance instance, World world) {
+        var iterator = instance.pendingDoors().iterator();
+        while (iterator.hasNext()) {
+            DungeonPendingDoor door = iterator.next();
+            if (!partyPassed(instance, world, door)) {
+                continue;
+            }
+            fill(door.wall, world, door.wall.closeBlock);
+            iterator.remove();
+        }
+    }
+
+    private boolean partyPassed(DungeonInstance instance, World world, DungeonPendingDoor door) {
+        int living = 0;
+        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
+            if (!instance.players().contains(member.getUniqueId()) || member.isDead()) {
+                continue;
+            }
+            if (!member.getWorld().equals(world)) {
+                return false;
+            }
+            living++;
+            if (!passed(member.getLocation(), door)) {
+                return false;
+            }
+        }
+        return living > 0;
+    }
+
+    private static boolean passed(Location loc, DungeonPendingDoor door) {
+        DungeonWall wall = door.wall;
+        int spanX = wall.maxX - wall.minX;
+        int spanY = wall.maxY - wall.minY;
+        int spanZ = wall.maxZ - wall.minZ;
+        if (spanZ <= spanX && spanZ <= spanY) {
+            double mid = (wall.minZ + wall.maxZ) / 2.0;
+            return door.fromZ > mid ? loc.getZ() < wall.minZ - 0.4 : loc.getZ() > wall.maxZ + 0.4;
+        }
+        if (spanX <= spanY) {
+            double mid = (wall.minX + wall.maxX) / 2.0;
+            return door.fromX > mid ? loc.getX() < wall.minX - 0.4 : loc.getX() > wall.maxX + 0.4;
+        }
+        double mid = (wall.minY + wall.maxY) / 2.0;
+        return door.fromY > mid ? loc.getY() < wall.minY - 0.4 : loc.getY() > wall.maxY + 0.4;
     }
 
     private int pruneLiving(DungeonInstance instance, World world) {
