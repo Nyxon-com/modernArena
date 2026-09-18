@@ -8,6 +8,7 @@ import java.util.List;
 public final class DungeonRoom {
 
     public final String id;
+    public final String displayName;
     public final DungeonObjective objective;
     public final Point spawn;
     public final DungeonIntro intro;
@@ -20,6 +21,7 @@ public final class DungeonRoom {
 
     public DungeonRoom(
             String id,
+            String displayName,
             DungeonObjective objective,
             Point spawn,
             DungeonIntro intro,
@@ -31,6 +33,7 @@ public final class DungeonRoom {
             List<String> commands
     ) {
         this.id = id;
+        this.displayName = displayName == null || displayName.isBlank() ? id : displayName;
         this.objective = objective == null ? DungeonObjective.CLEAR_MOBS : objective;
         this.spawn = spawn;
         this.intro = intro;

@@ -149,7 +149,7 @@ public final class DungeonHolograms {
         Map<String, String> placeholders = Map.of(
                 "dungeon", definition.displayName == null || definition.displayName.isEmpty()
                         ? definition.id : definition.displayName,
-                "room", room == null ? "" : room.id,
+                "room", room == null ? "" : room.displayName,
                 "remaining", Integer.toString(remaining),
                 "wave", Integer.toString(instance.waveIndex()),
                 "waves", Integer.toString(room == null ? 0 : room.waves.size())

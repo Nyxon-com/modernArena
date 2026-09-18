@@ -65,7 +65,7 @@ Kit/eco Core = `[console] …` in YAML. Hologram = `TextDisplay` Paper.
 - `settings.waves` — default ondate (vedi sezione sotto)
 - `settings.proximity-check-ticks` — timer su slot `ACTIVE` per pack `radius`, leash e ondate (niente `PlayerMoveEvent`)
 - `settings.leash.radius` — default leash pack (0 = off). `settings.leash.heal` — cura al ritip (default true)
-- `dungeons.<id>.rooms` — ordine YAML. Stanza 1: `spawn` TP. `objective: clear-mobs | boss`
+- `dungeons.<id>.rooms` — ordine YAML. Stanza 1: `spawn` TP. `objective: clear-mobs | boss`. `display-name` MiniMessage per holo/TAB (`{room}` `%valary_room%`); l’id YAML resta la chiave
 - `rooms.*.mobs.<id>` — **niente spawner Mythic**. Spawn diretto:
   - `mob` internal name Mythic
   - `trigger: immediate` | `radius` | `wave` (`wave` = solo posizione, chi spawna lo decide `waves:`)

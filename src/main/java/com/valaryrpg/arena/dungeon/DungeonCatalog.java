@@ -252,6 +252,7 @@ public final class DungeonCatalog {
             }
             rooms.add(new DungeonRoom(
                     id,
+                    node.getString("display-name", id),
                     objective,
                     node.isConfigurationSection("spawn") ? point(node.getConfigurationSection("spawn"), 0.5, 64, 0.5) : null,
                     intro(node.getConfigurationSection("intro")),

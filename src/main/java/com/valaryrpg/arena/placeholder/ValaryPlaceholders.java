@@ -71,7 +71,7 @@ public final class ValaryPlaceholders extends PlaceholderExpansion {
                     ? instance.dungeonId() : definition.displayName;
         }
         if (key.equals("room")) {
-            return room == null ? "" : room.id;
+            return room == null ? "" : room.displayName;
         }
         if (key.equals("wave")) {
             return Integer.toString(instance.waveIndex());

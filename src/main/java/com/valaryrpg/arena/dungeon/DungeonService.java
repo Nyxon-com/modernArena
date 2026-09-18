@@ -143,7 +143,7 @@ public final class DungeonService {
                 "display", display(definition),
                 "slot", Integer.toString(instance.slot()),
                 "world", instance.worldName(),
-                "room", room == null ? "" : room.id,
+                "room", room == null ? "" : room.displayName,
                 "remaining", Integer.toString(this.rooms.remaining(instance, definition, loadedWorld(instance))),
                 "players", Integer.toString(instance.players().size()),
                 "wave", Integer.toString(instance.waveIndex()),
