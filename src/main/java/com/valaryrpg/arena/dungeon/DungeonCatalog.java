@@ -456,8 +456,25 @@ public final class DungeonCatalog {
                 faces,
                 node.contains("pass-detect")
                         ? Math.max(1D, node.getDouble("pass-detect"))
-                        : this.wallPassDetect
+                        : this.wallPassDetect,
+                parsePassAxis(node.getString("pass-axis", "auto"))
         );
+    }
+
+    private static int parsePassAxis(String raw) {
+        if (raw == null) {
+            return -1;
+        }
+        if (raw.equalsIgnoreCase("x")) {
+            return 0;
+        }
+        if (raw.equalsIgnoreCase("y")) {
+            return 1;
+        }
+        if (raw.equalsIgnoreCase("z")) {
+            return 2;
+        }
+        return -1;
     }
 
     private static String firstNonBlank(String... values) {

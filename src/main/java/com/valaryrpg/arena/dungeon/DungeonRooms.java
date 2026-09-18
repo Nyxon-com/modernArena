@@ -685,6 +685,9 @@ public final class DungeonRooms {
     }
 
     private static int thinAxis(DungeonWall wall) {
+        if (wall.passAxis >= 0) {
+            return wall.passAxis;
+        }
         int spanX = wall.maxX - wall.minX;
         int spanY = wall.maxY - wall.minY;
         int spanZ = wall.maxZ - wall.minZ;
