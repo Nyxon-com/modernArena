@@ -3,7 +3,9 @@ package com.valaryrpg.arena.dungeon;
 import org.bukkit.Location;
 import org.bukkit.World;
 
-/** Cubo porta: open `set-block`, poi `close-block` quando il party ha superato il piano. */
+import java.util.List;
+
+/** Cubo porta: `open-block` all’apertura, `close-block` quando il party ha superato il piano. */
 public final class DungeonWall {
 
     public final int minX;
@@ -15,6 +17,11 @@ public final class DungeonWall {
     public final String setBlock;
     public final String closeBlock;
     public final boolean openOnStart;
+    public final boolean closeOnPass;
+    public final int closeDelayTicks;
+    public final double passMargin;
+    public final boolean physics;
+    public final List<String> closeFaces;
 
     public DungeonWall(
             int x1,
@@ -25,7 +32,12 @@ public final class DungeonWall {
             int z2,
             String setBlock,
             String closeBlock,
-            boolean openOnStart
+            boolean openOnStart,
+            boolean closeOnPass,
+            int closeDelayTicks,
+            double passMargin,
+            boolean physics,
+            List<String> closeFaces
     ) {
         this.minX = Math.min(x1, x2);
         this.minY = Math.min(y1, y2);
@@ -36,10 +48,15 @@ public final class DungeonWall {
         this.setBlock = setBlock == null || setBlock.isBlank() ? "air" : setBlock;
         this.closeBlock = closeBlock == null ? "" : closeBlock;
         this.openOnStart = openOnStart;
+        this.closeOnPass = closeOnPass;
+        this.closeDelayTicks = Math.max(0, closeDelayTicks);
+        this.passMargin = Math.max(0D, passMargin);
+        this.physics = physics;
+        this.closeFaces = closeFaces == null ? List.of() : List.copyOf(closeFaces);
     }
 
     public boolean closes() {
-        return !this.closeBlock.isBlank();
+        return this.closeOnPass && !this.closeBlock.isBlank();
     }
 
     public Location center(World world) {

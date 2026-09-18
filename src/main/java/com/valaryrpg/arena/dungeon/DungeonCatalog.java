@@ -50,6 +50,14 @@ public final class DungeonCatalog {
     private int waveAnnounceFadeInTicks = 10;
     private int waveAnnounceStayTicks = 40;
     private int waveAnnounceFadeOutTicks = 10;
+    private String wallOpenBlock = "air";
+    private String wallCloseBlock = "iron_bars";
+    private boolean wallOpenOnStart;
+    private boolean wallCloseOnPass = true;
+    private int wallCloseDelayTicks;
+    private double wallPassMargin = 0.4;
+    private boolean wallPhysics;
+    private List<String> wallCloseFaces = List.of();
 
     public DungeonCatalog(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
@@ -100,6 +108,18 @@ public final class DungeonCatalog {
         this.waveAnnounceFadeInTicks = Math.max(0, yaml.getInt("settings.waves.announce-fade-in-ticks", 10));
         this.waveAnnounceStayTicks = Math.max(1, yaml.getInt("settings.waves.announce-stay-ticks", 40));
         this.waveAnnounceFadeOutTicks = Math.max(0, yaml.getInt("settings.waves.announce-fade-out-ticks", 10));
+        this.wallOpenBlock = firstNonBlank(
+                yaml.getString("settings.wall.open-block"),
+                yaml.getString("settings.wall.set-block"),
+                "air"
+        );
+        this.wallCloseBlock = firstNonBlank(yaml.getString("settings.wall.close-block"), "iron_bars");
+        this.wallOpenOnStart = "start".equalsIgnoreCase(yaml.getString("settings.wall.open-on", "clear"));
+        this.wallCloseOnPass = !"never".equalsIgnoreCase(yaml.getString("settings.wall.close-on", "pass"));
+        this.wallCloseDelayTicks = Math.max(0, yaml.getInt("settings.wall.close-delay-ticks", 0));
+        this.wallPassMargin = Math.max(0D, yaml.getDouble("settings.wall.pass-margin", 0.4));
+        this.wallPhysics = yaml.getBoolean("settings.wall.physics", false);
+        this.wallCloseFaces = List.copyOf(yaml.getStringList("settings.wall.close-faces"));
 
         ConfigurationSection section = yaml.getConfigurationSection("dungeons");
         if (section == null) {
@@ -399,6 +419,11 @@ public final class DungeonCatalog {
         if (from == null || to == null) {
             return null;
         }
+        List<String> faces = node.contains("close-faces")
+                ? node.getStringList("close-faces")
+                : node.contains("faces")
+                        ? node.getStringList("faces")
+                        : this.wallCloseFaces;
         return new DungeonWall(
                 from.getInt("x", (int) from.getDouble("x")),
                 from.getInt("y", (int) from.getDouble("y")),
@@ -406,11 +431,32 @@ public final class DungeonCatalog {
                 to.getInt("x", (int) to.getDouble("x")),
                 to.getInt("y", (int) to.getDouble("y")),
                 to.getInt("z", (int) to.getDouble("z")),
-                node.getString("set-block", "air"),
-                node.getString("close-block", ""),
-                "start".equalsIgnoreCase(node.getString("open-on", "clear"))
+                firstNonBlank(node.getString("open-block"), node.getString("set-block"), this.wallOpenBlock),
+                firstNonBlank(node.getString("close-block"), this.wallCloseBlock),
+                node.contains("open-on")
+                        ? "start".equalsIgnoreCase(node.getString("open-on"))
+                        : this.wallOpenOnStart,
+                node.contains("close-on")
+                        ? !"never".equalsIgnoreCase(node.getString("close-on"))
+                        : this.wallCloseOnPass,
+                node.contains("close-delay-ticks")
+                        ? Math.max(0, node.getInt("close-delay-ticks"))
+                        : this.wallCloseDelayTicks,
+                node.contains("pass-margin")
+                        ? Math.max(0D, node.getDouble("pass-margin"))
+                        : this.wallPassMargin,
+                node.contains("physics") ? node.getBoolean("physics") : this.wallPhysics,
+                faces
         );
-        );
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
     }
 
     private HologramSettings hologram(ConfigurationSection dungeon) {

@@ -7,12 +7,16 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.MultipleFacing;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -495,17 +499,64 @@ public final class DungeonRooms {
     }
 
     private void fill(DungeonWall wall, World world, String block) {
-        Material material = Material.matchMaterial(block == null ? "AIR" : block.toUpperCase(Locale.ROOT));
-        if (material == null) {
-            material = Material.AIR;
-        }
+        BlockData template = parseBlock(block);
         for (int x = wall.minX; x <= wall.maxX; x++) {
             for (int y = wall.minY; y <= wall.maxY; y++) {
                 for (int z = wall.minZ; z <= wall.maxZ; z++) {
-                    world.getBlockAt(x, y, z).setType(material, false);
+                    BlockData data = template.clone();
+                    applyFaces(data, wall, block);
+                    world.getBlockAt(x, y, z).setBlockData(data, wall.physics);
                 }
             }
         }
+    }
+
+    private static BlockData parseBlock(String spec) {
+        String raw = spec == null || spec.isBlank() ? "air" : spec.trim();
+        try {
+            return Bukkit.createBlockData(raw);
+        } catch (IllegalArgumentException ignored) {
+            Material material = Material.matchMaterial(raw.toUpperCase(Locale.ROOT));
+            return (material == null ? Material.AIR : material).createBlockData();
+        }
+    }
+
+    private static void applyFaces(BlockData data, DungeonWall wall, String spec) {
+        if (!(data instanceof MultipleFacing facing) || (spec != null && spec.contains("["))) {
+            return;
+        }
+        List<BlockFace> faces = closeFaces(wall);
+        if (faces.isEmpty()) {
+            return;
+        }
+        for (BlockFace face : facing.getAllowedFaces()) {
+            facing.setFace(face, faces.contains(face));
+        }
+    }
+
+    private static List<BlockFace> closeFaces(DungeonWall wall) {
+        if (!wall.closeFaces.isEmpty()) {
+            List<BlockFace> parsed = new ArrayList<>();
+            for (String name : wall.closeFaces) {
+                try {
+                    parsed.add(BlockFace.valueOf(name.toUpperCase(Locale.ROOT)));
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
+            if (!parsed.isEmpty()) {
+                return parsed;
+            }
+        }
+        int spanX = wall.maxX - wall.minX;
+        int spanY = wall.maxY - wall.minY;
+        int spanZ = wall.maxZ - wall.minZ;
+        if (spanZ <= spanX && spanZ <= spanY) {
+            return List.of(BlockFace.EAST, BlockFace.WEST);
+        }
+        if (spanX <= spanY) {
+            return List.of(BlockFace.NORTH, BlockFace.SOUTH);
+        }
+        return List.of(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST);
     }
 
     private void openDoor(DungeonInstance instance, DungeonWall wall, World world) {
@@ -545,6 +596,14 @@ public final class DungeonRooms {
             if (!partyPassed(instance, world, door)) {
                 continue;
             }
+            if (door.wall.closeDelayTicks > 0) {
+                if (door.closeAtMillis == 0L) {
+                    door.closeAtMillis = System.currentTimeMillis() + door.wall.closeDelayTicks * 50L;
+                }
+                if (System.currentTimeMillis() < door.closeAtMillis) {
+                    continue;
+                }
+            }
             fill(door.wall, world, door.wall.closeBlock);
             iterator.remove();
         }
@@ -572,16 +631,17 @@ public final class DungeonRooms {
         int spanX = wall.maxX - wall.minX;
         int spanY = wall.maxY - wall.minY;
         int spanZ = wall.maxZ - wall.minZ;
+        double margin = wall.passMargin;
         if (spanZ <= spanX && spanZ <= spanY) {
             double mid = (wall.minZ + wall.maxZ) / 2.0;
-            return door.fromZ > mid ? loc.getZ() < wall.minZ - 0.4 : loc.getZ() > wall.maxZ + 0.4;
+            return door.fromZ > mid ? loc.getZ() < wall.minZ - margin : loc.getZ() > wall.maxZ + margin;
         }
         if (spanX <= spanY) {
             double mid = (wall.minX + wall.maxX) / 2.0;
-            return door.fromX > mid ? loc.getX() < wall.minX - 0.4 : loc.getX() > wall.maxX + 0.4;
+            return door.fromX > mid ? loc.getX() < wall.minX - margin : loc.getX() > wall.maxX + margin;
         }
         double mid = (wall.minY + wall.maxY) / 2.0;
-        return door.fromY > mid ? loc.getY() < wall.minY - 0.4 : loc.getY() > wall.maxY + 0.4;
+        return door.fromY > mid ? loc.getY() < wall.minY - margin : loc.getY() > wall.maxY + margin;
     }
 
     private int pruneLiving(DungeonInstance instance, World world) {

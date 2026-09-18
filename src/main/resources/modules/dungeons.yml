@@ -39,6 +39,15 @@ settings:
   leash:
     radius: 24
     heal: true
+  wall:
+    open-block: air
+    close-block: iron_bars
+    open-on: clear
+    close-on: pass
+    close-delay-ticks: 0
+    pass-margin: 0.4
+    physics: false
+    close-faces: []
 
 leave:
   command: spawn
@@ -90,7 +99,13 @@ dungeons:
             x: 8
             y: 66
             z: 6
-          set-block: air
+          open-block: air
+          close-block: iron_bars
+          open-on: clear
+          close-on: pass
+          close-delay-ticks: 0
+          pass-margin: 0.4
+          physics: false
         mobs:
           gate:
             trigger: wave
