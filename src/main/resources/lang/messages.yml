@@ -50,7 +50,7 @@ errors:
 arena:
   help:
     - "{separator}"
-    - "{prefix}<gray>/arena start <white>boss</white>"
+    - "{prefix}<gray>/arena start <white>boss [player]</white>"
     - "{prefix}<gray>/arena list"
     - "{prefix}<gray>/arena leave"
     - "{prefix}<gray>/arena stats <white>[player] [boss]</white>"
@@ -61,6 +61,8 @@ arena:
   list-footer: "{separator}"
   list-empty: "{prefix}<gray>Non ci sono arene attive."
   started: "{prefix}<gray>Arena <white>{boss}</white> avviata. Slot <white>{slot}</white>."
+  started-for: "{prefix}<gray>Arena <white>{boss}</white> avviata per <white>{player}</white>."
+  usage-start: "{prefix}<gray>Uso: <white>/arena start boss [player]</white>"
   queued: "{prefix}<gray>Tutte le istanze di <white>{boss}</white> sono occupate. Coda: <white>#{position}</white>."
   queue-removed: "{prefix}<gray>Il party è uscito dalla coda di <white>{boss}</white>."
   leave: "{prefix}<gray>Hai lasciato l'arena."
@@ -99,11 +101,20 @@ hologram:
 scoreboard:
   arena:
     enabled: true
-    title: "<gradient:#5F22C3:#40099B>ValaryRPG</gradient>"
+    title: "%nexo_valary_logo%"
     lines:
-      - "<gray>%valary_name%"
-      - "<dark_gray>tempo <white>%valary_time%"
-      - "<dark_gray>boss <white>%valary_remaining%"
+      - "<#5F22C3>▌"
+      - "<#6723C2>▌ <gradient:#5F22C3:#40099B><bold>✦</bold></gradient> <white><bold>ᴀʀᴇɴᴀ</bold>"
+      - "<#6F24C0>▌   <white>%nexo_star_icon% <gray>ʙᴏꜱꜱ <dark_gray>» %valary_name%"
+      - "<#7824BF>▌   <white>%nexo_sword_icon% <gray>ᴋɪʟʟ <dark_gray>» <white>%valary_remaining%<dark_gray>/</dark_gray><white>10"
+      - "<#8025BE>▌   <white>%nexo_experience_orb_icon% <gray>ᴛᴇᴍᴘᴏ <dark_gray>» <white>%valary_time%"
+      - "<#8826BC>▌   <white>%nexo_shield_icon% <gray>ᴘᴀʀᴛʏ <dark_gray>» <white>%valary_players%"
+      - "<#9027BB>▌"
+      - "<#9927BA>▌ <gradient:#5F22C3:#40099B><bold>✦</bold></gradient> <white><bold>ꜱᴇꜱꜱɪᴏɴᴇ</bold>"
+      - "<#A128B8>▌   <white>%nexo_crown_icon% <gray>ᴄʟᴀꜱꜱᴇ <dark_gray>» %mmocore_class%"
+      - "<#A929B7>▌   <white>%nexo_level_up_icon% <gray>ʟɪᴠᴇʟʟᴏ <dark_gray>» <yellow>%mmocore_level%"
+      - "<#B12AB6>▌"
+      - "<#CA2CB2>▌  <gradient:#CA2CB2:#5F22C3><underlined>☁ ᴡᴡᴡ.ᴠᴀʟᴀʀʏʀᴘɢ.ɴᴇᴛ ☁</gradient>"
   dungeon:
     enabled: true
     title: "<gradient:#5F22C3:#40099B>ValaryRPG</gradient>"

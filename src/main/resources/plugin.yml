@@ -33,6 +33,9 @@ permissions:
   valary.arena.start:
     description: /arena start
     default: true
+  valary.arena.start.other:
+    description: /arena start <boss> <player> (console o staff)
+    default: op
   valary.arena.list:
     description: /arena list
     default: true

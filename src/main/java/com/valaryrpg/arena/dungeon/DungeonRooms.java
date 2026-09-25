@@ -63,15 +63,17 @@ public final class DungeonRooms {
         instance.combatStarted(!room.startOnRadius);
         instance.lastMinionAnnounced(false);
         instance.packFires().clear();
-        if (room.wall != null && room.wall.openOnStart) {
-            openDoor(instance, room.wall, world);
+        for (DungeonWall wall : room.walls) {
+            if (wall.openOnStart) {
+                openDoor(instance, wall, world);
+            }
         }
         if (instance.combatStarted()) {
             beginCombat(instance, definition, room, world);
         }
         if (room.startOnRadius || room.hasRadiusPacks() || room.hasLeash()
                 || (room.hasWaves() && room.objective == DungeonObjective.CLEAR_MOBS)
-                || (room.wall != null && (room.wall.openOnStart || room.wall.closes()))
+                || room.hasStartDoors() || room.hasClosingDoors()
                 || !instance.pendingDoors().isEmpty()) {
             int ticks = this.catalog.proximityCheckTicks();
             instance.packTask(this.plugin.tasks().repeat(
@@ -258,7 +260,7 @@ public final class DungeonRooms {
         if (room.startPoint != null) {
             return near(instance, room.startPoint.to(world), room.startRadius);
         }
-        if (room.wall != null && room.wall.openOnStart) {
+        if (room.wall != null && room.hasStartDoors()) {
             return near(instance, room.wall.center(world), room.startRadius);
         }
         for (DungeonPack pack : room.packs) {
@@ -473,8 +475,10 @@ public final class DungeonRooms {
 
     private void clear(DungeonInstance instance, DungeonDefinition definition, World world, DungeonRoom room) {
         stopPacks(instance);
-        if (room.wall != null) {
-            openDoor(instance, room.wall, world);
+        for (DungeonWall wall : room.walls) {
+            openDoor(instance, wall, world);
+        }
+        if (!room.walls.isEmpty()) {
             this.service.moveHologramToDoor(instance, definition, room);
         }
         Map<String, String> placeholders = this.service.placeholders(instance, definition);
@@ -648,11 +652,31 @@ public final class DungeonRooms {
             }
             fill(door.wall, world, door.wall.closeBlock);
             iterator.remove();
+            if (door.wall.spawnOnClose) {
+                spawnAfterDoor(instance, world);
+            }
         }
         if (instance.pendingDoors().isEmpty() && instance.doorTask() != null) {
             instance.doorTask().cancel();
             instance.doorTask(null);
         }
+    }
+
+    private void spawnAfterDoor(DungeonInstance instance, World world) {
+        DungeonDefinition definition = this.catalog.dungeon(instance.dungeonId());
+        if (definition == null) {
+            return;
+        }
+        DungeonRoom room = definition.room(instance.roomIndex());
+        if (room == null) {
+            return;
+        }
+        for (DungeonPack pack : room.packs) {
+            if (pack.trigger == DungeonPackTrigger.DOOR) {
+                fire(instance, pack, world, pack.amount);
+            }
+        }
+        remaining(instance, definition, world);
     }
 
     private boolean partyPassed(DungeonInstance instance, World world, DungeonPendingDoor door) {

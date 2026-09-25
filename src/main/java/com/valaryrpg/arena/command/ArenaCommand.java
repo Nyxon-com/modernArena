@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/** /arena start|list|leave|stats|milestones|reload. Nomi e permessi da config.yml. */
+/** /arena start|list|leave|stats|milestones|reload. Start da console: boss + player. */
 public final class ArenaCommand implements TabExecutor {
 
     private final ValaryArenaPlugin plugin;
@@ -23,33 +23,28 @@ public final class ArenaCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            this.plugin.messages().send(sender, "errors.player-only");
-            return true;
-        }
-        if (!player.hasPermission(this.plugin.configs().permission("arena", "valary.arena"))) {
-            deny(player);
-            return true;
-        }
         if (args.length == 0) {
-            this.plugin.messages().send(player, "arena.help");
-            return true;
-        }
-        if (this.plugin.cooldowns().cooling(player, "arena")) {
-            this.plugin.messages().send(player, "errors.cooldown");
+            if (sender instanceof Player player && !hasArena(player)) {
+                deny(player);
+                return true;
+            }
+            this.plugin.messages().send(sender, "arena.help");
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (sub.equals(this.plugin.configs().command("arena-start", "start"))) {
-            if (!player.hasPermission(this.plugin.configs().permission("arena-start", "valary.arena.start"))) {
-                deny(player);
-                return true;
-            }
-            if (args.length < 2) {
-                this.plugin.messages().send(player, "arena.help");
-                return true;
-            }
-            this.plugin.arenas().start(player, args[1]);
+            return start(sender, args);
+        }
+        if (!(sender instanceof Player player)) {
+            this.plugin.messages().send(sender, "errors.player-only");
+            return true;
+        }
+        if (!hasArena(player)) {
+            deny(player);
+            return true;
+        }
+        if (this.plugin.cooldowns().cooling(player, "arena")) {
+            this.plugin.messages().send(player, "errors.cooldown");
             return true;
         }
         if (sub.equals("list") || sub.equals(this.plugin.configs().command("arena-list", "list"))) {
@@ -114,9 +109,15 @@ public final class ArenaCommand implements TabExecutor {
             suggest(out, args[0], this.plugin.configs().command("arena-reload", "reload"));
             return out;
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase(this.plugin.configs().command("arena-start", "start"))) {
-            for (String id : this.plugin.arenas().catalog().bossIds()) {
-                suggest(out, args[1], id);
+        if (args[0].equalsIgnoreCase(this.plugin.configs().command("arena-start", "start"))) {
+            if (args.length == 2) {
+                for (String id : this.plugin.arenas().catalog().bossIds()) {
+                    suggest(out, args[1], id);
+                }
+                return out;
+            }
+            if (args.length == 3 && canStartOther(sender)) {
+                suggestPlayers(out, args[2]);
             }
             return out;
         }
@@ -135,6 +136,49 @@ public final class ArenaCommand implements TabExecutor {
             suggestPlayers(out, args[1]);
         }
         return out;
+    }
+
+    private boolean start(CommandSender sender, String[] args) {
+        boolean other = args.length >= 3;
+        if (sender instanceof Player player) {
+            String perm = other
+                    ? this.plugin.configs().permission("arena-start-other", "valary.arena.start.other")
+                    : this.plugin.configs().permission("arena-start", "valary.arena.start");
+            if (!player.hasPermission(perm)) {
+                deny(player);
+                return true;
+            }
+            if (!other && !hasArena(player)) {
+                deny(player);
+                return true;
+            }
+            if (this.plugin.cooldowns().cooling(player, "arena")) {
+                this.plugin.messages().send(player, "errors.cooldown");
+                return true;
+            }
+        }
+        if (args.length < 2 || (!(sender instanceof Player) && !other)) {
+            this.plugin.messages().send(sender, "arena.usage-start");
+            return true;
+        }
+        Player target;
+        if (other) {
+            target = Bukkit.getPlayerExact(args[2]);
+            if (target == null) {
+                this.plugin.messages().send(sender, "errors.player-offline", Map.of("player", args[2]));
+                return true;
+            }
+        } else {
+            target = (Player) sender;
+        }
+        this.plugin.arenas().start(target, args[1]);
+        if (other && sender != target) {
+            this.plugin.messages().send(sender, "arena.started-for", Map.of(
+                    "boss", args[1],
+                    "player", target.getName()
+            ));
+        }
+        return true;
     }
 
     private void list(Player player) {
@@ -210,6 +254,18 @@ public final class ArenaCommand implements TabExecutor {
         }
         this.plugin.kills().showKills(player, other.getUniqueId(), other.getName(), mob);
         return true;
+    }
+
+    private boolean hasArena(Player player) {
+        return player.hasPermission(this.plugin.configs().permission("arena", "valary.arena"));
+    }
+
+    private boolean canStartOther(CommandSender sender) {
+        return !(sender instanceof Player player)
+                || player.hasPermission(this.plugin.configs().permission(
+                "arena-start-other",
+                "valary.arena.start.other"
+        ));
     }
 
     private boolean canViewOther(Player viewer, Player target) {

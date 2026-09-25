@@ -14,6 +14,7 @@ public final class DungeonRoom {
     public final DungeonIntro intro;
     public final DungeonIntro outro;
     public final DungeonWall wall;
+    public final List<DungeonWall> walls;
     public final String bossMob;
     public final List<DungeonPack> packs;
     public final List<DungeonWave> waves;
@@ -29,7 +30,7 @@ public final class DungeonRoom {
             Point spawn,
             DungeonIntro intro,
             DungeonIntro outro,
-            DungeonWall wall,
+            List<DungeonWall> walls,
             String bossMob,
             List<DungeonPack> packs,
             List<DungeonWave> waves,
@@ -44,7 +45,8 @@ public final class DungeonRoom {
         this.spawn = spawn;
         this.intro = intro;
         this.outro = outro;
-        this.wall = wall;
+        this.walls = walls == null || walls.isEmpty() ? List.of() : List.copyOf(walls);
+        this.wall = this.walls.isEmpty() ? null : this.walls.getFirst();
         this.bossMob = bossMob == null ? "" : bossMob;
         this.packs = List.copyOf(packs);
         this.waves = waves == null ? List.of() : List.copyOf(waves);
@@ -115,6 +117,24 @@ public final class DungeonRoom {
 
     public boolean hasWaves() {
         return !this.waves.isEmpty();
+    }
+
+    public boolean hasStartDoors() {
+        for (DungeonWall wall : this.walls) {
+            if (wall.openOnStart) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean hasClosingDoors() {
+        for (DungeonWall wall : this.walls) {
+            if (wall.closes()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public DungeonPack pack(String id) {

@@ -281,7 +281,7 @@ public final class DungeonCatalog {
                     node.isConfigurationSection("spawn") ? point(node.getConfigurationSection("spawn"), 0.5, 64, 0.5) : null,
                     intro(node.getConfigurationSection("intro")),
                     optionalIntro(node.getConfigurationSection("outro")),
-                    wall(node.getConfigurationSection("wall")),
+                    walls(node),
                     bossMob,
                     packs,
                     waves(node, packs),
@@ -417,6 +417,133 @@ public final class DungeonCatalog {
         return lines;
     }
 
+    private List<DungeonWall> walls(ConfigurationSection room) {
+        List<DungeonWall> walls = new ArrayList<>();
+        DungeonWall single = wall(room.getConfigurationSection("wall"));
+        if (single != null) {
+            walls.add(single);
+        }
+        ConfigurationSection named = room.getConfigurationSection("walls");
+        if (named != null) {
+            for (String id : named.getKeys(false)) {
+                DungeonWall extra = wall(named.getConfigurationSection(id));
+                if (extra != null) {
+                    walls.add(extra);
+                }
+            }
+            return walls;
+        }
+        for (Map<?, ?> row : room.getMapList("walls")) {
+            DungeonWall extra = wallFromMap(row);
+            if (extra != null) {
+                walls.add(extra);
+            }
+        }
+        return walls;
+    }
+
+    private DungeonWall wallFromMap(Map<?, ?> map) {
+        if (map == null) {
+            return null;
+        }
+        Map<?, ?> from = nestedMap(map.get("from"));
+        Map<?, ?> to = nestedMap(map.get("to"));
+        if (from == null || to == null) {
+            return null;
+        }
+        List<String> faces = stringList(map.get("close-faces"));
+        if (faces.isEmpty()) {
+            faces = stringList(map.get("faces"));
+        }
+        if (faces.isEmpty()) {
+            faces = this.wallCloseFaces;
+        }
+        String openOn = stringValue(map.get("open-on"));
+        String closeOn = stringValue(map.get("close-on"));
+        return new DungeonWall(
+                mapInt(from, "x"),
+                mapInt(from, "y"),
+                mapInt(from, "z"),
+                mapInt(to, "x"),
+                mapInt(to, "y"),
+                mapInt(to, "z"),
+                firstNonBlank(stringValue(map.get("open-block")), stringValue(map.get("set-block")), this.wallOpenBlock),
+                firstNonBlank(stringValue(map.get("close-block")), this.wallCloseBlock),
+                openOn.isBlank() ? this.wallOpenOnStart : "start".equalsIgnoreCase(openOn),
+                closeOn.isBlank() ? this.wallCloseOnPass : !"never".equalsIgnoreCase(closeOn),
+                map.containsKey("close-delay-ticks")
+                        ? Math.max(0, mapInt(map, "close-delay-ticks"))
+                        : this.wallCloseDelayTicks,
+                map.containsKey("pass-margin")
+                        ? Math.max(0D, mapDouble(map, "pass-margin"))
+                        : this.wallPassMargin,
+                map.containsKey("physics") ? mapBoolean(map, "physics") : this.wallPhysics,
+                faces,
+                map.containsKey("pass-detect")
+                        ? Math.max(1D, mapDouble(map, "pass-detect"))
+                        : this.wallPassDetect,
+                parsePassAxis(stringValue(map.get("pass-axis"))),
+                mapBoolean(map, "spawn-on-close")
+        );
+    }
+
+    private static Map<?, ?> nestedMap(Object value) {
+        return value instanceof Map<?, ?> map ? map : null;
+    }
+
+    private static List<String> stringList(Object value) {
+        if (!(value instanceof List<?> list) || list.isEmpty()) {
+            return List.of();
+        }
+        List<String> values = new ArrayList<>();
+        for (Object entry : list) {
+            if (entry != null && !String.valueOf(entry).isBlank()) {
+                values.add(String.valueOf(entry));
+            }
+        }
+        return values;
+    }
+
+    private static String stringValue(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    private static int mapInt(Map<?, ?> map, String key) {
+        Object value = map.get(key);
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value != null) {
+            try {
+                return (int) Double.parseDouble(String.valueOf(value));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0;
+    }
+
+    private static double mapDouble(Map<?, ?> map, String key) {
+        Object value = map.get(key);
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value != null) {
+            try {
+                return Double.parseDouble(String.valueOf(value));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0D;
+    }
+
+    private static boolean mapBoolean(Map<?, ?> map, String key) {
+        Object value = map.get(key);
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        return value != null && Boolean.parseBoolean(String.valueOf(value));
+    }
+
     private DungeonWall wall(ConfigurationSection node) {
         if (node == null) {
             return null;
@@ -457,7 +584,8 @@ public final class DungeonCatalog {
                 node.contains("pass-detect")
                         ? Math.max(1D, node.getDouble("pass-detect"))
                         : this.wallPassDetect,
-                parsePassAxis(node.getString("pass-axis", "auto"))
+                parsePassAxis(node.getString("pass-axis", "auto")),
+                node.getBoolean("spawn-on-close", false)
         );
     }
 

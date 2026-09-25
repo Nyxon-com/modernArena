@@ -4,7 +4,8 @@ package com.valaryrpg.arena.dungeon;
 public enum DungeonPackTrigger {
     IMMEDIATE,
     RADIUS,
-    WAVE;
+    WAVE,
+    DOOR;
 
     public static DungeonPackTrigger parse(String raw) {
         if (raw == null) {
@@ -15,6 +16,11 @@ public enum DungeonPackTrigger {
         }
         if (raw.equalsIgnoreCase("wave")) {
             return WAVE;
+        }
+        if (raw.equalsIgnoreCase("door")
+                || raw.equalsIgnoreCase("door-close")
+                || raw.equalsIgnoreCase("after-door")) {
+            return DOOR;
         }
         return IMMEDIATE;
     }

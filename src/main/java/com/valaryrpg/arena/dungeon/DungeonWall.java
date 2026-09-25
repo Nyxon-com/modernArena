@@ -24,6 +24,7 @@ public final class DungeonWall {
     public final List<String> closeFaces;
     public final double passDetect;
     public final int passAxis;
+    public final boolean spawnOnClose;
 
     public DungeonWall(
             int x1,
@@ -41,7 +42,8 @@ public final class DungeonWall {
             boolean physics,
             List<String> closeFaces,
             double passDetect,
-            int passAxis
+            int passAxis,
+            boolean spawnOnClose
     ) {
         this.minX = Math.min(x1, x2);
         this.minY = Math.min(y1, y2);
@@ -59,6 +61,7 @@ public final class DungeonWall {
         this.closeFaces = closeFaces == null ? List.of() : List.copyOf(closeFaces);
         this.passDetect = Math.max(1D, passDetect);
         this.passAxis = passAxis;
+        this.spawnOnClose = spawnOnClose;
     }
 
     public boolean closes() {

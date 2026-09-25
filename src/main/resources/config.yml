@@ -29,6 +29,7 @@ commands:
 permissions:
   arena: valary.arena
   arena-start: valary.arena.start
+  arena-start-other: valary.arena.start.other
   arena-list: valary.arena.list
   arena-leave: valary.arena.leave
   arena-stats: valary.arena.stats
