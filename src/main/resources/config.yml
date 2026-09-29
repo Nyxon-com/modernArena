@@ -69,14 +69,11 @@ instances:
 
 # Primo token, con o senza /. /arena /dungeon /party restano. Bypass: valary.arena.command.bypass
 blocked-commands:
-  - spawn
   - home
   - sethome
   - tpa
   - tpahere
   - tpaccept
-  - warp
-  - warps
   - kit
   - rtp
   - wild
