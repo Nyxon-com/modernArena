@@ -14,7 +14,6 @@ softdepend:
   - ValaryRPG-Core
   - Vault
   - PlaceholderAPI
-  - Multiverse-Core
   - TAB
 commands:
   arena:
