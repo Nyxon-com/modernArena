@@ -2,6 +2,7 @@ package com.valaryrpg.arena.arena;
 
 import com.infernalsuite.asp.api.AdvancedSlimePaperAPI;
 import com.infernalsuite.asp.api.world.SlimeWorld;
+import com.infernalsuite.asp.api.world.properties.SlimeProperties;
 import com.valaryrpg.arena.ValaryArenaPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -83,7 +84,10 @@ public final class SlimeInstances {
                 throw new IllegalStateException("Istanza ancora caricata: " + instanceName);
             }
             SlimeWorld clone = template.clone(instanceName);
-            World world = AdvancedSlimePaperAPI.instance().loadWorld(clone, false).getBukkitWorld();
+            // L'import anvil non copia la difficulty: il default ASP è peaceful e i mob ostili non restano.
+            clone.getPropertyMap().setValue(SlimeProperties.DIFFICULTY, "easy");
+            clone.getPropertyMap().setValue(SlimeProperties.ALLOW_MONSTERS, true);
+            World world = AdvancedSlimePaperAPI.instance().loadWorld(clone, true).getBukkitWorld();
             world.setAutoSave(false);
             onReady.accept(world);
         } catch (Exception exception) {
