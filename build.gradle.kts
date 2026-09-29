@@ -1,6 +1,6 @@
 plugins {
     java
-    id("com.gradleup.shadow") version "8.3.8"
+    id("com.gradleup.shadow") version "9.1.0"
 }
 
 group = "com.valaryrpg"
@@ -9,7 +9,7 @@ description = "Instanced Mythic arena for ValaryRPG"
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
 
@@ -19,6 +19,7 @@ repositories {
     maven("https://mvn.lumine.io/repository/maven-public/")
     maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
     maven("https://jitpack.io")
+    maven("https://repo.infernalsuite.com/repository/maven-snapshots/")
 }
 
 dependencies {
@@ -27,6 +28,7 @@ dependencies {
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
     compileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("com.github.NEZNAMY:TAB-API:5.2.5")
+    compileOnly("com.infernalsuite.asp:api:4.2.0-SNAPSHOT")
 
     implementation("com.zaxxer:HikariCP:6.2.1")
     implementation("org.xerial:sqlite-jdbc:3.47.2.0")
@@ -47,7 +49,7 @@ tasks {
 
     compileJava {
         options.encoding = "UTF-8"
-        options.release.set(21)
+        options.release.set(25)
     }
 
     shadowJar {

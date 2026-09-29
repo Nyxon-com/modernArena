@@ -5,7 +5,6 @@ import com.valaryrpg.arena.party.Party;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.WorldCreator;
 import org.bukkit.entity.Player;
 
 import java.nio.file.Files;
@@ -17,13 +16,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Orchestra slot, copy async, load/TP/Mythic sync, unload e dequeue. */
+/** Orchestra slot, clone slime in RAM, load/TP/Mythic sync, unload e dequeue. */
 public final class ArenaService {
 
     private final ValaryArenaPlugin plugin;
     private final ArenaCatalog catalog;
     private final ArenaQueue queue;
     private final WorldCopier copier;
+    private final SlimeInstances slime;
     private final MythicSpawners mythic;
     private final ArenaHolograms holograms;
     private final ArenaCooldowns joinCooldowns;
@@ -41,12 +41,14 @@ public final class ArenaService {
             ArenaCatalog catalog,
             ArenaQueue queue,
             WorldCopier copier,
+            SlimeInstances slime,
             MythicSpawners mythic
     ) {
         this.plugin = plugin;
         this.catalog = catalog;
         this.queue = queue;
         this.copier = copier;
+        this.slime = slime;
         this.mythic = mythic;
         this.holograms = new ArenaHolograms(plugin, mythic, catalog);
         this.joinCooldowns = new ArenaCooldowns();
@@ -190,6 +192,10 @@ public final class ArenaService {
         Path template = worldContainer().resolve(definition.template);
         if (!Files.isDirectory(template)) {
             this.plugin.messages().send(leader, "errors.template-missing", Map.of("world", definition.template));
+            return;
+        }
+        if (!this.slime.available()) {
+            this.plugin.messages().send(leader, "errors.slime-missing");
             return;
         }
         int slot = freeSlot(bossId);
@@ -431,13 +437,15 @@ public final class ArenaService {
         this.byWorld.put(worldName, instance);
         this.byFolder.put(destination.toAbsolutePath().normalize(), instance);
         this.byParty.put(party.id(), instance);
-        World loadedTemplate = Bukkit.getWorld(definition.template);
-        if (loadedTemplate != null) {
-            Bukkit.unloadWorld(loadedTemplate, true);
-        }
         Path source = worldContainer().resolve(definition.template);
-        this.copier.copy(source, destination, this.catalog.copyExclude(), () -> activate(instance, definition), exception -> {
-            this.plugin.getLogger().warning("Copia mondo fallita: " + exception.getMessage());
+        this.slime.open(definition.template, source.toFile(), worldName, world -> {
+            if (instance.state() == SlotState.UNLOADING) {
+                unloadLoadedWorld(world);
+                return;
+            }
+            activate(instance, definition, world);
+        }, exception -> {
+            this.plugin.getLogger().warning("Istanza slime fallita: " + exception.getMessage());
             this.byWorld.remove(worldName);
             this.byFolder.remove(destination.toAbsolutePath().normalize());
             this.byParty.remove(party.id());
@@ -453,11 +461,10 @@ public final class ArenaService {
         ));
     }
 
-    private void activate(ArenaInstance instance, ArenaDefinition definition) {
+    private void activate(ArenaInstance instance, ArenaDefinition definition, World world) {
         if (instance.state() == SlotState.UNLOADING) {
             return;
         }
-        World world = new WorldCreator(worldLoadName(instance.folder())).createWorld();
         if (world == null) {
             this.plugin.getLogger().warning("Load mondo fallito: " + instance.worldName());
             deleteFolderWhenSafe(instance);
@@ -749,11 +756,6 @@ public final class ArenaService {
         return instanceRoot().resolve(worldName);
     }
 
-    private String worldLoadName(Path folder) {
-        Path container = worldContainer().toAbsolutePath().normalize();
-        return container.relativize(folder.toAbsolutePath().normalize()).toString().replace('\\', '/');
-    }
-
     private World loadedWorld(ArenaInstance instance) {
         World byFolder = worldUsing(instance.folder());
         if (byFolder != null) {
@@ -808,15 +810,27 @@ public final class ArenaService {
                 this.plugin.getLogger().warning("Unload mondo incompleto, cartella lasciata: " + folder.getFileName());
                 return;
             }
-            this.copier.delete(folder, () -> {
-                release(instance);
-                if (!this.shuttingDown) {
-                    dequeue(instance.bossId());
-                }
-            });
+            this.copier.delete(folder, () -> discardStray(instance));
         };
         if (this.plugin.tasks().later(delete, 5L) == null && !this.shuttingDown) {
             delete.run();
+        }
+    }
+
+    private void discardStray(ArenaInstance instance) {
+        Path stray = worldContainer().resolve(instance.worldName());
+        Path folder = instance.folder().toAbsolutePath().normalize();
+        if (Files.isDirectory(stray) && !stray.toAbsolutePath().normalize().equals(folder) && worldUsing(stray) == null) {
+            this.copier.delete(stray, () -> releaseAndContinue(instance));
+            return;
+        }
+        releaseAndContinue(instance);
+    }
+
+    private void releaseAndContinue(ArenaInstance instance) {
+        release(instance);
+        if (!this.shuttingDown) {
+            dequeue(instance.bossId());
         }
     }
 

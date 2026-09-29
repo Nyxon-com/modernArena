@@ -30,6 +30,7 @@ errors:
   queue-full: "{prefix}<gray>La coda di <white>{boss}</white> è piena."
   template-missing: "{prefix}<gray>Template <white>{world}</white> assente sul disco."
   copy-failed: "{prefix}<gray>Copia del mondo fallita. Riprova."
+  slime-missing: "{prefix}<gray>Il server non è AdvancedSlimePaper. Le istanze non partono."
   not-in-arena: "{prefix}<gray>Non sei in un'arena."
   target-offline: "{prefix}<gray><white>{target}</white> non è online."
   target-in-party: "{prefix}<gray><white>{target}</white> è già in un party."

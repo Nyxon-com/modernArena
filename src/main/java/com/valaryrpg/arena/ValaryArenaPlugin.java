@@ -5,6 +5,7 @@ import com.valaryrpg.arena.arena.ArenaListener;
 import com.valaryrpg.arena.arena.ArenaQueue;
 import com.valaryrpg.arena.arena.ArenaService;
 import com.valaryrpg.arena.arena.MythicSpawners;
+import com.valaryrpg.arena.arena.SlimeInstances;
 import com.valaryrpg.arena.arena.WorldCopier;
 import com.valaryrpg.arena.command.ArenaCommand;
 import com.valaryrpg.arena.command.CommandCooldowns;
@@ -83,11 +84,16 @@ public final class ValaryArenaPlugin extends JavaPlugin {
         this.milestoneCatalog.load();
         MythicSpawners mythic = new MythicSpawners(this);
         WorldCopier copier = new WorldCopier(this.tasks, this.configs.instances().copyMaxConcurrent);
+        SlimeInstances slime = new SlimeInstances(this);
+        if (!slime.available()) {
+            getLogger().warning("AdvancedSlimePaper assente: arene e dungeon non possono creare istanze.");
+        }
         this.arenas = new ArenaService(
                 this,
                 this.arenaCatalog,
                 new ArenaQueue(),
                 copier,
+                slime,
                 mythic
         );
         this.dungeons = new DungeonService(
@@ -95,6 +101,7 @@ public final class ValaryArenaPlugin extends JavaPlugin {
                 this.dungeonCatalog,
                 new ArenaQueue(),
                 copier,
+                slime,
                 mythic
         );
         this.kills = new KillTracker(this, new KillRepository(this.storage), this.milestoneCatalog);
