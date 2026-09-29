@@ -8,7 +8,7 @@
 
 brand:
   name: ValaryRPG
-  prefix: "<gradient:#5F22C3:#40099B><bold>ValaryRPG</bold></gradient> <dark_gray>»</dark_gray> "
+  prefix: "<gradient:#8B5CF6:#EC4899><bold>ᴠᴀʟᴀʀʏʀᴘɢ</bold></gradient><dark_gray>»</dark_gray> <white>ᴀʀᴇɴᴀ</white> "
   separator: "<bold><strikethrough><gradient:#5F22C3:#40099B>                                                          </gradient></strikethrough></bold>"
 
 errors:
