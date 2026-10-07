@@ -10,3 +10,6 @@ out/
 run/
 .DS_Store
 Thumbs.db
+
+# script temporanei
+_*.py
