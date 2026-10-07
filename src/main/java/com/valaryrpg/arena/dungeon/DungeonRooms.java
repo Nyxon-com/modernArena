@@ -720,27 +720,75 @@ public final class DungeonRooms {
             return false;
         }
         Set<UUID> alive = new HashSet<>();
+        // Valuta TUTTI i membri ad ogni tick (niente short-circuit): altrimenti chi viene dopo
+        // il primo "non passato" non viene tracciato e il suo lato precedente resta stantio.
+        boolean all = true;
         for (Player member : living) {
             alive.add(member.getUniqueId());
             if (!crossed(member.getLocation(), door, member.getUniqueId())) {
-                return false;
+                all = false;
             }
         }
         door.crossed.retainAll(alive);
         door.lastPositive.keySet().retainAll(alive);
-        return true;
+        door.origin.keySet().retainAll(alive);
+        return all;
     }
 
+    /**
+     * Passato = adesso e' fuori dal vano porta (oltre pass-margin) sul lato OPPOSTO a quello da cui
+     * e' arrivato, e il cambio di lato e' avvenuto entro pass-detect dalla porta.
+     * Chi sta nel vano (o torna indietro) NON conta come passato: prima bastava oscillare sul piano
+     * centrale (stare sulla soglia / un passo avanti e indietro) per restare "passato" per sempre,
+     * e la porta si chiudeva a caso, anche addosso o davanti a chi era ancora fuori.
+     */
     private static boolean crossed(Location loc, DungeonPendingDoor door, UUID id) {
         DungeonWall wall = door.wall;
         int axis = thinAxis(wall);
-        double mid = axisMid(wall, axis);
-        boolean positive = coord(loc, axis) > mid;
-        Boolean previous = door.lastPositive.put(id, positive);
-        if (aabbDistance(loc, wall) <= wall.passDetect && previous != null && previous != positive) {
+        double c = coord(loc, axis);
+        if (!door.origin.containsKey(id)) {
+            boolean start = c > axisMid(wall, axis);
+            door.origin.put(id, start);
+            door.lastPositive.put(id, start);
+        }
+        Boolean side = decidedSide(c, wall, axis);
+        if (side == null) {
+            return false;
+        }
+        boolean origin = door.origin.get(id);
+        Boolean previous = door.lastPositive.put(id, side);
+        if (side == origin) {
+            door.crossed.remove(id);
+            return false;
+        }
+        if (previous != null && previous.booleanValue() != side.booleanValue()
+                && aabbDistance(loc, wall) <= wall.passDetect) {
             door.crossed.add(id);
         }
         return door.crossed.contains(id);
+    }
+
+    /** true/false = lato positivo/negativo fuori dal vano porta + pass-margin; null = dentro il vano. */
+    private static Boolean decidedSide(double c, DungeonWall wall, int axis) {
+        double lo;
+        double hi;
+        if (axis == 0) {
+            lo = wall.minX;
+            hi = wall.maxX + 1;
+        } else if (axis == 1) {
+            lo = wall.minY;
+            hi = wall.maxY + 1;
+        } else {
+            lo = wall.minZ;
+            hi = wall.maxZ + 1;
+        }
+        if (c > hi + wall.passMargin) {
+            return Boolean.TRUE;
+        }
+        if (c < lo - wall.passMargin) {
+            return Boolean.FALSE;
+        }
+        return null;
     }
 
     private static int thinAxis(DungeonWall wall) {
