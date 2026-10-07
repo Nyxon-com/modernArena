@@ -8,6 +8,8 @@ import io.lumine.mythic.bukkit.events.MythicMobDeathEvent;
 import io.lumine.mythic.bukkit.events.MythicPostReloadedEvent;
 import io.lumine.mythic.core.mobs.ActiveMob;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -21,6 +23,8 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.world.EntitiesLoadEvent;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -81,6 +85,49 @@ public final class ArenaListener implements Listener {
         var location = this.arenas.eliminatedRespawn(event.getPlayer());
         if (location != null) {
             event.setRespawnLocation(location);
+        }
+    }
+
+    /** PDC Mythic: "x,y,z,mondo" dove il mob e' nato. */
+    private static final NamespacedKey MYTHIC_SPAWN_LOCATION = new NamespacedKey("mythicmobs", "spawn_location");
+
+    /**
+     * Mob Mythic salvati DENTRO il template (es. un boss nato dallo spawner sorgente mentre il template
+     * era caricato come mondo normale) verrebbero clonati in ogni istanza: boss doppio, non dello
+     * spawner arena. Li togliamo quando il chunk dell'istanza carica le entita'.
+     * Un mob nato nell'istanza ha spawn_location con il nome dell'istanza e non viene toccato.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onEntitiesLoad(EntitiesLoadEvent event) {
+        World world = event.getWorld();
+        if (!this.arenas.isArenaWorld(world)) {
+            return;
+        }
+        for (Entity entity : event.getEntities()) {
+            if (entity instanceof Player) {
+                continue;
+            }
+            String spawn;
+            try {
+                spawn = entity.getPersistentDataContainer().get(MYTHIC_SPAWN_LOCATION, PersistentDataType.STRING);
+            } catch (IllegalArgumentException wrongType) {
+                continue;
+            }
+            if (spawn == null) {
+                continue;
+            }
+            int comma = spawn.lastIndexOf(',');
+            String origin = comma < 0 ? "" : spawn.substring(comma + 1).trim();
+            if (origin.equals(world.getName())) {
+                continue;
+            }
+            ActiveMob mob = MythicBukkit.inst().getMobManager().getActiveMob(entity.getUniqueId()).orElse(null);
+            if (mob != null) {
+                mob.remove();
+            }
+            entity.remove();
+            Bukkit.getLogger().warning("[ValaryRPG-Arena] Rimosso mob Mythic clonato dal template in "
+                    + world.getName() + " (nato in '" + origin + "'): ripulisci il template.");
         }
     }
 
