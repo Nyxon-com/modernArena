@@ -18,6 +18,7 @@ public final class MilestoneCatalog {
     private final ValaryArenaPlugin plugin;
     private final Map<String, List<MilestoneDefinition>> byMob = new HashMap<>();
     private final Map<String, String> canonical = new HashMap<>();
+    private int claimRevision;
 
     public MilestoneCatalog(ValaryArenaPlugin plugin) {
         this.plugin = plugin;
@@ -27,6 +28,7 @@ public final class MilestoneCatalog {
         this.byMob.clear();
         this.canonical.clear();
         FileConfiguration yaml = this.plugin.configs().milestones();
+        this.claimRevision = Math.max(1, yaml.getInt("settings.claim-revision", 1));
         ConfigurationSection mobs = yaml.getConfigurationSection("mobs");
         if (mobs == null) {
             return;
@@ -52,7 +54,8 @@ public final class MilestoneCatalog {
                         threshold,
                         node.getString("message", ""),
                         node.getString("sound", "milestone"),
-                        node.getStringList("commands")
+                        node.getStringList("commands"),
+                        node.getStringList("random-commands")
                 ));
             }
             list.sort(Comparator.comparingInt(definition -> definition.threshold));
@@ -60,6 +63,10 @@ public final class MilestoneCatalog {
             this.byMob.put(key, List.copyOf(list));
             this.canonical.put(key, mobId);
         }
+    }
+
+    public int claimRevision() {
+        return this.claimRevision;
     }
 
     public List<MilestoneDefinition> of(String mobId) {

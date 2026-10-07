@@ -3,94 +3,95 @@
 # arena-queue, milestone, command-denied, arena-cooldown, arena-boss-cap,
 # dungeon-start, dungeon-leave, dungeon-queue, dungeon-complete, dungeon-room,
 # dungeon-wave, dungeon-last-minion.
+# Preferisci resource key Minecraft (es. block.note_block.chime).
 # =============================================================================
 
 party-invite:
   enabled: true
-  sound: ENTITY_EXPERIENCE_ORB_PICKUP
+  sound: entity.experience_orb.pickup
   volume: 0.8
   pitch: 1.2
 
 arena-start:
   enabled: true
-  sound: ENTITY_ENDER_DRAGON_GROWL
+  sound: entity.ender_dragon.growl
   volume: 0.6
   pitch: 1.0
 
 arena-leave:
   enabled: true
-  sound: ENTITY_ENDERMAN_TELEPORT
+  sound: entity.enderman.teleport
   volume: 0.7
   pitch: 1.0
 
 arena-queue:
   enabled: true
-  sound: BLOCK_NOTE_BLOCK_PLING
+  sound: block.note_block.pling
   volume: 0.8
   pitch: 0.8
 
 milestone:
   enabled: true
-  sound: UI_TOAST_CHALLENGE_COMPLETE
+  sound: ui.toast.challenge_complete
   volume: 0.9
   pitch: 1.0
 
 command-denied:
   enabled: true
-  sound: BLOCK_NOTE_BLOCK_BASS
+  sound: block.note_block.bass
   volume: 0.6
   pitch: 0.7
 
 arena-cooldown:
   enabled: true
-  sound: BLOCK_NOTE_BLOCK_BASS
+  sound: block.note_block.bass
   volume: 0.6
   pitch: 0.6
 
 arena-boss-cap:
   enabled: true
-  sound: ENTITY_ENDER_DRAGON_DEATH
+  sound: entity.ender_dragon.death
   volume: 0.4
   pitch: 1.4
 
 dungeon-start:
   enabled: true
-  sound: ENTITY_WITHER_SPAWN
+  sound: entity.wither.spawn
   volume: 0.5
   pitch: 1.2
 
 dungeon-leave:
   enabled: true
-  sound: ENTITY_ENDERMAN_TELEPORT
+  sound: entity.enderman.teleport
   volume: 0.7
   pitch: 1.0
 
 dungeon-queue:
   enabled: true
-  sound: BLOCK_NOTE_BLOCK_PLING
+  sound: block.note_block.pling
   volume: 0.8
   pitch: 0.8
 
 dungeon-room:
   enabled: true
-  sound: BLOCK_NOTE_BLOCK_CHIME
+  sound: block.note_block.chime
   volume: 0.8
   pitch: 1.1
 
 dungeon-wave:
   enabled: true
-  sound: ENTITY_EVOKER_CAST_SPELL
+  sound: entity.evoker.cast_spell
   volume: 0.7
   pitch: 1.15
 
 dungeon-last-minion:
   enabled: true
-  sound: BLOCK_BELL_USE
+  sound: block.bell.use
   volume: 0.9
   pitch: 1.4
 
 dungeon-complete:
   enabled: true
-  sound: UI_TOAST_CHALLENGE_COMPLETE
+  sound: ui.toast.challenge_complete
   volume: 0.9
   pitch: 1.0

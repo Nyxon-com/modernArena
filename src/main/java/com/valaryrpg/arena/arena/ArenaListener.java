@@ -89,6 +89,22 @@ public final class ArenaListener implements Listener {
         this.arenas.refreshMythicSpawners();
     }
 
+    /** Blocca PvP player→player in arena (oltre a world.setPVP false). */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onPlayerPvP(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player victim)) {
+            return;
+        }
+        ArenaInstance instance = this.arenas.instanceOf(victim.getWorld());
+        if (instance == null || instance.state() != SlotState.ACTIVE) {
+            return;
+        }
+        Player attacker = attacker(event.getDamager());
+        if (attacker != null && !attacker.getUniqueId().equals(victim.getUniqueId())) {
+            event.setCancelled(true);
+        }
+    }
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDamage(EntityDamageByEntityEvent event) {
         if (!(event.getEntity() instanceof LivingEntity victim)) {

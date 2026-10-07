@@ -11,6 +11,7 @@ import com.valaryrpg.arena.command.ArenaCommand;
 import com.valaryrpg.arena.command.CommandCooldowns;
 import com.valaryrpg.arena.command.CommandGuard;
 import com.valaryrpg.arena.command.DungeonCommand;
+import com.valaryrpg.arena.command.MilestoneCommand;
 import com.valaryrpg.arena.command.PartyCommand;
 import com.valaryrpg.arena.config.ConfigManager;
 import com.valaryrpg.arena.dungeon.DungeonCatalog;
@@ -22,6 +23,8 @@ import com.valaryrpg.arena.hud.TabScoreboards;
 import com.valaryrpg.arena.message.MessageService;
 import com.valaryrpg.arena.milestone.KillTracker;
 import com.valaryrpg.arena.milestone.MilestoneCatalog;
+import com.valaryrpg.arena.milestone.MilestoneGui;
+import com.valaryrpg.arena.milestone.MilestoneListener;
 import com.valaryrpg.arena.party.PartyService;
 import com.valaryrpg.arena.placeholder.ValaryPlaceholders;
 import com.valaryrpg.arena.sound.SoundService;
@@ -49,6 +52,7 @@ public final class ValaryArenaPlugin extends JavaPlugin {
     private ArenaService arenas;
     private DungeonService dungeons;
     private KillTracker kills;
+    private MilestoneGui milestoneGui;
     private ValaryPlaceholders placeholders;
     private InstanceHud hud;
 
@@ -116,12 +120,17 @@ public final class ValaryArenaPlugin extends JavaPlugin {
         this.arenas.cleanup();
         this.dungeons.cleanup();
 
+        this.kills.applyClaimRevision();
+        this.milestoneGui = new MilestoneGui(this);
         getServer().getPluginManager().registerEvents(
                 new ArenaListener(this.arenas, this.kills, this.parties, this.cooldowns),
                 this
         );
         getServer().getPluginManager().registerEvents(new DungeonListener(this.dungeons, this.kills), this);
+        getServer().getPluginManager().registerEvents(new MilestoneListener(this, this.kills), this);
+        getServer().getPluginManager().registerEvents(this.milestoneGui, this);
         getServer().getPluginManager().registerEvents(new CommandGuard(this), this);
+        this.kills.catchUpAll();
         this.placeholders = new ValaryPlaceholders(this);
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             this.placeholders.register();
@@ -130,6 +139,7 @@ public final class ValaryArenaPlugin extends JavaPlugin {
         bind("arena", new ArenaCommand(this));
         bind("dungeon", new DungeonCommand(this));
         bind("party", new PartyCommand(this));
+        bind("milestones", new MilestoneCommand(this, this.milestoneGui));
         getLogger().info(this.messages.brand("name") + " Arena " + getPluginMeta().getVersion() + " abilitato.");
     }
 
@@ -169,6 +179,8 @@ public final class ValaryArenaPlugin extends JavaPlugin {
             this.arenaCatalog.load();
             this.dungeonCatalog.load();
             this.milestoneCatalog.load();
+            this.kills.applyClaimRevision();
+            this.kills.catchUpAll();
             this.hud().reload();
             reshowHud();
             return true;
@@ -262,6 +274,10 @@ public final class ValaryArenaPlugin extends JavaPlugin {
 
     public KillTracker kills() {
         return this.kills;
+    }
+
+    public MilestoneGui milestoneGui() {
+        return this.milestoneGui;
     }
 
     private void bind(String name, org.bukkit.command.TabExecutor executor) {

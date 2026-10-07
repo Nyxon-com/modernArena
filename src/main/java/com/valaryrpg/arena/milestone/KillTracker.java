@@ -4,15 +4,23 @@ import com.valaryrpg.arena.ValaryArenaPlugin;
 import com.valaryrpg.arena.arena.ArenaDefinition;
 import com.valaryrpg.arena.storage.KillRepository;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 /** Kill SQL async + cache contatori online + reward milestone. */
 public final class KillTracker {
@@ -109,6 +117,197 @@ public final class KillTracker {
         });
     }
 
+    /**
+     * Se claim-revision e' cambiata, azzera i claim cosi' il catch-up
+     * ridistribuisce le reward in base alle kill gia' fatte.
+     */
+    public void applyClaimRevision() {
+        int revision = this.catalog.claimRevision();
+        Path file = this.plugin.getDataFolder().toPath().resolve("milestone-claim-revision.txt");
+        int stored = 0;
+        try {
+            if (Files.isRegularFile(file)) {
+                String raw = Files.readString(file).trim();
+                if (!raw.isEmpty()) {
+                    stored = Integer.parseInt(raw);
+                }
+            }
+        } catch (IOException | NumberFormatException ignored) {
+            stored = 0;
+        }
+        if (stored == revision) {
+            return;
+        }
+        try {
+            int wiped = this.repository.clearAllClaims();
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, Integer.toString(revision));
+            this.plugin.getLogger().info(
+                    "Milestone claim-revision " + revision + ": azzerati " + wiped + " claim (catch-up al join)."
+            );
+        } catch (SQLException | IOException exception) {
+            this.plugin.getLogger().warning("Reset claim milestone fallito: " + exception.getMessage());
+        }
+    }
+
+    /** Concede le milestone gia' raggiunte ma non ancora claimate. */
+    public void catchUp(Player player) {
+        catchUp(player, null);
+    }
+
+    /** Come {@link #catchUp(Player)}, poi esegue {@code after} in sync. */
+    public void catchUp(Player player, Runnable after) {
+        if (player == null || !player.isOnline() || !this.accepting.get()) {
+            if (after != null) {
+                this.plugin.tasks().sync(after);
+            }
+            return;
+        }
+        UUID uuid = player.getUniqueId();
+        this.plugin.tasks().async(() -> {
+            if (!beginOperation()) {
+                if (after != null) {
+                    this.plugin.tasks().sync(after);
+                }
+                return;
+            }
+            try {
+                Map<String, Integer> kills = this.repository.list(uuid);
+                this.plugin.tasks().sync(() -> {
+                    grantCatchUp(uuid, kills);
+                    if (after != null) {
+                        after.run();
+                    }
+                });
+            } catch (SQLException exception) {
+                this.plugin.getLogger().warning("Catch-up milestone fallito: " + exception.getMessage());
+                if (after != null) {
+                    this.plugin.tasks().sync(after);
+                }
+            } finally {
+                endOperation();
+            }
+        });
+    }
+
+    private void grantCatchUp(UUID uuid, Map<String, Integer> kills) {
+        Player online = Bukkit.getPlayer(uuid);
+        String name = resolveName(uuid, online);
+        if (name == null || name.isBlank()) {
+            this.plugin.getLogger().warning("Catch-up milestone: nome sconosciuto per " + uuid);
+            return;
+        }
+        int granted = 0;
+        for (String mobId : this.catalog.mobIds()) {
+            String canonical = this.catalog.canonical(mobId);
+            int count = countOf(kills, canonical);
+            if (count <= 0) {
+                continue;
+            }
+            for (MilestoneDefinition milestone : this.catalog.of(canonical)) {
+                if (count < milestone.threshold) {
+                    continue;
+                }
+                try {
+                    if (!this.repository.claim(uuid, canonical, milestone.threshold)) {
+                        continue;
+                    }
+                } catch (SQLException exception) {
+                    this.plugin.getLogger().warning("Claim milestone fallito: " + exception.getMessage());
+                    continue;
+                }
+                if (online != null && online.isOnline()) {
+                    reward(online, canonical, count, milestone);
+                } else {
+                    rewardOffline(name, uuid, canonical, count, milestone);
+                }
+                granted++;
+            }
+        }
+        if (granted > 0) {
+            this.plugin.getLogger().info("Catch-up milestone: " + name + " → " + granted + " reward.");
+            if (online != null && online.isOnline()) {
+                this.plugin.messages().sendRaw(
+                        online,
+                        "{prefix}<green>Hai ricevuto <white>" + granted + "</white> ricompense milestone arretrate.",
+                        Map.of()
+                );
+            }
+        }
+    }
+
+    private static String resolveName(UUID uuid, Player online) {
+        if (online != null) {
+            return online.getName();
+        }
+        OfflinePlayer offline = Bukkit.getOfflinePlayer(uuid);
+        String name = offline.getName();
+        return name == null || name.isBlank() ? null : name;
+    }
+
+    public void catchUpOnline() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            catchUp(player);
+        }
+    }
+
+    /** Catch-up per tutti i player nel DB kill (online e offline). */
+    public void catchUpAll() {
+        this.plugin.tasks().async(() -> {
+            if (!beginOperation()) {
+                return;
+            }
+            try {
+                Set<UUID> players = this.repository.listPlayers();
+                int total = 0;
+                for (UUID uuid : players) {
+                    Map<String, Integer> kills = this.repository.list(uuid);
+                    boolean relevant = false;
+                    for (String mobId : this.catalog.mobIds()) {
+                        if (countOf(kills, this.catalog.canonical(mobId)) > 0) {
+                            relevant = true;
+                            break;
+                        }
+                    }
+                    if (!relevant) {
+                        continue;
+                    }
+                    total++;
+                    UUID id = uuid;
+                    Map<String, Integer> snapshot = kills;
+                    this.plugin.tasks().sync(() -> grantCatchUp(id, snapshot));
+                }
+                int finalTotal = total;
+                this.plugin.tasks().sync(() -> this.plugin.getLogger().info(
+                        "Catch-up milestone globale: elaborati " + finalTotal + " player con kill boss."
+                ));
+            } catch (SQLException exception) {
+                this.plugin.getLogger().warning("Catch-up globale fallito: " + exception.getMessage());
+            } finally {
+                endOperation();
+            }
+        });
+    }
+
+    /** Carica le kill in async e passa la mappa al consumer in sync. */
+    public void withKills(UUID uuid, Consumer<Map<String, Integer>> consumer) {
+        this.plugin.tasks().async(() -> {
+            Map<String, Integer> kills;
+            try {
+                kills = this.repository.list(uuid);
+            } catch (SQLException exception) {
+                this.plugin.getLogger().warning("Lettura kill fallita: " + exception.getMessage());
+                kills = Map.of();
+            }
+            Map<String, Integer> snapshot = kills;
+            this.plugin.tasks().sync(() -> consumer.accept(snapshot));
+        });
+    }
+
+    public MilestoneCatalog catalog() {
+        return this.catalog;
+    }
+
     public void shutdown(long timeoutMillis) {
         long deadline = System.currentTimeMillis() + Math.max(0L, timeoutMillis);
         synchronized (this.operationsMonitor) {
@@ -150,9 +349,8 @@ public final class KillTracker {
             int target = next > 0 ? next : lastThreshold(milestones);
             this.plugin.tasks().sync(() -> progress(uuid, mobId, kills, target));
             for (MilestoneDefinition milestone : milestones) {
-                if (kills >= milestone.threshold
-                        && this.repository.claim(uuid, mobId, milestone.threshold)) {
-                    this.plugin.tasks().sync(() -> reward(uuid, mobId, kills, milestone));
+                if (kills >= milestone.threshold) {
+                    this.plugin.tasks().sync(() -> grantIfUnclaimed(uuid, mobId, kills, milestone));
                 }
             }
         } catch (SQLException exception) {
@@ -192,15 +390,27 @@ public final class KillTracker {
         ));
     }
 
-    private void reward(UUID uuid, String mobId, int kills, MilestoneDefinition milestone) {
+    private void grantIfUnclaimed(UUID uuid, String mobId, int kills, MilestoneDefinition milestone) {
         Player player = Bukkit.getPlayer(uuid);
         if (player == null || !player.isOnline()) {
             return;
         }
+        try {
+            if (!this.repository.claim(uuid, mobId, milestone.threshold)) {
+                return;
+            }
+        } catch (SQLException exception) {
+            this.plugin.getLogger().warning("Claim milestone fallito: " + exception.getMessage());
+            return;
+        }
+        reward(player, mobId, kills, milestone);
+    }
+
+    private void reward(Player player, String mobId, int kills, MilestoneDefinition milestone) {
         Map<String, String> placeholders = Map.of(
                 "player", player.getName(),
                 "name", player.getName(),
-                "uuid", uuid.toString(),
+                "uuid", player.getUniqueId().toString(),
                 "mob", mobId,
                 "kills", Integer.toString(kills)
         );
@@ -214,7 +424,36 @@ public final class KillTracker {
         if (milestone.sound != null && !milestone.sound.isEmpty()) {
             this.plugin.sounds().play(player, milestone.sound);
         }
-        this.plugin.console().run(player, milestone.commands, withThreshold);
+        List<String> commands = new ArrayList<>(milestone.commands);
+        if (!milestone.randomCommands.isEmpty()) {
+            commands.add(milestone.randomCommands.get(
+                    ThreadLocalRandom.current().nextInt(milestone.randomCommands.size())
+            ));
+        }
+        this.plugin.console().run(player, commands, withThreshold);
+    }
+
+    private void rewardOffline(
+            String playerName,
+            UUID uuid,
+            String mobId,
+            int kills,
+            MilestoneDefinition milestone
+    ) {
+        Map<String, String> withThreshold = new java.util.HashMap<>();
+        withThreshold.put("player", playerName);
+        withThreshold.put("name", playerName);
+        withThreshold.put("uuid", uuid.toString());
+        withThreshold.put("mob", mobId);
+        withThreshold.put("kills", Integer.toString(kills));
+        withThreshold.put("threshold", Integer.toString(milestone.threshold));
+        List<String> commands = new ArrayList<>(milestone.commands);
+        if (!milestone.randomCommands.isEmpty()) {
+            commands.add(milestone.randomCommands.get(
+                    ThreadLocalRandom.current().nextInt(milestone.randomCommands.size())
+            ));
+        }
+        this.plugin.console().runOffline(playerName, uuid, commands, withThreshold);
     }
 
     private void sendKills(Player viewer, String targetName, String mobFilter, Map<String, Integer> kills) {

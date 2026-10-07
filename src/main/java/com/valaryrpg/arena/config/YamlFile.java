@@ -30,12 +30,13 @@ public final class YamlFile {
             this.plugin.saveResource(this.path, false);
         }
         this.config = YamlConfiguration.loadConfiguration(this.file);
+        // Solo defaults in memoria: niente copyDefaults, evita che chiavi vecchie del jar
+        // (es. ExampleBoss) finiscano nei getKeys() insieme al file su disco.
         try (InputStream input = this.plugin.getResource(this.path)) {
             if (input != null) {
                 YamlConfiguration defaults = YamlConfiguration.loadConfiguration(
                         new InputStreamReader(input, StandardCharsets.UTF_8));
                 this.config.setDefaults(defaults);
-                this.config.options().copyDefaults(true);
             }
         } catch (IOException ignored) {
             // defaults dal jar non disponibili

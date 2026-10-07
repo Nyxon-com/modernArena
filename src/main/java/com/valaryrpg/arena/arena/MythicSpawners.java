@@ -129,6 +129,8 @@ public final class MythicSpawners {
                 this.logger.warning("Spawner Mythic sorgente non trovato: " + definition.sourceSpawner);
                 return null;
             }
+            MythicSpawner copiedSpawner = manager.getSpawnerByName(name);
+            configureArenaSpawner(copiedSpawner, definition);
             return name;
         }
         MythicSpawner spawner = manager.createSpawner(name, location, definition.mob);
@@ -136,10 +138,33 @@ public final class MythicSpawners {
             this.logger.warning("Spawner Mythic non creato: " + name + " (" + definition.mob + ")");
             return null;
         }
-        spawner.setCooldownSeconds(definition.cooldownSeconds);
-        spawner.setMaxMobs(PlaceholderInt.of(Integer.toString(definition.maxMobs)));
-        spawner.setSpawnRadius(definition.spawnRadius);
+        configureArenaSpawner(spawner, definition);
         return name;
+    }
+
+    /**
+     * Dopo copy/create: warmup Mythic sempre 0.
+     * Altrimenti dopo kill Mythic riattiva Warmup del template (20/35s) e poi il cooldown
+     * riparte da 90 → hologram "salta" a ~1 min.
+     */
+    private void configureArenaSpawner(MythicSpawner spawner, SpawnerDefinition definition) {
+        if (spawner == null || definition == null) {
+            return;
+        }
+        clearWarmup(spawner);
+        spawner.setCooldownSeconds(Math.max(0, definition.cooldownSeconds));
+        spawner.setMaxMobs(PlaceholderInt.of(Integer.toString(Math.max(1, definition.maxMobs))));
+        spawner.setSpawnRadius(Math.max(0, definition.spawnRadius));
+        spawner.resetTimers();
+        clearWarmup(spawner);
+    }
+
+    private static void clearWarmup(MythicSpawner spawner) {
+        if (spawner == null) {
+            return;
+        }
+        spawner.setWarmupSeconds(0);
+        spawner.setRemainingWarmupSeconds(0L);
     }
 
     public int waitSeconds(List<String> names) {
@@ -150,8 +175,14 @@ public final class MythicSpawners {
             if (spawner == null) {
                 continue;
             }
-            wait = Math.max(wait, spawner.getRemainingWarmupSeconds());
-            wait = Math.max(wait, spawner.getRemainingCooldownSeconds());
+            // Re-enforce: copy/reload possono rimettere Warmup del template.
+            clearWarmup(spawner);
+            int remaining = Math.max(0, spawner.getRemainingCooldownSeconds());
+            int max = Math.max(0, spawner.getCooldownSeconds());
+            if (max > 0) {
+                remaining = Math.min(remaining, max);
+            }
+            wait = Math.max(wait, remaining);
         }
         return wait;
     }

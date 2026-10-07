@@ -3,6 +3,8 @@ package com.valaryrpg.arena.dungeon;
 import com.valaryrpg.arena.ValaryArenaPlugin;
 import com.valaryrpg.arena.arena.MythicSpawners;
 import com.valaryrpg.arena.arena.SlotState;
+import io.lumine.mythic.bukkit.MythicBukkit;
+import io.lumine.mythic.core.mobs.ActiveMob;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -91,6 +93,21 @@ public final class DungeonRooms {
     }
 
     public void onMobDeath(DungeonInstance instance, DungeonDefinition definition, World world, String mythicName, UUID deadId) {
+        onMobRemoved(instance, definition, world, mythicName, deadId, true);
+    }
+
+    /**
+     * Mob sparito (death o despawn/remove). Senza death credit quando {@code countDeath} e' false,
+     * cosi' i despawn Mythic non gonfiano i kill ma sbloccano comunque wave/porte.
+     */
+    public void onMobRemoved(
+            DungeonInstance instance,
+            DungeonDefinition definition,
+            World world,
+            String mythicName,
+            UUID deadId,
+            boolean countDeath
+    ) {
         if (instance.state() != SlotState.ACTIVE || instance.completing()) {
             return;
         }
@@ -99,13 +116,19 @@ public final class DungeonRooms {
             return;
         }
         if (deadId != null) {
+            boolean tracked = instance.roomLiving().containsKey(deadId)
+                    || instance.waveLiving().contains(deadId)
+                    || instance.leashed().containsKey(deadId);
+            if (!tracked && !countDeath) {
+                return;
+            }
             boolean glow = deadId.equals(instance.glowing());
             forget(instance, deadId);
             if (glow) {
                 unglow(instance);
             }
         }
-        if (room.matchesMob(mythicName)) {
+        if (countDeath && room.matchesMob(mythicName)) {
             instance.deathsInRoom(instance.deathsInRoom() + 1);
             if (room.objective == DungeonObjective.BOSS && room.isBoss(mythicName)) {
                 this.service.complete(instance, definition);
@@ -323,24 +346,36 @@ public final class DungeonRooms {
         var iterator = instance.leashed().entrySet().iterator();
         while (iterator.hasNext()) {
             var entry = iterator.next();
-            Entity entity = Bukkit.getEntity(entry.getKey());
-            if (!(entity instanceof LivingEntity living)
-                    || living.isDead()
-                    || !living.getWorld().equals(world)) {
-                iterator.remove();
-                continue;
-            }
             DungeonPack pack = room.pack(entry.getValue());
             if (pack == null || !pack.leashed()) {
                 iterator.remove();
                 continue;
             }
             Location home = pack.point.to(world);
-            double max = pack.leashRadius * pack.leashRadius;
-            if (living.getLocation().distanceSquared(home) <= max) {
+            ensureChunk(home);
+            // Non droppare il leash se l'entity e' temporaneamente irrisolvibile (chunk unload).
+            Entity entity = resolve(world, instance, entry.getKey());
+            if (entity == null) {
                 continue;
             }
+            if (!(entity instanceof LivingEntity living) || living.isDead()) {
+                iterator.remove();
+                continue;
+            }
+            if (!living.getWorld().equals(world)) {
+                iterator.remove();
+                continue;
+            }
+            double max = pack.leashRadius * pack.leashRadius;
+            if (living.getLocation().distanceSquared(home) <= max) {
+                pin(instance, living.getUniqueId(), living.getLocation().clone());
+                continue;
+            }
+            living.setFallDistance(0f);
+            living.setVelocity(new org.bukkit.util.Vector());
             living.teleport(home);
+            living.setFallDistance(0f);
+            living.setVelocity(new org.bukkit.util.Vector());
             pin(instance, living.getUniqueId(), living.getLocation().clone());
             if (pack.healOnLeash) {
                 heal(living);
@@ -784,36 +819,85 @@ public final class DungeonRooms {
         int alive = 0;
         while (iterator.hasNext()) {
             var entry = iterator.next();
-            Entity entity = resolve(world, instance, entry.getKey());
+            UUID id = entry.getKey();
+            Entity entity = resolve(world, instance, id);
+            // Entity null: se il chunk e' carico e Mythic non ha piu' l'ActiveMob e' un ghost
+            // (Despawn: true / remove senza death). Altrimenti e' unload temporaneo.
+            if (entity == null) {
+                if (isGhostMob(world, instance, id)) {
+                    iterator.remove();
+                    unpin(instance, id);
+                    continue;
+                }
+                alive++;
+                continue;
+            }
             if (!(entity instanceof LivingEntity living)
                     || living.isDead()
                     || (world != null && !living.getWorld().equals(world))) {
-                UUID gone = entry.getKey();
                 iterator.remove();
-                unpin(instance, gone);
+                unpin(instance, id);
                 continue;
             }
-            pin(instance, entry.getKey(), living.getLocation().clone());
+            pin(instance, id, living.getLocation().clone());
             alive++;
         }
         instance.waveLiving().removeIf(uuid -> !instance.roomLiving().containsKey(uuid));
         return alive;
     }
 
+    /** True se l'UUID tracciato non esiste piu' nel mondo ne' in Mythic (despawn senza death). */
+    private boolean isGhostMob(World world, DungeonInstance instance, UUID id) {
+        Location at = instance.livingAt().get(id);
+        if (at != null && at.getWorld() != null) {
+            World pinned = at.getWorld();
+            int cx = at.getBlockX() >> 4;
+            int cz = at.getBlockZ() >> 4;
+            if (!pinned.isChunkLoaded(cx, cz)) {
+                return false;
+            }
+        }
+        try {
+            ActiveMob mob = MythicBukkit.inst().getMobManager().getActiveMob(id).orElse(null);
+            if (mob != null && !mob.isDead()) {
+                return false;
+            }
+        } catch (Throwable ignored) {
+            // Mythic non pronto: non droppare aggressivamente
+            return false;
+        }
+        if (world != null && world.getEntity(id) != null) {
+            return false;
+        }
+        return Bukkit.getEntity(id) == null;
+    }
+
     private Entity resolve(World world, DungeonInstance instance, UUID uuid) {
         Location at = instance.livingAt().get(uuid);
-        if (at != null && at.getWorld() != null) {
-            at.getWorld().getChunkAt(at);
-        }
+        ensureChunk(at);
         Entity entity = world == null ? null : world.getEntity(uuid);
-        return entity != null ? entity : Bukkit.getEntity(uuid);
+        if (entity == null) {
+            entity = Bukkit.getEntity(uuid);
+        }
+        return entity;
+    }
+
+    private void ensureChunk(Location at) {
+        if (at == null || at.getWorld() == null) {
+            return;
+        }
+        World world = at.getWorld();
+        int cx = at.getBlockX() >> 4;
+        int cz = at.getBlockZ() >> 4;
+        if (!world.isChunkLoaded(cx, cz)) {
+            world.loadChunk(cx, cz);
+        }
+        world.getChunkAt(cx, cz).addPluginChunkTicket(this.plugin);
     }
 
     private void pin(DungeonInstance instance, UUID id, Location now) {
         Location old = instance.livingAt().put(id, now);
-        if (now != null && now.getWorld() != null) {
-            now.getChunk().addPluginChunkTicket(this.plugin);
-        }
+        ensureChunk(now);
         if (old != null && old.getWorld() != null && (now == null || !sameChunk(old, now))) {
             old.getChunk().removePluginChunkTicket(this.plugin);
         }
@@ -864,8 +948,13 @@ public final class DungeonRooms {
             return;
         }
         UUID uuid = instance.waveLiving().iterator().next();
-        Entity entity = Bukkit.getEntity(uuid);
+        Entity entity = resolve(world, instance, uuid);
         if (entity == null) {
+            if (isGhostMob(world, instance, uuid)) {
+                forget(instance, uuid);
+                tryAdvance(instance, definition, world);
+                remaining(instance, definition, world);
+            }
             return;
         }
         if (!(entity instanceof LivingEntity living) || living.isDead()) {

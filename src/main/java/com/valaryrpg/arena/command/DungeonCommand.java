@@ -35,7 +35,18 @@ public final class DungeonCommand implements TabExecutor {
         if (sub.equals(this.plugin.configs().command("dungeon-start", "start"))) {
             return start(sender, args);
         }
-        if (!(sender instanceof Player player)) {
+        if (args.length >= 2 && sub.equals(this.plugin.configs().command("dungeon-spawn", "spawn"))) {
+            if (sender instanceof Player staff
+                && !staff.hasPermission(this.plugin.configs().permission("dungeon-spawn-other", "valary.dungeon.spawn.other"))) {
+                deny(staff);
+                return true;
+            }
+            Player target = Bukkit.getPlayerExact(args[1]);
+            if (target != null) {
+                this.plugin.dungeons().teleportSpawn(target);
+            }
+            return true;
+        }        if (!(sender instanceof Player player)) {
             this.plugin.messages().send(sender, "errors.player-only");
             return true;
         }

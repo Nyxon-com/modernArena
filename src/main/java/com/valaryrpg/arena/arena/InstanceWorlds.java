@@ -59,6 +59,8 @@ public final class InstanceWorlds {
         world.setKeepSpawnInMemory(this.keepSpawnInMemory);
         world.setViewDistance(this.viewDistance);
         world.setSimulationDistance(this.simulationDistance);
+        // Nessun PvP in arene/dungeon (istanze).
+        world.setPVP(false);
         world.setGameRule(GameRule.RANDOM_TICK_SPEED, this.randomTickSpeed);
         world.setGameRule(GameRule.DO_MOB_SPAWNING, this.vanillaMobSpawning);
         world.setGameRule(GameRule.DO_PATROL_SPAWNING, false);

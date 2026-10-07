@@ -46,7 +46,12 @@ public final class CommandGuard implements Listener {
         String arena = this.plugin.configs().command("arena", "arena").toLowerCase(Locale.ROOT);
         String dungeon = this.plugin.configs().command("dungeon", "dungeon").toLowerCase(Locale.ROOT);
         String party = this.plugin.configs().command("party", "party").toLowerCase(Locale.ROOT);
-        return token.equals(arena) || token.equals(dungeon) || token.equals(party);
+        String milestones = this.plugin.configs().command("milestones", "milestones").toLowerCase(Locale.ROOT);
+        return token.equals(arena)
+                || token.equals(dungeon)
+                || token.equals(party)
+                || token.equals(milestones)
+                || token.equals("milestone");
     }
 
     private Set<String> blocked() {

@@ -25,6 +25,11 @@ commands:
   dungeon:
     description: Avvia o lascia un dungeon istanziato
     usage: /<command>
+  milestones:
+    description: GUI ricompense milestone boss
+    usage: /<command>
+    permission: valary.arena.milestones
+    aliases: [milestone, milestoni]
 permissions:
   valary.arena:
     description: Usa /arena
@@ -77,6 +82,9 @@ permissions:
   valary.dungeon.spawn:
     description: /dungeon spawn
     default: true
+  valary.dungeon.spawn.other:
+    description: /dungeon spawn <player> (console o staff)
+    default: op
   valary.party:
     description: Usa /party
     default: true

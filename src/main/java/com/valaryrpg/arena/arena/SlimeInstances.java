@@ -68,9 +68,100 @@ public final class SlimeInstances {
             if (this.templates.containsKey(templateName)) {
                 return;
             }
-            SlimeWorld template = AdvancedSlimePaperAPI.instance().readVanillaWorld(templateDir, templateName, null);
-            this.templates.put(templateName, template);
+            File importDir = sanitizeTemplateDir(templateDir, templateName);
+            try {
+                // ASP non applica i DataFixer: i chunk devono gia essere alla DataVersion del server.
+                // sanitizeTemplateDir esclude DIM-1/DIM1 (nether/end legacy) che altrimenti spammano errori.
+                this.plugin.getLogger().info("Import slime template '" + templateName + "' da " + importDir.getAbsolutePath());
+                SlimeWorld template = AdvancedSlimePaperAPI.instance().readVanillaWorld(importDir, templateName, null);
+                this.templates.put(templateName, template);
+            } finally {
+                if (!importDir.equals(templateDir)) {
+                    deleteRecursive(importDir);
+                }
+            }
         }
+    }
+
+    /**
+     * Copia solo overworld (level.dat + region/entities/poi) in una cartella temp,
+     * escludendo DIM-* e backup, cosi ASP non legge nether 1.16 vecchi.
+     */
+    private File sanitizeTemplateDir(File templateDir, String templateName) throws Exception {
+        File dim1 = new File(templateDir, "DIM-1");
+        File dimEnd = new File(templateDir, "DIM1");
+        File region = new File(templateDir, "region");
+        if (!dim1.isDirectory() && !dimEnd.isDirectory()) {
+            return templateDir;
+        }
+        if (!region.isDirectory()) {
+            throw new IllegalStateException(
+                    "Template '" + templateName + "' ha DIM-* ma nessuna cartella region overworld. "
+                            + "Sposta la mappa in region/ e aggiorna i chunk (forceUpgrade).");
+        }
+        File tempRoot = new File(this.plugin.getDataFolder(), "slime-import-tmp");
+        File temp = new File(tempRoot, templateName + "-" + System.nanoTime());
+        if (!temp.mkdirs()) {
+            throw new IllegalStateException("Impossibile creare temp import: " + temp);
+        }
+        copyFile(new File(templateDir, "level.dat"), new File(temp, "level.dat"));
+        copyFile(new File(templateDir, "level.dat_old"), new File(temp, "level.dat_old"));
+        copyFile(new File(templateDir, "uid.dat"), new File(temp, "uid.dat"));
+        copyFile(new File(templateDir, "paper-world.yml"), new File(temp, "paper-world.yml"));
+        copyTree(region, new File(temp, "region"));
+        copyTree(new File(templateDir, "entities"), new File(temp, "entities"));
+        copyTree(new File(templateDir, "poi"), new File(temp, "poi"));
+        copyTree(new File(templateDir, "data"), new File(temp, "data"));
+        this.plugin.getLogger().warning(
+                "Template '" + templateName + "': ignorati DIM-* durante import slime (usa solo overworld).");
+        return temp;
+    }
+
+    private static void copyFile(File from, File to) throws Exception {
+        if (!from.isFile()) {
+            return;
+        }
+        java.nio.file.Files.copy(from.toPath(), to.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private static void copyTree(File from, File to) throws Exception {
+        if (!from.isDirectory()) {
+            return;
+        }
+        java.nio.file.Path source = from.toPath();
+        java.nio.file.Path target = to.toPath();
+        java.nio.file.Files.walkFileTree(source, new java.nio.file.SimpleFileVisitor<>() {
+            @Override
+            public java.nio.file.FileVisitResult preVisitDirectory(
+                    java.nio.file.Path dir, java.nio.file.attribute.BasicFileAttributes attrs) throws java.io.IOException {
+                java.nio.file.Files.createDirectories(target.resolve(source.relativize(dir)));
+                return java.nio.file.FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public java.nio.file.FileVisitResult visitFile(
+                    java.nio.file.Path file, java.nio.file.attribute.BasicFileAttributes attrs) throws java.io.IOException {
+                java.nio.file.Files.copy(
+                        file,
+                        target.resolve(source.relativize(file)),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                return java.nio.file.FileVisitResult.CONTINUE;
+            }
+        });
+    }
+
+    private static void deleteRecursive(File root) {
+        if (root == null || !root.exists()) {
+            return;
+        }
+        File[] children = root.listFiles();
+        if (children != null) {
+            for (File child : children) {
+                deleteRecursive(child);
+            }
+        }
+        //noinspection ResultOfMethodCallIgnored
+        root.delete();
     }
 
     private void mount(String templateName, String instanceName, Consumer<World> onReady, Consumer<Exception> onFail) {

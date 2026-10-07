@@ -5,7 +5,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /** Query per (uuid, mob_id): increment kill e claim milestone. */
@@ -66,6 +68,24 @@ public final class KillRepository {
         return kills;
     }
 
+    /** Tutti i player con almeno una kill. */
+    public Set<UUID> listPlayers() throws SQLException {
+        Set<UUID> players = new LinkedHashSet<>();
+        String sql = "SELECT DISTINCT player_uuid FROM " + this.storage.table("kills");
+        try (Connection connection = this.storage.connection();
+             PreparedStatement select = connection.prepareStatement(sql);
+             ResultSet result = select.executeQuery()) {
+            while (result.next()) {
+                try {
+                    players.add(UUID.fromString(result.getString(1)));
+                } catch (IllegalArgumentException ignored) {
+                    // uuid corrotti ignorati
+                }
+            }
+        }
+        return players;
+    }
+
     public boolean claim(UUID uuid, String mobId, int threshold) throws SQLException {
         try (Connection connection = this.storage.connection();
              PreparedStatement insert = connection.prepareStatement(this.claimSql)) {
@@ -73,6 +93,15 @@ public final class KillRepository {
             insert.setString(2, mobId);
             insert.setInt(3, threshold);
             return insert.executeUpdate() > 0;
+        }
+    }
+
+    /** Svuota tutti i claim milestone (usato quando cambia claim-revision). */
+    public int clearAllClaims() throws SQLException {
+        String sql = "DELETE FROM " + this.storage.table("milestones");
+        try (Connection connection = this.storage.connection();
+             PreparedStatement delete = connection.prepareStatement(sql)) {
+            return delete.executeUpdate();
         }
     }
 }

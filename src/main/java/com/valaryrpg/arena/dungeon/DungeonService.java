@@ -63,6 +63,10 @@ public final class DungeonService {
         this.joinCooldowns = new ArenaCooldowns();
     }
 
+    public ValaryArenaPlugin plugin() {
+        return this.plugin;
+    }
+
     public DungeonCatalog catalog() {
         return this.catalog;
     }
@@ -395,12 +399,16 @@ public final class DungeonService {
     }
 
     public void onMobDeath(DungeonInstance instance, String mythicName, UUID entityId) {
+        onMobRemoved(instance, mythicName, entityId, true);
+    }
+
+    public void onMobRemoved(DungeonInstance instance, String mythicName, UUID entityId, boolean countDeath) {
         DungeonDefinition definition = this.catalog.dungeon(instance.dungeonId());
         World world = loadedWorld(instance);
         if (definition == null || world == null) {
             return;
         }
-        this.rooms.onMobDeath(instance, definition, world, mythicName, entityId);
+        this.rooms.onMobRemoved(instance, definition, world, mythicName, entityId, countDeath);
         this.holograms.refresh(instance, definition);
     }
 

@@ -93,6 +93,25 @@ public final class ArenaCommand implements TabExecutor {
             }
             return milestones(player, args);
         }
+        if (sub.equals("catchup")) {
+            if (!player.hasPermission(this.plugin.configs().permission("arena-reload", "valary.arena.reload"))) {
+                deny(player);
+                return true;
+            }
+            if (args.length >= 2 && args[1].equalsIgnoreCase("all")) {
+                this.plugin.kills().catchUpAll();
+                this.plugin.messages().sendRaw(player, "{prefix}<gray>Catch-up milestone avviato per <white>tutti</white> i player.", Map.of());
+                return true;
+            }
+            Player target = args.length >= 2 ? Bukkit.getPlayerExact(args[1]) : player;
+            if (target == null) {
+                this.plugin.messages().send(player, "errors.target-offline", Map.of("target", args[1]));
+                return true;
+            }
+            this.plugin.kills().catchUp(target);
+            this.plugin.messages().sendRaw(player, "{prefix}<gray>Catch-up milestone avviato per <white>" + target.getName() + "</white>.", Map.of());
+            return true;
+        }
         this.plugin.messages().send(player, "errors.unknown-command");
         return true;
     }
@@ -227,7 +246,12 @@ public final class ArenaCommand implements TabExecutor {
 
     private boolean milestones(Player player, String[] args) {
         if (args.length == 1) {
-            this.plugin.kills().showMilestones(player, player.getUniqueId(), player.getName());
+            if (this.plugin.milestoneGui() != null) {
+                this.plugin.kills().catchUp(player, () -> this.plugin.milestoneGui().open(player));
+            } else {
+                this.plugin.kills().catchUp(player);
+                this.plugin.kills().showMilestones(player, player.getUniqueId(), player.getName());
+            }
             return true;
         }
         Player other = Bukkit.getPlayerExact(args[1]);

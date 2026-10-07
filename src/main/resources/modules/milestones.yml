@@ -1,18 +1,346 @@
 # =============================================================================
-# Soglie per player, chiave = internal name Mythic o id boss in arenas.yml.
-# Ogni kill del player incrementa il suo contatore; la reward scatta sulla soglia personale.
+# Milestone boss (kill personali).
 # Placeholder: {player} {uuid} {name} {mob} {kills} {threshold}
+#
+# claim-revision: incrementa quando cambi le reward. Azzera i claim e al join
+# (o reload) ridà le ricompense a chi ha gia' raggiunto le soglie.
+#
+# Scaling espansioni (template):
+#   5   -> accesso / 1 key assicurata
+#   20  -> 2 key OPPURE 1 gemma random del boss
+#   50  -> 3 key / artefatti
+#   75  -> 5 key / drop raro assicurato  (opzionale)
+#   100 -> punti levelling
 # =============================================================================
 
+settings:
+  claim-revision: 4
+
+# GUI /milestones — small-caps Valary (stile item MMOItems).
+gui:
+  title: '<b><gradient:#4AFF5C:#00FF07>ᴍɪʟᴇꜱᴛᴏɴᴇꜱ</gradient></b>'
+  rows: 5
+  filler: BLACK_STAINED_GLASS_PANE
+  labels:
+    terra:
+      slot: 4
+      material: MOSS_BLOCK
+      name: '<b><gradient:#00FF79:#00FF07>ᴛᴇʀʀᴀ</gradient></b>'
+      lore:
+        - '<dark_gray>ᴇꜱᴘᴀɴꜱɪᴏɴᴇ 1'
+    marte:
+      slot: 22
+      material: RED_SAND
+      name: '<b><gradient:#FF2A2A:#FF7A3C>ᴍᴀʀᴛᴇ</gradient></b>'
+      lore:
+        - '<dark_gray>ᴇꜱᴘᴀɴꜱɪᴏɴᴇ 2'
+  entries:
+    - mob: Terratron
+      slot: 10
+      material: MOSSY_COBBLESTONE
+      name: '<b><color:#AAAAAA>ᴘʀɪᴍᴏ ʙᴏꜱꜱ</color></b> <dark_gray>·</dark_gray> <b><gradient:#00FF79:#00FF07>ᴛᴇʀʀᴀᴛʀᴏɴ</gradient></b>'
+      lore:
+        - '<dark_gray>ꜱᴏɢʟɪᴇ'
+        - '<gray>5</gray> <dark_gray>»</dark_gray> <white>1 ᴀʀᴛᴇꜰᴀᴛᴛᴏ ɢᴇᴏᴄʀᴏɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴏ'
+        - '<gray>20</gray> <dark_gray>»</dark_gray> <white>2 ᴋᴇʏ ᴛᴇʀʀᴀᴛʀᴏɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴇ'
+        - '<gray>50</gray> <dark_gray>»</dark_gray> <white>3 ᴀʀᴛᴇꜰᴀᴛᴛɪ ɢᴇᴏᴄʀᴏɴ ᴀꜱꜱɪᴄᴜʀᴀᴛɪ'
+        - '<gray>75</gray> <dark_gray>»</dark_gray> <white>5 ᴋᴇʏ ᴛᴇʀʀᴀᴛʀᴏɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴇ'
+        - '<gray>100</gray> <dark_gray>»</dark_gray> <aqua>1 ᴘᴜɴᴛᴏ ʟᴇᴠᴇʟʟɪɴɢ'
+    - mob: Geocron
+      slot: 12
+      material: EMERALD_BLOCK
+      name: '<b><color:#AAAAAA>ꜱᴇᴄᴏɴᴅᴏ ʙᴏꜱꜱ</color></b> <dark_gray>·</dark_gray> <b><gradient:#00D96B:#00E600>ɢᴇᴏᴄʀᴏɴ</gradient></b>'
+      lore:
+        - '<dark_gray>ꜱᴏɢʟɪᴇ'
+        - '<gray>5</gray> <dark_gray>»</dark_gray> <white>1 ᴀʀᴛᴇꜰᴀᴛᴛᴏ ꜱʏʟᴠᴀʀᴏɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴏ'
+        - '<gray>20</gray> <dark_gray>»</dark_gray> <white>2 ᴋᴇʏ ɢᴇᴏᴄʀᴏɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴇ'
+        - '<gray>50</gray> <dark_gray>»</dark_gray> <white>3 ᴀʀᴛᴇꜰᴀᴛᴛɪ ꜱʏʟᴠᴀʀᴏɴ ᴀꜱꜱɪᴄᴜʀᴀᴛɪ'
+        - '<gray>75</gray> <dark_gray>»</dark_gray> <white>5 ᴋᴇʏ ɢᴇᴏᴄʀᴏɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴇ'
+        - '<gray>100</gray> <dark_gray>»</dark_gray> <aqua>1 ᴘᴜɴᴛᴏ ʟᴇᴠᴇʟʟɪɴɢ'
+    - mob: Sylvaron
+      slot: 14
+      material: LIME_CONCRETE
+      name: '<b><color:#AAAAAA>ᴛᴇʀᴢᴏ ʙᴏꜱꜱ</color></b> <dark_gray>·</dark_gray> <b><color:#4AFF5C>ꜱʏʟᴠᴀʀᴏɴ</color></b>'
+      lore:
+        - '<dark_gray>ꜱᴏɢʟɪᴇ'
+        - '<gray>5</gray> <dark_gray>»</dark_gray> <white>1 ᴋᴇʏ ꜱʏʟᴠᴀʀᴏɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴀ'
+        - '<gray>20</gray> <dark_gray>»</dark_gray> <white>1 ᴅᴇʟʟᴇ 4 ɢᴇᴍᴍᴇ ᴀꜱꜱɪᴄᴜʀᴀᴛᴇ'
+        - '<gray>50</gray> <dark_gray>»</dark_gray> <white>3 ᴋᴇʏ ꜱʏʟᴠᴀʀᴏɴ'
+        - '<gray>75</gray> <dark_gray>»</dark_gray> <white>ᴏᴄᴄʜɪᴏ ᴅɪ ꜱʏʟᴠᴀʀᴏɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴏ'
+        - '<gray>100</gray> <dark_gray>»</dark_gray> <aqua>1 ᴘᴜɴᴛᴏ ʟᴇᴠᴇʟʟɪɴɢ'
+    - mob: Traghion
+      slot: 16
+      material: SLIME_BLOCK
+      name: '<b><color:#AAAAAA>ǫᴜᴀʀᴛᴏ ʙᴏꜱꜱ</color></b> <dark_gray>·</dark_gray> <b><gradient:#4AFF5C:#00FF07>ᴛʀᴀɢʜɪᴏɴ</gradient></b>'
+      lore:
+        - '<dark_gray>ꜱᴏɢʟɪᴇ'
+        - '<gray>5</gray> <dark_gray>»</dark_gray> <white>1 ᴋᴇʏ ᴛʀᴀɢʜɪᴏɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴀ'
+        - '<gray>20</gray> <dark_gray>»</dark_gray> <white>1 ᴅᴇʟʟᴇ 3 ɢᴇᴍᴍᴇ ᴀꜱꜱɪᴄᴜʀᴀᴛᴇ'
+        - '<gray>50</gray> <dark_gray>»</dark_gray> <white>ʟɪᴍᴇ ᴄᴏɴᴄᴇɴᴛʀᴀᴛᴏ ᴀꜱꜱɪᴄᴜʀᴀᴛᴏ'
+        - '<gray>100</gray> <dark_gray>»</dark_gray> <aqua>2 ᴘᴜɴᴛɪ ʟᴇᴠᴇʟʟɪɴɢ'
+    - mob: Larycan
+      slot: 28
+      material: RED_CONCRETE
+      name: '<b><color:#AAAAAA>ᴘʀɪᴍᴏ ʙᴏꜱꜱ</color></b> <dark_gray>·</dark_gray> <b><gradient:#FF2A2A:#FF7A3C>ʟᴀʀʏᴄᴀɴ</gradient></b>'
+      lore:
+        - '<dark_gray>ꜱᴏɢʟɪᴇ'
+        - '<gray>5</gray> <dark_gray>»</dark_gray> <white>1 ᴀʀᴛᴇꜰᴀᴛᴛᴏ ᴘᴜᴛʀᴀɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴏ'
+        - '<gray>20</gray> <dark_gray>»</dark_gray> <white>2 ᴋᴇʏ ʟᴀʀʏᴄᴀɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴇ'
+        - '<gray>50</gray> <dark_gray>»</dark_gray> <white>3 ᴀʀᴛᴇꜰᴀᴛᴛɪ ᴘᴜᴛʀᴀɴ ᴀꜱꜱɪᴄᴜʀᴀᴛɪ'
+        - '<gray>75</gray> <dark_gray>»</dark_gray> <white>5 ᴋᴇʏ ʟᴀʀʏᴄᴀɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴇ'
+        - '<gray>100</gray> <dark_gray>»</dark_gray> <aqua>1 ᴘᴜɴᴛᴏ ʟᴇᴠᴇʟʟɪɴɢ'
+    - mob: Putran
+      slot: 30
+      material: NETHER_WART_BLOCK
+      name: '<b><color:#AAAAAA>ꜱᴇᴄᴏɴᴅᴏ ʙᴏꜱꜱ</color></b> <dark_gray>·</dark_gray> <b><gradient:#B01020:#FF4D6A>ᴘᴜᴛʀᴀɴ</gradient></b>'
+      lore:
+        - '<dark_gray>ꜱᴏɢʟɪᴇ'
+        - '<gray>5</gray> <dark_gray>»</dark_gray> <white>1 ᴀʀᴛᴇꜰᴀᴛᴛᴏ ᴠᴜʟᴄᴀɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴏ'
+        - '<gray>20</gray> <dark_gray>»</dark_gray> <white>2 ᴋᴇʏ ᴘᴜᴛʀᴀɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴇ'
+        - '<gray>50</gray> <dark_gray>»</dark_gray> <white>3 ᴀʀᴛᴇꜰᴀᴛᴛɪ ᴠᴜʟᴄᴀɴ ᴀꜱꜱɪᴄᴜʀᴀᴛɪ'
+        - '<gray>75</gray> <dark_gray>»</dark_gray> <white>5 ᴋᴇʏ ᴘᴜᴛʀᴀɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴇ'
+        - '<gray>100</gray> <dark_gray>»</dark_gray> <aqua>1 ᴘᴜɴᴛᴏ ʟᴇᴠᴇʟʟɪɴɢ'
+    - mob: Vulcan
+      slot: 32
+      material: MAGMA_BLOCK
+      name: '<b><color:#AAAAAA>ᴛᴇʀᴢᴏ ʙᴏꜱꜱ</color></b> <dark_gray>·</dark_gray> <b><gradient:#FF6A00:#FFD24A>ᴠᴜʟᴄᴀɴ</gradient></b>'
+      lore:
+        - '<dark_gray>ꜱᴏɢʟɪᴇ'
+        - '<gray>5</gray> <dark_gray>»</dark_gray> <white>1 ᴋᴇʏ ᴠᴜʟᴄᴀɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴀ'
+        - '<gray>20</gray> <dark_gray>»</dark_gray> <white>1 ᴅᴇʟʟᴇ 4 ɢᴇᴍᴍᴇ ᴀꜱꜱɪᴄᴜʀᴀᴛᴇ'
+        - '<gray>50</gray> <dark_gray>»</dark_gray> <white>3 ᴋᴇʏ ᴠᴜʟᴄᴀɴ'
+        - '<gray>75</gray> <dark_gray>»</dark_gray> <white>ᴏᴄᴄʜɪᴏ ᴅɪ ᴠᴜʟᴄᴀɴ ᴀꜱꜱɪᴄᴜʀᴀᴛᴏ'
+        - '<gray>100</gray> <dark_gray>»</dark_gray> <aqua>1 ᴘᴜɴᴛᴏ ʟᴇᴠᴇʟʟɪɴɢ'
+    - mob: Nekrath
+      slot: 34
+      material: CRIMSON_NYLIUM
+      name: '<b><color:#AAAAAA>ǫᴜᴀʀᴛᴏ ʙᴏꜱꜱ</color></b> <dark_gray>·</dark_gray> <b><gradient:#3A0610:#C41E3A>ɴᴇᴋʀᴀᴛʜ</gradient></b>'
+      lore:
+        - '<dark_gray>ꜱᴏɢʟɪᴇ'
+        - '<gray>5</gray> <dark_gray>»</dark_gray> <white>1 ᴋᴇʏ ɴᴇᴋʀᴀᴛʜ ᴀꜱꜱɪᴄᴜʀᴀᴛᴀ'
+        - '<gray>20</gray> <dark_gray>»</dark_gray> <white>1 ᴅᴇʟʟᴇ 3 ɢᴇᴍᴍᴇ ᴀꜱꜱɪᴄᴜʀᴀᴛᴇ'
+        - '<gray>50</gray> <dark_gray>»</dark_gray> <white>ʙʀᴀᴄᴇ ᴄᴏɴᴄᴇɴᴛʀᴀᴛᴀ ᴀꜱꜱɪᴄᴜʀᴀᴛᴀ'
+        - '<gray>100</gray> <dark_gray>»</dark_gray> <aqua>2 ᴘᴜɴᴛɪ ʟᴇᴠᴇʟʟɪɴɢ'
+
 mobs:
-  ExampleBoss:
-    10:
-      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>."
+  Terratron:
+    5:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>1 artefatto Geocron</green>."
       sound: milestone
       commands:
-        - "[console] kit starter {player}"
+        - "[console] mmoitems give CONSUMABLE PORTALE_ARENA_GEOCRON {player} 1"
+    20:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>2 key Terratron</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} terratron 2"
     50:
-      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>."
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>3 artefatti Geocron</green>."
       sound: milestone
       commands:
-        - "[console] eco give {player} 1000"
+        - "[console] mmoitems give CONSUMABLE PORTALE_ARENA_GEOCRON {player} 3"
+    75:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>5 key Terratron</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} terratron 5"
+    100:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <aqua>+1 punto levelling</aqua>."
+      sound: milestone
+      commands:
+        - "[console] mmocore admin attribute-points give {player} 1"
+
+  Geocron:
+    5:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>1 artefatto Sylvaron</green>."
+      sound: milestone
+      commands:
+        - "[console] mmoitems give CONSUMABLE PORTALE_ARENA_SYLVARON {player} 1"
+    20:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>2 key Geocron</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} geocron 2"
+    50:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>3 artefatti Sylvaron</green>."
+      sound: milestone
+      commands:
+        - "[console] mmoitems give CONSUMABLE PORTALE_ARENA_SYLVARON {player} 3"
+    75:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>5 key Geocron</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} geocron 5"
+    100:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <aqua>+1 punto levelling</aqua>."
+      sound: milestone
+      commands:
+        - "[console] mmocore admin attribute-points give {player} 1"
+
+  Sylvaron:
+    5:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>1 key Sylvaron</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} sylvaron 1"
+    20:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>1 gemma Sylvaron assicurata</green>."
+      sound: milestone
+      commands: []
+      random-commands:
+        - "[console] mmoitems give GEM_STONE SCARLATTITE0 {player} 1"
+        - "[console] mmoitems give GEM_STONE MAGMITE0 {player} 1"
+        - "[console] mmoitems give GEM_STONE SOLARITE0 {player} 1"
+        - "[console] mmoitems give GEM_STONE TENEBRITE0 {player} 1"
+    50:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>3 key Sylvaron</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} sylvaron 3"
+    75:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>Occhio di Sylvaron</green>."
+      sound: milestone
+      commands:
+        - "[console] mmoitems give MATERIAL OCCHIO_SYLVARON {player} 1"
+    100:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <aqua>+1 punto levelling</aqua>."
+      sound: milestone
+      commands:
+        - "[console] mmocore admin attribute-points give {player} 1"
+
+  Traghion:
+    5:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>1 key Traghion</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} traghion 1"
+    20:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>1 gemma Traghion assicurata</green>."
+      sound: milestone
+      commands: []
+      random-commands:
+        - "[console] mmoitems give GEM_STONE GEMMA_VERDE {player} 1"
+        - "[console] mmoitems give GEM_STONE GEMMA_BLU {player} 1"
+        - "[console] mmoitems give GEM_STONE GEMMA_ROSSA {player} 1"
+    50:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>Lime concentrato</green>."
+      sound: milestone
+      commands:
+        - "[console] mmoitems give MATERIAL LIME_CONCENTRATO {player} 1"
+    100:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <aqua>+2 punti levelling</aqua>."
+      sound: milestone
+      commands:
+        - "[console] mmocore admin attribute-points give {player} 2"
+
+  # Espansione 2 — Marte (stesso schema Terra: Larycan/Putran/Vulcan/Nekrath)
+  # Artefatto = key del boss successivo (finche' non ci sono PORTALE_ARENA marziani)
+  Larycan:
+    5:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>1 artefatto Putran</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} putran 1"
+    20:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>2 key Larycan</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} larycan 2"
+    50:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>3 artefatti Putran</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} putran 3"
+    75:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>5 key Larycan</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} larycan 5"
+    100:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <aqua>+1 punto levelling</aqua>."
+      sound: milestone
+      commands:
+        - "[console] mmocore admin attribute-points give {player} 1"
+
+  Putran:
+    5:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>1 artefatto Vulcan</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} vulcan 1"
+    20:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>2 key Putran</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} putran 2"
+    50:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>3 artefatti Vulcan</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} vulcan 3"
+    75:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>5 key Putran</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} putran 5"
+    100:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <aqua>+1 punto levelling</aqua>."
+      sound: milestone
+      commands:
+        - "[console] mmocore admin attribute-points give {player} 1"
+
+  Vulcan:
+    5:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>1 key Vulcan</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} vulcan 1"
+    20:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>1 delle 4 gemme assicurate</green>."
+      sound: milestone
+      commands: []
+      random-commands:
+        - "[console] mmoitems give GEM_STONE SCARLATTITE0 {player} 1"
+        - "[console] mmoitems give GEM_STONE MAGMITE0 {player} 1"
+        - "[console] mmoitems give GEM_STONE SOLARITE0 {player} 1"
+        - "[console] mmoitems give GEM_STONE TENEBRITE0 {player} 1"
+    50:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>3 key Vulcan</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} vulcan 3"
+    75:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>Occhio di Vulcan</green>."
+      sound: milestone
+      commands:
+        - "[console] mmoitems give MATERIAL OCCHIO_VULCAN {player} 1"
+    100:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <aqua>+1 punto levelling</aqua>."
+      sound: milestone
+      commands:
+        - "[console] mmocore admin attribute-points give {player} 1"
+
+  Nekrath:
+    5:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>1 key Nekrath</green>."
+      sound: milestone
+      commands:
+        - "[console] crate give {player} nekrath 1"
+    20:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>1 delle 3 gemme assicurate</green>."
+      sound: milestone
+      commands: []
+      random-commands:
+        - "[console] mmoitems give GEM_STONE GEMMA_VERDE {player} 1"
+        - "[console] mmoitems give GEM_STONE GEMMA_BLU {player} 1"
+        - "[console] mmoitems give GEM_STONE GEMMA_ROSSA {player} 1"
+    50:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <green>Brace Concentrata</green>."
+      sound: milestone
+      commands:
+        - "[console] mmoitems give MATERIAL BRACE_CONCENTRATA {player} 1"
+    100:
+      message: "{prefix}<gray>Milestone <white>{threshold}</white> su <white>{mob}</white>: <aqua>+2 punti levelling</aqua>."
+      sound: milestone
+      commands:
+        - "[console] mmocore admin attribute-points give {player} 2"
