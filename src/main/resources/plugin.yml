@@ -4,7 +4,7 @@ main: com.modern.arena.ModernArenaPlugin
 api-version: '1.21'
 description: '${description}'
 authors:
-  - ValaryRPG
+  - Modern
 website: https://github.com/Nyxon-com/modernArena
 folia-supported: false
 load: POSTWORLD

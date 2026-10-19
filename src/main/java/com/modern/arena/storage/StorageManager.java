@@ -30,7 +30,7 @@ public final class StorageManager {
         this.sqlite = !type.equals("mysql") && !type.equals("mariadb");
 
         HikariConfig hikari = new HikariConfig();
-        hikari.setPoolName("ValaryArena");
+        hikari.setPoolName("ModernArena");
         hikari.setMaximumPoolSize(yaml.getInt("pool.maximum-pool-size", 4));
         hikari.setMinimumIdle(yaml.getInt("pool.minimum-idle", 1));
         hikari.setConnectionTimeout(yaml.getLong("pool.connection-timeout-millis", 10000L));
