@@ -3,7 +3,7 @@ plugins {
     id("com.gradleup.shadow") version "9.1.0"
 }
 
-group = "com.valaryrpg"
+group = "com.modern"
 version = "1.0.0"
 description = "Instanced Mythic arena for ValaryRPG"
 
@@ -54,8 +54,8 @@ tasks {
 
     shadowJar {
         archiveClassifier.set("")
-        archiveBaseName.set("ValaryRPG-Arena")
-        relocate("com.zaxxer.hikari", "com.valaryrpg.arena.libs.hikari")
+        archiveBaseName.set("modernArena")
+        relocate("com.zaxxer.hikari", "com.modern.arena.libs.hikari")
         mergeServiceFiles()
         exclude("org/sqlite/native/Linux-Android/**")
         exclude("org/sqlite/native/Linux-Musl/**")

@@ -1,17 +1,17 @@
-name: ValaryRPG-Arena
+name: modernArena
 version: '${version}'
-main: com.valaryrpg.arena.ValaryArenaPlugin
+main: com.modern.arena.ModernArenaPlugin
 api-version: '1.21'
 description: '${description}'
 authors:
   - ValaryRPG
-website: https://github.com/Nyxon-com/ValaryRPGarena-instances
+website: https://github.com/Nyxon-com/modernArena
 folia-supported: false
 load: POSTWORLD
 depend:
   - MythicMobs
 softdepend:
-  - ValaryRPG-Core
+  - modernCore
   - Vault
   - PlaceholderAPI
   - TAB

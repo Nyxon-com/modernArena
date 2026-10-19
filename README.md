@@ -1,27 +1,27 @@
-# ValaryRPG-Arena
+# modernArena
 
-Plugin Paper **separato** da ValaryRPG-Core. Arene e dungeon istanziati per **ValaryRPG**: template mondo unloaded → copie `arena_<boss>_<slot>` / `dungeon_<id>_<slot>` → party → coda → kill/milestone SQL.
+Plugin Paper **separato** da modernCore. Arene e dungeon istanziati per **ValaryRPG**: template mondo unloaded → copie `arena_<boss>_<slot>` / `dungeon_<id>_<slot>` → party → coda → kill/milestone SQL.
 
 Non è AdvancedMobArena e non è un modulo Core. Java orchestra, **YAML decide**.
 
-Repo: `Nyxon-com/ValaryRPGarena-instances` (privata). Artifact: `ValaryRPG-Arena`. Package: `com.valaryrpg.arena`.
+Repo: `Nyxon-com/modernArena` (privata). Artifact: `modernArena`. Package: `com.modern.arena`.
 
 ## Stack
 
 - Paper **1.21.11**, Java **21**, Gradle Shadow, MiniMessage, HikariCP (SQLite / MySQL / MariaDB)
 - Hard-depend: **MythicMobs**
-- Soft: ValaryRPG-Core, Vault, PlaceholderAPI, Multiverse-Core, **TAB** (scoreboard)
+- Soft: modernCore, Vault, PlaceholderAPI, Multiverse-Core, **TAB** (scoreboard)
 - Hologram: `TextDisplay` Paper (niente plugin extra)
 - Kit/eco Core: `[console] …` in YAML, mai `compileOnly` sul Core
 
 ## Install
 
-1. Metti `ValaryRPG-Arena-1.0.0.jar` in `plugins/` (MythicMobs deve essere presente).
+1. Metti `modernArena-1.0.0.jar` in `plugins/` (MythicMobs deve essere presente).
 2. Template mondo **non caricati** nella world container del server.
 3. Sul Core: `worlds.ignore-prefixes: ["arena_", "dungeon_"]`. Multiverse non deve auto-importare quei mondi.
 4. Produzione con tante kill: `storage.yml` → `type: mysql` (o `mariadb`). SQLite solo per test.
 
-Build: `gradlew.bat shadowJar` → `build/libs/ValaryRPG-Arena-1.0.0.jar`.
+Build: `gradlew.bat shadowJar` → `build/libs/modernArena-1.0.0.jar`.
 
 ## Comandi
 

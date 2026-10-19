@@ -1,0 +1,233 @@
+package com.modern.arena.arena;
+
+import com.modern.arena.command.CommandCooldowns;
+import com.modern.arena.milestone.KillTracker;
+import com.modern.arena.party.PartyService;
+import io.lumine.mythic.bukkit.MythicBukkit;
+import io.lumine.mythic.bukkit.events.MythicMobDeathEvent;
+import io.lumine.mythic.bukkit.events.MythicPostReloadedEvent;
+import io.lumine.mythic.core.mobs.ActiveMob;
+import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
+import org.bukkit.World;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
+import org.bukkit.entity.Tameable;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.world.EntitiesLoadEvent;
+import org.bukkit.persistence.PersistentDataType;
+
+import java.util.ArrayList;
+import java.util.UUID;
+
+/** Quit, leave mondo, death/respawn e kill Mythic. Niente PlayerMoveEvent. */
+public final class ArenaListener implements Listener {
+
+    private final ArenaService arenas;
+    private final KillTracker kills;
+    private final PartyService parties;
+    private final CommandCooldowns cooldowns;
+
+    public ArenaListener(
+            ArenaService arenas,
+            KillTracker kills,
+            PartyService parties,
+            CommandCooldowns cooldowns
+    ) {
+        this.arenas = arenas;
+        this.kills = kills;
+        this.parties = parties;
+        this.cooldowns = cooldowns;
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        this.kills.evict(player.getUniqueId());
+        this.cooldowns.evict(player.getUniqueId());
+        this.arenas.quit(player);
+        this.parties.leave(player);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        ArenaInstance instance = this.arenas.instanceOf(player);
+        if (instance == null) {
+            return;
+        }
+        if (instance.loadedWorldName() == null
+                || !instance.loadedWorldName().equals(player.getWorld().getName())) {
+            this.arenas.leave(player, false);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onDeath(PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        if (this.arenas.instanceOf(player) == null) {
+            return;
+        }
+        this.arenas.eliminate(player);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onRespawn(PlayerRespawnEvent event) {
+        var location = this.arenas.eliminatedRespawn(event.getPlayer());
+        if (location != null) {
+            event.setRespawnLocation(location);
+        }
+    }
+
+    /** PDC Mythic: "x,y,z,mondo" dove il mob e' nato. */
+    private static final NamespacedKey MYTHIC_SPAWN_LOCATION = new NamespacedKey("mythicmobs", "spawn_location");
+
+    /**
+     * Mob Mythic salvati DENTRO il template (es. un boss nato dallo spawner sorgente mentre il template
+     * era caricato come mondo normale) verrebbero clonati in ogni istanza: boss doppio, non dello
+     * spawner arena. Li togliamo quando il chunk dell'istanza carica le entita'.
+     * Un mob nato nell'istanza ha spawn_location con il nome dell'istanza e non viene toccato.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onEntitiesLoad(EntitiesLoadEvent event) {
+        World world = event.getWorld();
+        if (!this.arenas.isArenaWorld(world)) {
+            return;
+        }
+        for (Entity entity : event.getEntities()) {
+            if (entity instanceof Player) {
+                continue;
+            }
+            String spawn;
+            try {
+                spawn = entity.getPersistentDataContainer().get(MYTHIC_SPAWN_LOCATION, PersistentDataType.STRING);
+            } catch (IllegalArgumentException wrongType) {
+                continue;
+            }
+            if (spawn == null) {
+                continue;
+            }
+            int comma = spawn.lastIndexOf(',');
+            String origin = comma < 0 ? "" : spawn.substring(comma + 1).trim();
+            if (origin.equals(world.getName())) {
+                continue;
+            }
+            ActiveMob mob = MythicBukkit.inst().getMobManager().getActiveMob(entity.getUniqueId()).orElse(null);
+            if (mob != null) {
+                mob.remove();
+            }
+            entity.remove();
+            Bukkit.getLogger().warning("[modernArena] Rimosso mob Mythic clonato dal template in "
+                    + world.getName() + " (nato in '" + origin + "'): ripulisci il template.");
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onMythicReload(MythicPostReloadedEvent event) {
+        this.arenas.refreshMythicSpawners();
+    }
+
+    /** Blocca PvP player→player in arena (oltre a world.setPVP false). */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onPlayerPvP(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player victim)) {
+            return;
+        }
+        ArenaInstance instance = this.arenas.instanceOf(victim.getWorld());
+        if (instance == null || instance.state() != SlotState.ACTIVE) {
+            return;
+        }
+        Player attacker = attacker(event.getDamager());
+        if (attacker != null && !attacker.getUniqueId().equals(victim.getUniqueId())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onDamage(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof LivingEntity victim)) {
+            return;
+        }
+        ArenaInstance instance = this.arenas.instanceOf(victim.getWorld());
+        if (instance == null || instance.state() != SlotState.ACTIVE) {
+            return;
+        }
+        Player attacker = attacker(event.getDamager());
+        if (attacker == null || !instance.players().contains(attacker.getUniqueId())) {
+            return;
+        }
+        ActiveMob active = MythicBukkit.inst().getMobManager().getActiveMob(victim.getUniqueId()).orElse(null);
+        if (active == null) {
+            return;
+        }
+        String mythicName = active.getType() == null ? "" : active.getType().getInternalName();
+        if (!this.arenas.catalog().tracksMob(this.arenas.catalog().boss(instance.bossId()), mythicName)) {
+            return;
+        }
+        this.arenas.recordDamage(instance, victim.getUniqueId(), attacker, event.getFinalDamage());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onMythicDeath(MythicMobDeathEvent event) {
+        ActiveMob mob = event.getMob();
+        Entity entity = mob == null || mob.getEntity() == null ? null : mob.getEntity().getBukkitEntity();
+        ArenaInstance instance = entity == null ? null : this.arenas.instanceOf(entity.getWorld());
+        Player killer = killer(event, entity);
+        if (instance == null && killer != null) {
+            instance = this.arenas.instanceOf(killer);
+        }
+        if (instance == null || instance.state() != SlotState.ACTIVE) {
+            return;
+        }
+        String mythicName = event.getMobType().getInternalName();
+        boolean tracked = this.arenas.catalog().tracksMob(this.arenas.catalog().boss(instance.bossId()), mythicName);
+        String key = this.kills.keyFor(mythicName, instance.bossId(), tracked);
+        if (tracked) {
+            if (entity != null) {
+                this.arenas.trackedBossKilled(instance, entity.getUniqueId());
+            }
+            for (UUID uuid : new ArrayList<>(instance.players())) {
+                Player member = Bukkit.getPlayer(uuid);
+                if (member != null) {
+                    this.kills.record(member, key);
+                }
+            }
+            return;
+        }
+        if (killer != null && instance.players().contains(killer.getUniqueId())) {
+            this.kills.record(killer, key);
+        }
+    }
+
+    private Player attacker(Entity damager) {
+        if (damager instanceof Player player) {
+            return player;
+        }
+        if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Player player) {
+            return player;
+        }
+        if (damager instanceof Tameable tameable && tameable.getOwner() instanceof Player player) {
+            return player;
+        }
+        return null;
+    }
+
+    private Player killer(MythicMobDeathEvent event, Entity entity) {
+        if (event.getKiller() instanceof Player player) {
+            return player;
+        }
+        if (entity instanceof LivingEntity living && living.getKiller() instanceof Player player) {
+            return player;
+        }
+        return null;
+    }
+}

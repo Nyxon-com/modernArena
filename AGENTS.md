@@ -1,10 +1,10 @@
 # ValaryArena — wiki Cursor
 
-Plugin Paper **separato** da ValaryRPG-Core. Server **ValaryRPG**, viola `#5F22C3` → `#40099B` + nero.
+Plugin Paper **separato** da modernCore. Server **ValaryRPG**, viola `#5F22C3` → `#40099B` + nero.
 
 Non è AdvancedMobArena e non è un modulo Core. Template mondo **unloaded** → copie `arena_<boss>_<slot>` o `dungeon_<id>_<slot>` → party → coda RAM → kill/milestone SQL.
 
-Repo: `Nyxon-com/ValaryRPGarena-instances` (privata). Artifact: `ValaryRPG-Arena`. Package: `com.valaryrpg.arena`.
+Repo: `Nyxon-com/modernArena` (privata). Artifact: `modernArena`. Package: `com.modern.arena`.
 
 ## Per l’agente (prima di toccare codice)
 
@@ -12,14 +12,14 @@ Repo: `Nyxon-com/ValaryRPGarena-instances` (privata). Artifact: `ValaryRPG-Arena
 2. **Riaggancia** `Tasks`, `messages()`, `sounds()`, `console()`, `storage`. Non duplicare helper.
 3. **Niente** `PlayerMoveEvent`, `compileOnly` sul Core, scan `getActiveMobs()` globale, loop su tutte le istanze per un hit, SQL o `getConfigurationSection` sul main in timer/kill.
 4. Tocco minimo: solo ciò che è stato chiesto. Niente README extra, test, refactor “mentre ci sei”.
-5. **Non compilare** se non chiesto. Build: `gradlew.bat shadowJar` → `build/libs/ValaryRPG-Arena-1.0.0.jar`.
+5. **Non compilare** se non chiesto. Build: `gradlew.bat shadowJar` → `build/libs/modernArena-1.0.0.jar`.
 6. Feature finita → **commit + push**. Messaggio senza AI. Autore **solo** `Nyxon-com` (`325790384+Nyxon-com@users.noreply.github.com`). Non usare Haze / Cursor Agent. Non modificare `git config`: `git -c user.name="Nyxon-com" -c user.email="325790384+Nyxon-com@users.noreply.github.com"`.
 
 ## Stack
 
 Paper 1.21.11, Java 21, Gradle Shadow, MiniMessage, HikariCP (SQLite / MySQL / MariaDB).
 Il JAR imbusta i driver SQL (servono alle kill). Native SQLite inutili (Android/Mac/ARM) esclusi.
-Hard-depend: **MythicMobs**. Soft: ValaryRPG-Core, Vault, PlaceholderAPI, Multiverse-Core, TAB (scoreboard).
+Hard-depend: **MythicMobs**. Soft: modernCore, Vault, PlaceholderAPI, Multiverse-Core, TAB (scoreboard).
 Kit/eco Core = `[console] …` in YAML. Hologram = `TextDisplay` Paper.
 
 ## Brand (solo YAML)
@@ -45,7 +45,7 @@ Kit/eco Core = `[console] …` in YAML. Hologram = `TextDisplay` Paper.
 
 ### Arena — chiavi vive (`modules/arenas.yml`)
 
-- `settings.instances-directory` — copie in `plugins/ValaryRPG-Arena/instances/`
+- `settings.instances-directory` — copie in `plugins/modernArena/instances/`
 - `settings.max-instances-per-boss` (default 4), `max-instances-global` (0 = no cap)
 - `settings.max-bosses` — cap kill boss per istanza (0 = illimitato). Override: `bosses.<id>.max-bosses`
 - `settings.boss-cap-leave-ticks` — attesa poi TP fuori (min 1)
@@ -160,8 +160,8 @@ TAB (softdepend): due scoreboard in `lang/messages.yml` — `scoreboard.arena` e
 ## Package
 
 ```
-com.valaryrpg.arena
-  ValaryArenaPlugin     enable: config → storage → catalog → cleanup → comandi
+com.modern.arena
+  ModernArenaPlugin     enable: config → storage → catalog → cleanup → comandi
   config/               YamlFile, ConfigManager
   message/              MessageService
   sound/                SoundService
@@ -183,7 +183,7 @@ com.valaryrpg.arena
 2. Cooldown: stessa arena = `entry-cooldown-seconds`; arena diversa = `between-cooldown-seconds`.
 3. Slot libero 1..`max-instances-per-boss` e tetto globale `config.yml` `instances.max-loaded`. `COPYING` non è libero.
 4. Pieno → coda RAM per quel boss. Niente poll. Cooldown blocca anche la coda.
-5. Template unloaded, copy **async** (`WorldCopier`, esclude `uid.dat` / `session.lock`) in `plugins/ValaryRPG-Arena/instances/`. Copy max 1 insieme.
+5. Template unloaded, copy **async** (`WorldCopier`, esclude `uid.dat` / `session.lock`) in `plugins/modernArena/instances/`. Copy max 1 insieme.
 6. Sync: `createWorld` → clona spawner Mythic → chunk spawn async → TP party → `ACTIVE` → hologram se enabled.
 7. Timer durata solo se `duration-seconds` > 0 e solo su `ACTIVE`.
 8. Reload Mythic: spawner delle istanze `ACTIVE` ricreati (skip se `spawnersHalted`).
