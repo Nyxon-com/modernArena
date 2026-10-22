@@ -1,16 +1,14 @@
 # modernArena
 
-Plugin Paper **separato** da modernCore. Arene e dungeon istanziati per **ValaryRPG**: template mondo unloaded → copie `arena_<boss>_<slot>` / `dungeon_<id>_<slot>` → party → coda → kill/milestone SQL.
+Arene e dungeon istanziati per Paper, separati da modernCore. Un template unloaded viene copiato in `arena_<boss>_<slot>` o `dungeon_<id>_<slot>`. Poi party, coda, kill e milestone su SQL.
 
-Non è AdvancedMobArena e non è un modulo Core. Java orchestra, **YAML decide**.
-
-Repo: `Nyxon-com/modernArena` (privata). Artifact: `modernArena`. Package: `com.modern.arena`.
+Package `com.modern.arena`. Repo `Nyxon-com/modernArena`.
 
 ## Stack
 
-- Paper **1.21.11**, Java **21**, Gradle Shadow, MiniMessage, HikariCP (SQLite / MySQL / MariaDB)
-- Hard-depend: **MythicMobs**
-- Soft: modernCore, Vault, PlaceholderAPI, Multiverse-Core, **TAB** (scoreboard)
+- Paper 1.21.11, Java 21, Gradle Shadow, MiniMessage, HikariCP (SQLite / MySQL / MariaDB)
+- Dipendenza obbligatoria: MythicMobs
+- Opzionali: modernCore, Vault, PlaceholderAPI, Multiverse-Core, TAB (scoreboard)
 - Hologram: `TextDisplay` Paper (niente plugin extra)
 - Kit/eco Core: `[console] …` in YAML, mai `compileOnly` sul Core
 
