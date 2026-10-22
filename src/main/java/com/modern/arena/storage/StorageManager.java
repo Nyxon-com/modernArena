@@ -1,3 +1,5 @@
+//made with love by nyxon
+
 package com.modern.arena.storage;
 
 import com.modern.arena.ModernArenaPlugin;
@@ -11,7 +13,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Locale;
 
-/** Pool Hikari (SQLite / MySQL / MariaDB) e schema kill/milestone. */
 public final class StorageManager {
 
     private final ModernArenaPlugin plugin;

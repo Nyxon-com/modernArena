@@ -1,9 +1,10 @@
+//made with love by nyxon
+
 package com.modern.arena.arena;
 
-/** Stato di uno slot istanza. */
 public enum SlotState {
-    FREE,
-    COPYING,
-    ACTIVE,
-    UNLOADING
+  FREE,
+  COPYING,
+  ACTIVE,
+  UNLOADING
 }

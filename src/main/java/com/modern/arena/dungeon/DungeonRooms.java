@@ -1,3 +1,5 @@
+//made with love by nyxon
+
 package com.modern.arena.dungeon;
 
 import com.modern.arena.ModernArenaPlugin;
@@ -26,1064 +28,1046 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/** Stanza corrente: title, pack Mythic (no spawner), remaining, fill cubo. */
 public final class DungeonRooms {
 
-    private final ModernArenaPlugin plugin;
-    private final DungeonCatalog catalog;
-    private final MythicSpawners mythic;
-    private final DungeonService service;
+  private final ModernArenaPlugin plugin;
+  private final DungeonCatalog catalog;
+  private final MythicSpawners mythic;
+  private final DungeonService service;
 
-    public DungeonRooms(
-            ModernArenaPlugin plugin,
-            DungeonCatalog catalog,
-            MythicSpawners mythic,
-            DungeonService service
-    ) {
-        this.plugin = plugin;
-        this.catalog = catalog;
-        this.mythic = mythic;
-        this.service = service;
+  public DungeonRooms(
+      ModernArenaPlugin plugin,
+      DungeonCatalog catalog,
+      MythicSpawners mythic,
+      DungeonService service
+  ) {
+    this.plugin = plugin;
+    this.catalog = catalog;
+    this.mythic = mythic;
+    this.service = service;
+  }
+
+  public void start(DungeonInstance instance, DungeonDefinition definition, World world, int index) {
+    if (instance.state() != SlotState.ACTIVE || instance.completing()) {
+      return;
     }
-
-    public void start(DungeonInstance instance, DungeonDefinition definition, World world, int index) {
-        if (instance.state() != SlotState.ACTIVE || instance.completing()) {
-            return;
-        }
-        DungeonRoom room = definition.room(index);
-        if (room == null) {
-            this.service.complete(instance, definition);
-            return;
-        }
-        stopPacks(instance);
-        instance.roomIndex(index);
-        instance.deathsInRoom(0);
-        instance.spawnedInRoom(0);
-        instance.waveIndex(0);
-        instance.waveAt(0L);
-        instance.waveArmed(false);
-        instance.combatStarted(!room.startOnRadius);
-        instance.lastMinionAnnounced(false);
-        instance.packFires().clear();
-        for (DungeonWall wall : room.walls) {
-            if (wall.openOnStart) {
-                openDoor(instance, wall, world);
-            }
-        }
-        if (instance.combatStarted()) {
-            beginCombat(instance, definition, room, world);
-        }
-        if (room.startOnRadius || room.hasRadiusPacks() || room.hasLeash()
-                || (room.hasWaves() && room.objective == DungeonObjective.CLEAR_MOBS)
-                || room.hasStartDoors() || room.hasClosingDoors()
-                || !instance.pendingDoors().isEmpty()) {
-            int ticks = this.catalog.proximityCheckTicks();
-            instance.packTask(this.plugin.tasks().repeat(
-                    () -> tickRoom(instance, definition, world),
-                    ticks,
-                    ticks
-            ));
-        }
-        remaining(instance, definition, world);
-        if (instance.combatStarted()
-                && room.objective == DungeonObjective.CLEAR_MOBS
-                && room.expectedMobs() == 0) {
-            clear(instance, definition, world, room);
-        }
+    DungeonRoom room = definition.room(index);
+    if (room == null) {
+      this.service.complete(instance, definition);
+      return;
     }
-
-    public void onMobDeath(DungeonInstance instance, DungeonDefinition definition, World world, String mythicName, UUID deadId) {
-        onMobRemoved(instance, definition, world, mythicName, deadId, true);
+    stopPacks(instance);
+    instance.roomIndex(index);
+    instance.deathsInRoom(0);
+    instance.spawnedInRoom(0);
+    instance.waveIndex(0);
+    instance.waveAt(0L);
+    instance.waveArmed(false);
+    instance.combatStarted(!room.startOnRadius);
+    instance.lastMinionAnnounced(false);
+    instance.packFires().clear();
+    for (DungeonWall wall : room.walls) {
+      if (wall.openOnStart) {
+        openDoor(instance, wall, world);
+      }
     }
-
-    /**
-     * Mob sparito (death o despawn/remove). Senza death credit quando {@code countDeath} e' false,
-     * cosi' i despawn Mythic non gonfiano i kill ma sbloccano comunque wave/porte.
-     */
-    public void onMobRemoved(
-            DungeonInstance instance,
-            DungeonDefinition definition,
-            World world,
-            String mythicName,
-            UUID deadId,
-            boolean countDeath
-    ) {
-        if (instance.state() != SlotState.ACTIVE || instance.completing()) {
-            return;
-        }
-        DungeonRoom room = definition.room(instance.roomIndex());
-        if (room == null) {
-            return;
-        }
-        if (deadId != null) {
-            boolean tracked = instance.roomLiving().containsKey(deadId)
-                    || instance.waveLiving().contains(deadId)
-                    || instance.leashed().containsKey(deadId);
-            if (!tracked && !countDeath) {
-                return;
-            }
-            boolean glow = deadId.equals(instance.glowing());
-            forget(instance, deadId);
-            if (glow) {
-                unglow(instance);
-            }
-        }
-        if (countDeath && room.matchesMob(mythicName)) {
-            instance.deathsInRoom(instance.deathsInRoom() + 1);
-            if (room.objective == DungeonObjective.BOSS && room.isBoss(mythicName)) {
-                this.service.complete(instance, definition);
-                return;
-            }
-        }
-        int roomIndex = instance.roomIndex();
-        highlightLast(instance, definition, world);
-        tryAdvance(instance, definition, world);
-        remaining(instance, definition, world);
-        this.plugin.tasks().later(() -> {
-            if (instance.roomIndex() != roomIndex) {
-                return;
-            }
-            highlightLast(instance, definition, world);
-            tryAdvance(instance, definition, world);
-            remaining(instance, definition, world);
-        }, 2);
+    if (instance.combatStarted()) {
+      beginCombat(instance, definition, room, world);
     }
-
-    /** Avanza se i pack sono esausti e nel mondo non resta nessun mob della stanza. */
-    public void tryAdvance(DungeonInstance instance, DungeonDefinition definition, World world) {
-        if (instance.state() != SlotState.ACTIVE || instance.completing()) {
-            return;
-        }
-        DungeonRoom room = definition.room(instance.roomIndex());
-        if (room == null || room.objective != DungeonObjective.CLEAR_MOBS) {
-            return;
-        }
-        if (room.startOnRadius && !instance.combatStarted()) {
-            return;
-        }
-        if (cleared(instance, room, world)) {
-            clear(instance, definition, world, room);
-        }
+    if (room.startOnRadius || room.hasRadiusPacks() || room.hasLeash()
+        || (room.hasWaves() && room.objective == DungeonObjective.CLEAR_MOBS)
+        || room.hasStartDoors() || room.hasClosingDoors()
+        || !instance.pendingDoors().isEmpty()) {
+      int ticks = this.catalog.proximityCheckTicks();
+      instance.packTask(this.plugin.tasks().repeat(
+          () -> tickRoom(instance, definition, world),
+          ticks,
+          ticks
+      ));
     }
-
-    public int remaining(DungeonInstance instance, DungeonDefinition definition, World world) {
-        if (!Bukkit.isPrimaryThread()) {
-            return instance.cachedRemaining();
-        }
-        DungeonRoom room = definition == null ? null : definition.room(instance.roomIndex());
-        if (room == null) {
-            instance.cachedRemaining(0);
-            return 0;
-        }
-        int pending = 0;
-        if (room.objective != DungeonObjective.BOSS && !room.hasWaves()) {
-            for (DungeonPack pack : room.packs) {
-                int fired = instance.packFires().getOrDefault(pack.id, 0);
-                pending += Math.max(0, pack.times - fired) * pack.amount;
-            }
-        }
-        int alive = world == null ? 0 : pruneLiving(instance, world);
-        int value;
-        if (room.objective == DungeonObjective.BOSS) {
-            value = alive;
-        } else if (room.hasWaves()) {
-            value = instance.waveLiving().size();
-        } else {
-            value = pending + alive;
-        }
-        instance.cachedRemaining(value);
-        return value;
+    remaining(instance, definition, world);
+    if (instance.combatStarted()
+        && room.objective == DungeonObjective.CLEAR_MOBS
+        && room.expectedMobs() == 0) {
+      clear(instance, definition, world, room);
     }
+  }
 
-    public int remainingAt(DungeonInstance instance, DungeonDefinition definition, World world, int index) {
-        DungeonRoom room = definition.room(index);
-        if (room == null) {
-            return 0;
-        }
-        if (index < instance.roomIndex()) {
-            return 0;
-        }
-        if (index > instance.roomIndex()) {
-            return room.expectedMobs();
-        }
-        return remaining(instance, definition, world);
+  public void onMobDeath(DungeonInstance instance, DungeonDefinition definition, World world, String mythicName, UUID deadId) {
+    onMobRemoved(instance, definition, world, mythicName, deadId, true);
+  }
+
+  public void onMobRemoved(
+      DungeonInstance instance,
+      DungeonDefinition definition,
+      World world,
+      String mythicName,
+      UUID deadId,
+      boolean countDeath
+  ) {
+    if (instance.state() != SlotState.ACTIVE || instance.completing()) {
+      return;
     }
-
-    public void refreshSpawners(DungeonInstance instance, DungeonDefinition definition, World world) {
-        // i pack non sono spawner Mythic: un reload non li riduplica
+    DungeonRoom room = definition.room(instance.roomIndex());
+    if (room == null) {
+      return;
     }
-
-    public void stopPacks(DungeonInstance instance) {
-        if (instance.packTask() != null) {
-            instance.packTask().cancel();
-            instance.packTask(null);
-        }
+    if (deadId != null) {
+      boolean tracked = instance.roomLiving().containsKey(deadId)
+          || instance.waveLiving().contains(deadId)
+          || instance.leashed().containsKey(deadId);
+      if (!tracked && !countDeath) {
+        return;
+      }
+      boolean glow = deadId.equals(instance.glowing());
+      forget(instance, deadId);
+      if (glow) {
         unglow(instance);
-        for (UUID id : List.copyOf(instance.roomLiving().keySet())) {
-            forget(instance, id);
+      }
+    }
+    if (countDeath && room.matchesMob(mythicName)) {
+      instance.deathsInRoom(instance.deathsInRoom() + 1);
+      if (room.objective == DungeonObjective.BOSS && room.isBoss(mythicName)) {
+        this.service.complete(instance, definition);
+        return;
+      }
+    }
+    int roomIndex = instance.roomIndex();
+    highlightLast(instance, definition, world);
+    tryAdvance(instance, definition, world);
+    remaining(instance, definition, world);
+    this.plugin.tasks().later(() -> {
+      if (instance.roomIndex() != roomIndex) {
+        return;
+      }
+      highlightLast(instance, definition, world);
+      tryAdvance(instance, definition, world);
+      remaining(instance, definition, world);
+    }, 2);
+  }
+
+  public void tryAdvance(DungeonInstance instance, DungeonDefinition definition, World world) {
+    if (instance.state() != SlotState.ACTIVE || instance.completing()) {
+      return;
+    }
+    DungeonRoom room = definition.room(instance.roomIndex());
+    if (room == null || room.objective != DungeonObjective.CLEAR_MOBS) {
+      return;
+    }
+    if (room.startOnRadius && !instance.combatStarted()) {
+      return;
+    }
+    if (cleared(instance, room, world)) {
+      clear(instance, definition, world, room);
+    }
+  }
+
+  public int remaining(DungeonInstance instance, DungeonDefinition definition, World world) {
+    if (!Bukkit.isPrimaryThread()) {
+      return instance.cachedRemaining();
+    }
+    DungeonRoom room = definition == null ? null : definition.room(instance.roomIndex());
+    if (room == null) {
+      instance.cachedRemaining(0);
+      return 0;
+    }
+    int pending = 0;
+    if (room.objective != DungeonObjective.BOSS && !room.hasWaves()) {
+      for (DungeonPack pack : room.packs) {
+        int fired = instance.packFires().getOrDefault(pack.id, 0);
+        pending += Math.max(0, pack.times - fired) * pack.amount;
+      }
+    }
+    int alive = world == null ? 0 : pruneLiving(instance, world);
+    int value;
+    if (room.objective == DungeonObjective.BOSS) {
+      value = alive;
+    } else if (room.hasWaves()) {
+      value = instance.waveLiving().size();
+    } else {
+      value = pending + alive;
+    }
+    instance.cachedRemaining(value);
+    return value;
+  }
+
+  public int remainingAt(DungeonInstance instance, DungeonDefinition definition, World world, int index) {
+    DungeonRoom room = definition.room(index);
+    if (room == null) {
+      return 0;
+    }
+    if (index < instance.roomIndex()) {
+      return 0;
+    }
+    if (index > instance.roomIndex()) {
+      return room.expectedMobs();
+    }
+    return remaining(instance, definition, world);
+  }
+
+  public void refreshSpawners(DungeonInstance instance, DungeonDefinition definition, World world) {
+
+  }
+
+  public void stopPacks(DungeonInstance instance) {
+    if (instance.packTask() != null) {
+      instance.packTask().cancel();
+      instance.packTask(null);
+    }
+    unglow(instance);
+    for (UUID id : List.copyOf(instance.roomLiving().keySet())) {
+      forget(instance, id);
+    }
+    instance.leashed().clear();
+    instance.roomLiving().clear();
+    instance.livingAt().clear();
+    instance.waveLiving().clear();
+    instance.lastMinionAnnounced(false);
+    instance.waveArmed(false);
+  }
+
+  public void stopDoors(DungeonInstance instance) {
+    if (instance.doorTask() != null) {
+      instance.doorTask().cancel();
+      instance.doorTask(null);
+    }
+    instance.pendingDoors().clear();
+  }
+
+  private void tickRoom(DungeonInstance instance, DungeonDefinition definition, World world) {
+    if (instance.state() != SlotState.ACTIVE || instance.completing()) {
+      return;
+    }
+    DungeonRoom room = definition.room(instance.roomIndex());
+    if (room == null) {
+      return;
+    }
+    if (!instance.combatStarted()) {
+      if (!room.startOnRadius || !entered(instance, room, world)) {
+        return;
+      }
+      instance.combatStarted(true);
+      beginCombat(instance, definition, room, world);
+    }
+    tickRadius(instance, room, world);
+    tickWaves(instance, definition, room, world);
+    tickLeash(instance, room, world);
+    highlightLast(instance, definition, world);
+    tryAdvance(instance, definition, world);
+    remaining(instance, definition, world);
+  }
+
+  private void beginCombat(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room, World world) {
+    showIntro(instance, definition, room);
+    for (DungeonPack pack : room.packs) {
+      if (pack.trigger == DungeonPackTrigger.IMMEDIATE) {
+        fire(instance, pack, world, pack.amount);
+      }
+    }
+    if (room.hasWaves() && room.objective == DungeonObjective.CLEAR_MOBS) {
+      startWaves(instance, definition, room, world);
+    }
+    for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
+      if (instance.players().contains(member.getUniqueId())) {
+        this.plugin.sounds().play(member, "dungeon-room");
+      }
+    }
+    remaining(instance, definition, world);
+  }
+
+  private boolean entered(DungeonInstance instance, DungeonRoom room, World world) {
+    if (room.startPoint != null) {
+      return near(instance, room.startPoint.to(world), room.startRadius);
+    }
+    if (room.wall != null && room.hasStartDoors()) {
+      return near(instance, room.wall.center(world), room.startRadius);
+    }
+    for (DungeonPack pack : room.packs) {
+      if (near(instance, pack.point.to(world), room.startRadius)) {
+        return true;
+      }
+    }
+    if (room.spawn != null) {
+      return near(instance, room.spawn.to(world), room.startRadius);
+    }
+    return false;
+  }
+
+  private void tickRadius(DungeonInstance instance, DungeonRoom room, World world) {
+    for (DungeonPack pack : room.packs) {
+      if (pack.trigger != DungeonPackTrigger.RADIUS) {
+        continue;
+      }
+      int fired = instance.packFires().getOrDefault(pack.id, 0);
+      if (fired >= pack.times) {
+        continue;
+      }
+      if (livingOf(instance, world, pack.id) > 0) {
+        continue;
+      }
+      if (!near(instance, pack.point.to(world), pack.radius)) {
+        continue;
+      }
+      fire(instance, pack, world, pack.amount);
+    }
+  }
+
+  private void tickWaves(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room, World world) {
+    if (room.objective != DungeonObjective.CLEAR_MOBS || !room.hasWaves()) {
+      return;
+    }
+    if (!instance.combatStarted() || instance.waveIndex() >= room.waves.size()) {
+      return;
+    }
+    pruneLiving(instance, world);
+    if (this.catalog.waveRequireClear() && !instance.waveLiving().isEmpty()) {
+      return;
+    }
+    if (this.catalog.waveRequireClear() && !instance.waveArmed()) {
+      long retryMs = Math.max(1000L, this.catalog.waveDelaySeconds() * 1000L);
+      if (instance.waveAt() > 0L && System.currentTimeMillis() - instance.waveAt() < retryMs) {
+        return;
+      }
+      fireWave(instance, definition, room, world);
+      return;
+    }
+    long delayMs = this.catalog.waveDelaySeconds() * 1000L;
+    if (delayMs > 0L && System.currentTimeMillis() - instance.waveAt() < delayMs) {
+      return;
+    }
+    fireWave(instance, definition, room, world);
+  }
+
+  private void tickLeash(DungeonInstance instance, DungeonRoom room, World world) {
+    var iterator = instance.leashed().entrySet().iterator();
+    while (iterator.hasNext()) {
+      var entry = iterator.next();
+      DungeonPack pack = room.pack(entry.getValue());
+      if (pack == null || !pack.leashed()) {
+        iterator.remove();
+        continue;
+      }
+      Location home = pack.point.to(world);
+      ensureChunk(home);
+
+      Entity entity = resolve(world, instance, entry.getKey());
+      if (entity == null) {
+        continue;
+      }
+      if (!(entity instanceof LivingEntity living) || living.isDead()) {
+        iterator.remove();
+        continue;
+      }
+      if (!living.getWorld().equals(world)) {
+        iterator.remove();
+        continue;
+      }
+      double max = pack.leashRadius * pack.leashRadius;
+      if (living.getLocation().distanceSquared(home) <= max) {
+        pin(instance, living.getUniqueId(), living.getLocation().clone());
+        continue;
+      }
+      living.setFallDistance(0f);
+      living.setVelocity(new org.bukkit.util.Vector());
+      living.teleport(home);
+      living.setFallDistance(0f);
+      living.setVelocity(new org.bukkit.util.Vector());
+      pin(instance, living.getUniqueId(), living.getLocation().clone());
+      if (pack.healOnLeash) {
+        heal(living);
+      }
+    }
+  }
+
+  private void heal(LivingEntity living) {
+    AttributeInstance max = living.getAttribute(Attribute.MAX_HEALTH);
+    if (max != null) {
+      living.setHealth(max.getValue());
+    }
+  }
+
+  private boolean near(DungeonInstance instance, Location point, double radius) {
+    double range = Math.max(1D, radius);
+    double rangeSq = range * range;
+    for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
+      if (!instance.players().contains(member.getUniqueId())) {
+        continue;
+      }
+      if (!member.getWorld().equals(point.getWorld())) {
+        continue;
+      }
+      if (member.getLocation().distanceSquared(point) <= rangeSq) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private void fire(DungeonInstance instance, DungeonPack pack, World world, int amount) {
+    int fired = instance.packFires().getOrDefault(pack.id, 0);
+    if (pack.trigger != DungeonPackTrigger.WAVE && fired >= pack.times) {
+      return;
+    }
+    List<LivingEntity> spawned = this.mythic.spawnLiving(
+        pack.mob,
+        pack.point.to(world),
+        amount,
+        pack.scatter,
+        pack.level,
+        pack.trigger == DungeonPackTrigger.WAVE || instance.roomIndex() != 0
+            ? null
+            : this.service.entryWorldSpawn(instance, world),
+        pack.trigger == DungeonPackTrigger.WAVE || instance.roomIndex() != 0
+            ? 0D
+            : this.catalog.spawnSafeRadius()
+    );
+    if (pack.trigger != DungeonPackTrigger.WAVE) {
+      instance.packFires().put(pack.id, fired + 1);
+    }
+    instance.spawnedInRoom(instance.spawnedInRoom() + spawned.size());
+    for (LivingEntity living : spawned) {
+      instance.roomLiving().put(living.getUniqueId(), pack.id);
+      pin(instance, living.getUniqueId(), living.getLocation().clone());
+      if (pack.trigger == DungeonPackTrigger.WAVE) {
+        instance.waveLiving().add(living.getUniqueId());
+      }
+      if (pack.leashed()) {
+        instance.leashed().put(living.getUniqueId(), pack.id);
+      }
+    }
+  }
+
+  private void startWaves(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room, World world) {
+    int delay = introHoldTicks(room);
+    if (delay <= 1) {
+      fireWave(instance, definition, room, world);
+      return;
+    }
+    instance.waveArmed(true);
+    instance.waveAt(System.currentTimeMillis() + delay * 50L + 2000L);
+    int roomIndex = instance.roomIndex();
+    this.plugin.tasks().later(() -> {
+      if (instance.state() != SlotState.ACTIVE || instance.completing() || instance.roomIndex() != roomIndex) {
+        return;
+      }
+      instance.waveArmed(false);
+      instance.waveAt(0L);
+      fireWave(instance, definition, room, world);
+    }, delay);
+  }
+
+  private int introHoldTicks(DungeonRoom room) {
+    if (room.intro == null || (room.intro.title.isBlank() && room.intro.subtitle.isBlank())) {
+      return 1;
+    }
+    return Math.max(1, room.intro.fadeInTicks + room.intro.stayTicks);
+  }
+
+  private void fireWave(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room, World world) {
+    if (instance.waveIndex() >= room.waves.size()) {
+      return;
+    }
+    instance.lastMinionAnnounced(false);
+    DungeonWave wave = room.waves.get(instance.waveIndex());
+    instance.waveIndex(instance.waveIndex() + 1);
+    announceWave(instance, definition);
+    instance.waveLiving().clear();
+    for (Map.Entry<String, Integer> spawn : wave.spawns.entrySet()) {
+      DungeonPack pack = room.pack(spawn.getKey());
+      if (pack == null) {
+        continue;
+      }
+      fire(instance, pack, world, spawn.getValue());
+    }
+    instance.waveAt(System.currentTimeMillis());
+    if (instance.waveLiving().isEmpty()) {
+      instance.waveIndex(Math.max(0, instance.waveIndex() - 1));
+      instance.waveArmed(false);
+      return;
+    }
+    instance.waveArmed(true);
+    remaining(instance, definition, world);
+  }
+
+  private boolean cleared(DungeonInstance instance, DungeonRoom room, World world) {
+    if (instance.waveIndex() < room.waves.size()) {
+      return false;
+    }
+    for (DungeonPack pack : room.packs) {
+      if (pack.trigger == DungeonPackTrigger.WAVE) {
+        continue;
+      }
+      if (instance.packFires().getOrDefault(pack.id, 0) < pack.times) {
+        return false;
+      }
+    }
+    return pruneLiving(instance, world) == 0;
+  }
+
+  private void clear(DungeonInstance instance, DungeonDefinition definition, World world, DungeonRoom room) {
+    stopPacks(instance);
+    for (DungeonWall wall : room.walls) {
+      openDoor(instance, wall, world);
+    }
+    if (!room.walls.isEmpty()) {
+      this.service.moveHologramToDoor(instance, definition, room);
+    }
+    Map<String, String> placeholders = this.service.placeholders(instance, definition);
+    celebrate(instance, definition, room);
+    this.plugin.parties().broadcast(instance.party(), "dungeon.room-clear", placeholders);
+    int next = instance.roomIndex() + 1;
+    if (definition.room(next) == null) {
+      this.service.complete(instance, definition, true);
+      return;
+    }
+    start(instance, definition, world, next);
+  }
+
+  public void celebrate(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room) {
+    if (room == null) {
+      return;
+    }
+    Map<String, String> placeholders = this.service.placeholders(instance, definition);
+    for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
+      if (!instance.players().contains(member.getUniqueId())) {
+        continue;
+      }
+      if (hasScreen(room.outro)) {
+        this.plugin.messages().intro(
+            member,
+            room.outro.title,
+            room.outro.subtitle,
+            room.outro.actionbar,
+            room.outro.fadeInTicks,
+            room.outro.stayTicks,
+            room.outro.fadeOutTicks,
+            placeholders
+        );
+      }
+      this.plugin.console().run(member, room.commands, placeholders);
+    }
+  }
+
+  private boolean hasScreen(DungeonIntro intro) {
+    return intro != null
+        && (!intro.title.isBlank() || !intro.subtitle.isBlank() || !intro.actionbar.isBlank());
+  }
+
+  private void showIntro(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room) {
+    if (room.intro == null) {
+      return;
+    }
+    Map<String, String> placeholders = this.service.placeholders(instance, definition);
+    for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
+      if (!instance.players().contains(member.getUniqueId())) {
+        continue;
+      }
+      this.plugin.messages().intro(
+          member,
+          room.intro.title,
+          room.intro.subtitle,
+          room.intro.actionbar,
+          room.intro.fadeInTicks,
+          room.intro.stayTicks,
+          room.intro.fadeOutTicks,
+          placeholders
+      );
+    }
+  }
+
+  private void fill(DungeonWall wall, World world) {
+    fill(wall, world, wall.setBlock);
+  }
+
+  private void fill(DungeonWall wall, World world, String block) {
+    BlockData template = parseBlock(block);
+    for (int x = wall.minX; x <= wall.maxX; x++) {
+      for (int y = wall.minY; y <= wall.maxY; y++) {
+        for (int z = wall.minZ; z <= wall.maxZ; z++) {
+          BlockData data = template.clone();
+          applyFaces(data, wall, block);
+          world.getChunkAt(x >> 4, z >> 4).load();
+          world.getBlockAt(x, y, z).setBlockData(data, wall.physics);
         }
-        instance.leashed().clear();
-        instance.roomLiving().clear();
-        instance.livingAt().clear();
-        instance.waveLiving().clear();
+      }
+    }
+  }
+
+  private static BlockData parseBlock(String spec) {
+    String raw = spec == null || spec.isBlank() ? "air" : spec.trim();
+    if (!raw.contains(":")) {
+      raw = "minecraft:" + raw.toLowerCase(Locale.ROOT);
+    }
+    try {
+      return Bukkit.createBlockData(raw);
+    } catch (IllegalArgumentException ignored) {
+      Material material = Material.matchMaterial(spec == null ? "AIR" : spec.toUpperCase(Locale.ROOT));
+      return (material == null ? Material.AIR : material).createBlockData();
+    }
+  }
+
+  private static void applyFaces(BlockData data, DungeonWall wall, String spec) {
+    if (!(data instanceof MultipleFacing facing) || (spec != null && spec.contains("["))) {
+      return;
+    }
+    List<BlockFace> faces = closeFaces(wall);
+    if (faces.isEmpty()) {
+      return;
+    }
+    for (BlockFace face : facing.getAllowedFaces()) {
+      facing.setFace(face, faces.contains(face));
+    }
+  }
+
+  private static List<BlockFace> closeFaces(DungeonWall wall) {
+    if (!wall.closeFaces.isEmpty()) {
+      List<BlockFace> parsed = new ArrayList<>();
+      for (String name : wall.closeFaces) {
+        try {
+          parsed.add(BlockFace.valueOf(name.toUpperCase(Locale.ROOT)));
+        } catch (IllegalArgumentException ignored) {
+        }
+      }
+      if (!parsed.isEmpty()) {
+        return parsed;
+      }
+    }
+    int spanX = wall.maxX - wall.minX;
+    int spanY = wall.maxY - wall.minY;
+    int spanZ = wall.maxZ - wall.minZ;
+    if (spanZ <= spanX && spanZ <= spanY) {
+      return List.of(BlockFace.EAST, BlockFace.WEST);
+    }
+    if (spanX <= spanY) {
+      return List.of(BlockFace.NORTH, BlockFace.SOUTH);
+    }
+    return List.of(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST);
+  }
+
+  private void openDoor(DungeonInstance instance, DungeonWall wall, World world) {
+    fill(wall, world, wall.setBlock);
+    if (!wall.closes()) {
+      return;
+    }
+    instance.pendingDoors().add(new DungeonPendingDoor(wall));
+    ensureDoorTicker(instance, world);
+  }
+
+  private void ensureDoorTicker(DungeonInstance instance, World world) {
+    if (instance.doorTask() != null) {
+      return;
+    }
+    int ticks = this.catalog.proximityCheckTicks();
+    instance.doorTask(this.plugin.tasks().repeat(
+        () -> tickDoors(instance, world),
+        ticks,
+        ticks
+    ));
+  }
+
+  private void tickDoors(DungeonInstance instance, World world) {
+    var iterator = instance.pendingDoors().iterator();
+    while (iterator.hasNext()) {
+      DungeonPendingDoor door = iterator.next();
+      if (!partyPassed(instance, world, door)) {
+        continue;
+      }
+      if (door.wall.closeDelayTicks > 0) {
+        if (door.closeAtMillis == 0L) {
+          door.closeAtMillis = System.currentTimeMillis() + door.wall.closeDelayTicks * 50L;
+        }
+        if (System.currentTimeMillis() < door.closeAtMillis) {
+          continue;
+        }
+      }
+      fill(door.wall, world, door.wall.closeBlock);
+      iterator.remove();
+      if (door.wall.spawnOnClose) {
+        spawnAfterDoor(instance, world);
+      }
+    }
+    if (instance.pendingDoors().isEmpty() && instance.doorTask() != null) {
+      instance.doorTask().cancel();
+      instance.doorTask(null);
+    }
+  }
+
+  private void spawnAfterDoor(DungeonInstance instance, World world) {
+    DungeonDefinition definition = this.catalog.dungeon(instance.dungeonId());
+    if (definition == null) {
+      return;
+    }
+    DungeonRoom room = definition.room(instance.roomIndex());
+    if (room == null) {
+      return;
+    }
+    for (DungeonPack pack : room.packs) {
+      if (pack.trigger == DungeonPackTrigger.DOOR) {
+        fire(instance, pack, world, pack.amount);
+      }
+    }
+    remaining(instance, definition, world);
+  }
+
+  private boolean partyPassed(DungeonInstance instance, World world, DungeonPendingDoor door) {
+    List<Player> living = livingMembers(instance, world);
+    if (living.isEmpty()) {
+      return false;
+    }
+    Set<UUID> alive = new HashSet<>();
+
+    boolean all = true;
+    for (Player member : living) {
+      alive.add(member.getUniqueId());
+      if (!crossed(member.getLocation(), door, member.getUniqueId())) {
+        all = false;
+      }
+    }
+    door.crossed.retainAll(alive);
+    door.lastPositive.keySet().retainAll(alive);
+    door.origin.keySet().retainAll(alive);
+    return all;
+  }
+
+  private static boolean crossed(Location loc, DungeonPendingDoor door, UUID id) {
+    DungeonWall wall = door.wall;
+    int axis = thinAxis(wall);
+    double c = coord(loc, axis);
+    if (!door.origin.containsKey(id)) {
+      boolean start = c > axisMid(wall, axis);
+      door.origin.put(id, start);
+      door.lastPositive.put(id, start);
+    }
+    Boolean side = decidedSide(c, wall, axis);
+    if (side == null) {
+      return false;
+    }
+    boolean origin = door.origin.get(id);
+    Boolean previous = door.lastPositive.put(id, side);
+    if (side == origin) {
+      door.crossed.remove(id);
+      return false;
+    }
+    if (previous != null && previous.booleanValue() != side.booleanValue()
+        && aabbDistance(loc, wall) <= wall.passDetect) {
+      door.crossed.add(id);
+    }
+    return door.crossed.contains(id);
+  }
+
+  private static Boolean decidedSide(double c, DungeonWall wall, int axis) {
+    double lo;
+    double hi;
+    if (axis == 0) {
+      lo = wall.minX;
+      hi = wall.maxX + 1;
+    } else if (axis == 1) {
+      lo = wall.minY;
+      hi = wall.maxY + 1;
+    } else {
+      lo = wall.minZ;
+      hi = wall.maxZ + 1;
+    }
+    if (c > hi + wall.passMargin) {
+      return Boolean.TRUE;
+    }
+    if (c < lo - wall.passMargin) {
+      return Boolean.FALSE;
+    }
+    return null;
+  }
+
+  private static int thinAxis(DungeonWall wall) {
+    if (wall.passAxis >= 0) {
+      return wall.passAxis;
+    }
+    int spanX = wall.maxX - wall.minX;
+    int spanY = wall.maxY - wall.minY;
+    int spanZ = wall.maxZ - wall.minZ;
+    if (spanZ <= spanX && spanZ <= spanY) {
+      return 2;
+    }
+    if (spanX <= spanY) {
+      return 0;
+    }
+    return 1;
+  }
+
+  private static double axisMid(DungeonWall wall, int axis) {
+    if (axis == 0) {
+      return (wall.minX + wall.maxX + 1) / 2.0;
+    }
+    if (axis == 1) {
+      return (wall.minY + wall.maxY + 1) / 2.0;
+    }
+    return (wall.minZ + wall.maxZ + 1) / 2.0;
+  }
+
+  private static double coord(Location loc, int axis) {
+    if (axis == 0) {
+      return loc.getX();
+    }
+    if (axis == 1) {
+      return loc.getY();
+    }
+    return loc.getZ();
+  }
+
+  private static double aabbDistance(Location loc, DungeonWall wall) {
+    double dx = outside(loc.getX(), wall.minX, wall.maxX + 1);
+    double dy = outside(loc.getY(), wall.minY, wall.maxY + 1);
+    double dz = outside(loc.getZ(), wall.minZ, wall.maxZ + 1);
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  }
+
+  private static double outside(double value, double min, double max) {
+    if (value < min) {
+      return min - value;
+    }
+    if (value > max) {
+      return value - max;
+    }
+    return 0D;
+  }
+
+  private List<Player> livingMembers(DungeonInstance instance, World world) {
+    List<Player> living = new ArrayList<>();
+    for (UUID uuid : instance.players()) {
+      if (instance.eliminated().contains(uuid)) {
+        continue;
+      }
+      Player member = Bukkit.getPlayer(uuid);
+      if (member == null || !member.isOnline() || member.isDead()) {
+        continue;
+      }
+      if (world != null && !member.getWorld().equals(world)) {
+        continue;
+      }
+      living.add(member);
+    }
+    return living;
+  }
+
+  private int pruneLiving(DungeonInstance instance, World world) {
+    var iterator = instance.roomLiving().entrySet().iterator();
+    int alive = 0;
+    while (iterator.hasNext()) {
+      var entry = iterator.next();
+      UUID id = entry.getKey();
+      Entity entity = resolve(world, instance, id);
+
+      if (entity == null) {
+        if (isGhostMob(world, instance, id)) {
+          iterator.remove();
+          unpin(instance, id);
+          continue;
+        }
+        alive++;
+        continue;
+      }
+      if (!(entity instanceof LivingEntity living)
+          || living.isDead()
+          || (world != null && !living.getWorld().equals(world))) {
+        iterator.remove();
+        unpin(instance, id);
+        continue;
+      }
+      pin(instance, id, living.getLocation().clone());
+      alive++;
+    }
+    instance.waveLiving().removeIf(uuid -> !instance.roomLiving().containsKey(uuid));
+    return alive;
+  }
+
+  private boolean isGhostMob(World world, DungeonInstance instance, UUID id) {
+    Location at = instance.livingAt().get(id);
+    if (at != null && at.getWorld() != null) {
+      World pinned = at.getWorld();
+      int cx = at.getBlockX() >> 4;
+      int cz = at.getBlockZ() >> 4;
+      if (!pinned.isChunkLoaded(cx, cz)) {
+        return false;
+      }
+    }
+    try {
+      ActiveMob mob = MythicBukkit.inst().getMobManager().getActiveMob(id).orElse(null);
+      if (mob != null && !mob.isDead()) {
+        return false;
+      }
+    } catch (Throwable ignored) {
+
+      return false;
+    }
+    if (world != null && world.getEntity(id) != null) {
+      return false;
+    }
+    return Bukkit.getEntity(id) == null;
+  }
+
+  private Entity resolve(World world, DungeonInstance instance, UUID uuid) {
+    Location at = instance.livingAt().get(uuid);
+    ensureChunk(at);
+    Entity entity = world == null ? null : world.getEntity(uuid);
+    if (entity == null) {
+      entity = Bukkit.getEntity(uuid);
+    }
+    return entity;
+  }
+
+  private void ensureChunk(Location at) {
+    if (at == null || at.getWorld() == null) {
+      return;
+    }
+    World world = at.getWorld();
+    int cx = at.getBlockX() >> 4;
+    int cz = at.getBlockZ() >> 4;
+    if (!world.isChunkLoaded(cx, cz)) {
+      world.loadChunk(cx, cz);
+    }
+    world.getChunkAt(cx, cz).addPluginChunkTicket(this.plugin);
+  }
+
+  private void pin(DungeonInstance instance, UUID id, Location now) {
+    Location old = instance.livingAt().put(id, now);
+    ensureChunk(now);
+    if (old != null && old.getWorld() != null && (now == null || !sameChunk(old, now))) {
+      old.getChunk().removePluginChunkTicket(this.plugin);
+    }
+  }
+
+  private void forget(DungeonInstance instance, UUID id) {
+    instance.roomLiving().remove(id);
+    unpin(instance, id);
+  }
+
+  private void unpin(DungeonInstance instance, UUID id) {
+    Location at = instance.livingAt().remove(id);
+    if (at != null && at.getWorld() != null) {
+      at.getChunk().removePluginChunkTicket(this.plugin);
+    }
+    instance.waveLiving().remove(id);
+    instance.leashed().remove(id);
+  }
+
+  private boolean sameChunk(Location a, Location b) {
+    return a.getWorld() != null
+        && a.getWorld().equals(b.getWorld())
+        && (a.getBlockX() >> 4) == (b.getBlockX() >> 4)
+        && (a.getBlockZ() >> 4) == (b.getBlockZ() >> 4);
+  }
+
+  private int livingOf(DungeonInstance instance, World world, String packId) {
+    pruneLiving(instance, world);
+    int count = 0;
+    for (String id : instance.roomLiving().values()) {
+      if (id.equals(packId)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private void highlightLast(DungeonInstance instance, DungeonDefinition definition, World world) {
+    pruneLiving(instance, world);
+    if (!this.catalog.waveHighlightLast()) {
+      return;
+    }
+    if (instance.waveLiving().size() != 1) {
+      if (instance.waveLiving().size() > 1) {
+        unglow(instance);
         instance.lastMinionAnnounced(false);
-        instance.waveArmed(false);
+      }
+      return;
     }
-
-    public void stopDoors(DungeonInstance instance) {
-        if (instance.doorTask() != null) {
-            instance.doorTask().cancel();
-            instance.doorTask(null);
-        }
-        instance.pendingDoors().clear();
-    }
-
-    private void tickRoom(DungeonInstance instance, DungeonDefinition definition, World world) {
-        if (instance.state() != SlotState.ACTIVE || instance.completing()) {
-            return;
-        }
-        DungeonRoom room = definition.room(instance.roomIndex());
-        if (room == null) {
-            return;
-        }
-        if (!instance.combatStarted()) {
-            if (!room.startOnRadius || !entered(instance, room, world)) {
-                return;
-            }
-            instance.combatStarted(true);
-            beginCombat(instance, definition, room, world);
-        }
-        tickRadius(instance, room, world);
-        tickWaves(instance, definition, room, world);
-        tickLeash(instance, room, world);
-        highlightLast(instance, definition, world);
+    UUID uuid = instance.waveLiving().iterator().next();
+    Entity entity = resolve(world, instance, uuid);
+    if (entity == null) {
+      if (isGhostMob(world, instance, uuid)) {
+        forget(instance, uuid);
         tryAdvance(instance, definition, world);
         remaining(instance, definition, world);
+      }
+      return;
     }
+    if (!(entity instanceof LivingEntity living) || living.isDead()) {
+      unglow(instance);
+      return;
+    }
+    glow(living);
+    instance.glowing(uuid);
+    if (instance.lastMinionAnnounced()) {
+      return;
+    }
+    instance.lastMinionAnnounced(true);
+    Map<String, String> placeholders = this.service.placeholders(instance, definition);
+    for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
+      if (!instance.players().contains(member.getUniqueId())) {
+        continue;
+      }
+      this.plugin.messages().intro(
+          member,
+          "",
+          "",
+          this.plugin.messages().raw("dungeon.last-minion"),
+          0,
+          50,
+          0,
+          placeholders
+      );
+      this.plugin.sounds().play(member, "dungeon-last-minion");
+    }
+  }
 
-    private void beginCombat(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room, World world) {
-        showIntro(instance, definition, room);
-        for (DungeonPack pack : room.packs) {
-            if (pack.trigger == DungeonPackTrigger.IMMEDIATE) {
-                fire(instance, pack, world, pack.amount);
-            }
-        }
-        if (room.hasWaves() && room.objective == DungeonObjective.CLEAR_MOBS) {
-            startWaves(instance, definition, room, world);
-        }
-        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
-            if (instance.players().contains(member.getUniqueId())) {
-                this.plugin.sounds().play(member, "dungeon-room");
-            }
-        }
-        remaining(instance, definition, world);
-    }
+  private void glow(LivingEntity living) {
+    living.setGlowing(true);
+    living.addPotionEffect(new org.bukkit.potion.PotionEffect(
+        org.bukkit.potion.PotionEffectType.GLOWING,
+        20 * 60 * 30,
+        0,
+        false,
+        false,
+        false
+    ));
+  }
 
-    private boolean entered(DungeonInstance instance, DungeonRoom room, World world) {
-        if (room.startPoint != null) {
-            return near(instance, room.startPoint.to(world), room.startRadius);
-        }
-        if (room.wall != null && room.hasStartDoors()) {
-            return near(instance, room.wall.center(world), room.startRadius);
-        }
-        for (DungeonPack pack : room.packs) {
-            if (near(instance, pack.point.to(world), room.startRadius)) {
-                return true;
-            }
-        }
-        if (room.spawn != null) {
-            return near(instance, room.spawn.to(world), room.startRadius);
-        }
-        return false;
+  private void unglow(DungeonInstance instance) {
+    UUID uuid = instance.glowing();
+    if (uuid == null) {
+      return;
     }
+    Entity entity = Bukkit.getEntity(uuid);
+    if (entity instanceof LivingEntity living) {
+      living.setGlowing(false);
+      living.removePotionEffect(org.bukkit.potion.PotionEffectType.GLOWING);
+    }
+    instance.glowing(null);
+  }
 
-    private void tickRadius(DungeonInstance instance, DungeonRoom room, World world) {
-        for (DungeonPack pack : room.packs) {
-            if (pack.trigger != DungeonPackTrigger.RADIUS) {
-                continue;
-            }
-            int fired = instance.packFires().getOrDefault(pack.id, 0);
-            if (fired >= pack.times) {
-                continue;
-            }
-            if (livingOf(instance, world, pack.id) > 0) {
-                continue;
-            }
-            if (!near(instance, pack.point.to(world), pack.radius)) {
-                continue;
-            }
-            fire(instance, pack, world, pack.amount);
-        }
+  private void announceWave(DungeonInstance instance, DungeonDefinition definition) {
+    Map<String, String> placeholders = this.service.placeholders(instance, definition);
+    String title = screen("dungeon.wave-title");
+    String subtitle = screen("dungeon.wave-subtitle");
+    String actionbar = screen("dungeon.wave");
+    for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
+      if (!instance.players().contains(member.getUniqueId())) {
+        continue;
+      }
+      this.plugin.messages().intro(
+          member,
+          title,
+          subtitle,
+          actionbar,
+          this.catalog.waveAnnounceFadeInTicks(),
+          this.catalog.waveAnnounceStayTicks(),
+          this.catalog.waveAnnounceFadeOutTicks(),
+          placeholders
+      );
+      this.plugin.sounds().play(member, "dungeon-wave");
     }
+  }
 
-    private void tickWaves(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room, World world) {
-        if (room.objective != DungeonObjective.CLEAR_MOBS || !room.hasWaves()) {
-            return;
-        }
-        if (!instance.combatStarted() || instance.waveIndex() >= room.waves.size()) {
-            return;
-        }
-        pruneLiving(instance, world);
-        if (this.catalog.waveRequireClear() && !instance.waveLiving().isEmpty()) {
-            return;
-        }
-        if (this.catalog.waveRequireClear() && !instance.waveArmed()) {
-            long retryMs = Math.max(1000L, this.catalog.waveDelaySeconds() * 1000L);
-            if (instance.waveAt() > 0L && System.currentTimeMillis() - instance.waveAt() < retryMs) {
-                return;
-            }
-            fireWave(instance, definition, room, world);
-            return;
-        }
-        long delayMs = this.catalog.waveDelaySeconds() * 1000L;
-        if (delayMs > 0L && System.currentTimeMillis() - instance.waveAt() < delayMs) {
-            return;
-        }
-        fireWave(instance, definition, room, world);
-    }
-
-    private void tickLeash(DungeonInstance instance, DungeonRoom room, World world) {
-        var iterator = instance.leashed().entrySet().iterator();
-        while (iterator.hasNext()) {
-            var entry = iterator.next();
-            DungeonPack pack = room.pack(entry.getValue());
-            if (pack == null || !pack.leashed()) {
-                iterator.remove();
-                continue;
-            }
-            Location home = pack.point.to(world);
-            ensureChunk(home);
-            // Non droppare il leash se l'entity e' temporaneamente irrisolvibile (chunk unload).
-            Entity entity = resolve(world, instance, entry.getKey());
-            if (entity == null) {
-                continue;
-            }
-            if (!(entity instanceof LivingEntity living) || living.isDead()) {
-                iterator.remove();
-                continue;
-            }
-            if (!living.getWorld().equals(world)) {
-                iterator.remove();
-                continue;
-            }
-            double max = pack.leashRadius * pack.leashRadius;
-            if (living.getLocation().distanceSquared(home) <= max) {
-                pin(instance, living.getUniqueId(), living.getLocation().clone());
-                continue;
-            }
-            living.setFallDistance(0f);
-            living.setVelocity(new org.bukkit.util.Vector());
-            living.teleport(home);
-            living.setFallDistance(0f);
-            living.setVelocity(new org.bukkit.util.Vector());
-            pin(instance, living.getUniqueId(), living.getLocation().clone());
-            if (pack.healOnLeash) {
-                heal(living);
-            }
-        }
-    }
-
-    private void heal(LivingEntity living) {
-        AttributeInstance max = living.getAttribute(Attribute.MAX_HEALTH);
-        if (max != null) {
-            living.setHealth(max.getValue());
-        }
-    }
-
-    private boolean near(DungeonInstance instance, Location point, double radius) {
-        double range = Math.max(1D, radius);
-        double rangeSq = range * range;
-        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
-            if (!instance.players().contains(member.getUniqueId())) {
-                continue;
-            }
-            if (!member.getWorld().equals(point.getWorld())) {
-                continue;
-            }
-            if (member.getLocation().distanceSquared(point) <= rangeSq) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void fire(DungeonInstance instance, DungeonPack pack, World world, int amount) {
-        int fired = instance.packFires().getOrDefault(pack.id, 0);
-        if (pack.trigger != DungeonPackTrigger.WAVE && fired >= pack.times) {
-            return;
-        }
-        List<LivingEntity> spawned = this.mythic.spawnLiving(
-                pack.mob,
-                pack.point.to(world),
-                amount,
-                pack.scatter,
-                pack.level,
-                pack.trigger == DungeonPackTrigger.WAVE || instance.roomIndex() != 0
-                        ? null
-                        : this.service.entryWorldSpawn(instance, world),
-                pack.trigger == DungeonPackTrigger.WAVE || instance.roomIndex() != 0
-                        ? 0D
-                        : this.catalog.spawnSafeRadius()
-        );
-        if (pack.trigger != DungeonPackTrigger.WAVE) {
-            instance.packFires().put(pack.id, fired + 1);
-        }
-        instance.spawnedInRoom(instance.spawnedInRoom() + spawned.size());
-        for (LivingEntity living : spawned) {
-            instance.roomLiving().put(living.getUniqueId(), pack.id);
-            pin(instance, living.getUniqueId(), living.getLocation().clone());
-            if (pack.trigger == DungeonPackTrigger.WAVE) {
-                instance.waveLiving().add(living.getUniqueId());
-            }
-            if (pack.leashed()) {
-                instance.leashed().put(living.getUniqueId(), pack.id);
-            }
-        }
-    }
-
-    private void startWaves(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room, World world) {
-        int delay = introHoldTicks(room);
-        if (delay <= 1) {
-            fireWave(instance, definition, room, world);
-            return;
-        }
-        instance.waveArmed(true);
-        instance.waveAt(System.currentTimeMillis() + delay * 50L + 2000L);
-        int roomIndex = instance.roomIndex();
-        this.plugin.tasks().later(() -> {
-            if (instance.state() != SlotState.ACTIVE || instance.completing() || instance.roomIndex() != roomIndex) {
-                return;
-            }
-            instance.waveArmed(false);
-            instance.waveAt(0L);
-            fireWave(instance, definition, room, world);
-        }, delay);
-    }
-
-    private int introHoldTicks(DungeonRoom room) {
-        if (room.intro == null || (room.intro.title.isBlank() && room.intro.subtitle.isBlank())) {
-            return 1;
-        }
-        return Math.max(1, room.intro.fadeInTicks + room.intro.stayTicks);
-    }
-
-    private void fireWave(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room, World world) {
-        if (instance.waveIndex() >= room.waves.size()) {
-            return;
-        }
-        instance.lastMinionAnnounced(false);
-        DungeonWave wave = room.waves.get(instance.waveIndex());
-        instance.waveIndex(instance.waveIndex() + 1);
-        announceWave(instance, definition);
-        instance.waveLiving().clear();
-        for (Map.Entry<String, Integer> spawn : wave.spawns.entrySet()) {
-            DungeonPack pack = room.pack(spawn.getKey());
-            if (pack == null) {
-                continue;
-            }
-            fire(instance, pack, world, spawn.getValue());
-        }
-        instance.waveAt(System.currentTimeMillis());
-        if (instance.waveLiving().isEmpty()) {
-            instance.waveIndex(Math.max(0, instance.waveIndex() - 1));
-            instance.waveArmed(false);
-            return;
-        }
-        instance.waveArmed(true);
-        remaining(instance, definition, world);
-    }
-
-    private boolean cleared(DungeonInstance instance, DungeonRoom room, World world) {
-        if (instance.waveIndex() < room.waves.size()) {
-            return false;
-        }
-        for (DungeonPack pack : room.packs) {
-            if (pack.trigger == DungeonPackTrigger.WAVE) {
-                continue;
-            }
-            if (instance.packFires().getOrDefault(pack.id, 0) < pack.times) {
-                return false;
-            }
-        }
-        return pruneLiving(instance, world) == 0;
-    }
-
-    private void clear(DungeonInstance instance, DungeonDefinition definition, World world, DungeonRoom room) {
-        stopPacks(instance);
-        for (DungeonWall wall : room.walls) {
-            openDoor(instance, wall, world);
-        }
-        if (!room.walls.isEmpty()) {
-            this.service.moveHologramToDoor(instance, definition, room);
-        }
-        Map<String, String> placeholders = this.service.placeholders(instance, definition);
-        celebrate(instance, definition, room);
-        this.plugin.parties().broadcast(instance.party(), "dungeon.room-clear", placeholders);
-        int next = instance.roomIndex() + 1;
-        if (definition.room(next) == null) {
-            this.service.complete(instance, definition, true);
-            return;
-        }
-        start(instance, definition, world, next);
-    }
-
-    /** Title + comandi YAML a fine stanza, una volta per player vivo. */
-    public void celebrate(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room) {
-        if (room == null) {
-            return;
-        }
-        Map<String, String> placeholders = this.service.placeholders(instance, definition);
-        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
-            if (!instance.players().contains(member.getUniqueId())) {
-                continue;
-            }
-            if (hasScreen(room.outro)) {
-                this.plugin.messages().intro(
-                        member,
-                        room.outro.title,
-                        room.outro.subtitle,
-                        room.outro.actionbar,
-                        room.outro.fadeInTicks,
-                        room.outro.stayTicks,
-                        room.outro.fadeOutTicks,
-                        placeholders
-                );
-            }
-            this.plugin.console().run(member, room.commands, placeholders);
-        }
-    }
-
-    private boolean hasScreen(DungeonIntro intro) {
-        return intro != null
-                && (!intro.title.isBlank() || !intro.subtitle.isBlank() || !intro.actionbar.isBlank());
-    }
-
-    private void showIntro(DungeonInstance instance, DungeonDefinition definition, DungeonRoom room) {
-        if (room.intro == null) {
-            return;
-        }
-        Map<String, String> placeholders = this.service.placeholders(instance, definition);
-        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
-            if (!instance.players().contains(member.getUniqueId())) {
-                continue;
-            }
-            this.plugin.messages().intro(
-                    member,
-                    room.intro.title,
-                    room.intro.subtitle,
-                    room.intro.actionbar,
-                    room.intro.fadeInTicks,
-                    room.intro.stayTicks,
-                    room.intro.fadeOutTicks,
-                    placeholders
-            );
-        }
-    }
-
-    private void fill(DungeonWall wall, World world) {
-        fill(wall, world, wall.setBlock);
-    }
-
-    private void fill(DungeonWall wall, World world, String block) {
-        BlockData template = parseBlock(block);
-        for (int x = wall.minX; x <= wall.maxX; x++) {
-            for (int y = wall.minY; y <= wall.maxY; y++) {
-                for (int z = wall.minZ; z <= wall.maxZ; z++) {
-                    BlockData data = template.clone();
-                    applyFaces(data, wall, block);
-                    world.getChunkAt(x >> 4, z >> 4).load();
-                    world.getBlockAt(x, y, z).setBlockData(data, wall.physics);
-                }
-            }
-        }
-    }
-
-    private static BlockData parseBlock(String spec) {
-        String raw = spec == null || spec.isBlank() ? "air" : spec.trim();
-        if (!raw.contains(":")) {
-            raw = "minecraft:" + raw.toLowerCase(Locale.ROOT);
-        }
-        try {
-            return Bukkit.createBlockData(raw);
-        } catch (IllegalArgumentException ignored) {
-            Material material = Material.matchMaterial(spec == null ? "AIR" : spec.toUpperCase(Locale.ROOT));
-            return (material == null ? Material.AIR : material).createBlockData();
-        }
-    }
-
-    private static void applyFaces(BlockData data, DungeonWall wall, String spec) {
-        if (!(data instanceof MultipleFacing facing) || (spec != null && spec.contains("["))) {
-            return;
-        }
-        List<BlockFace> faces = closeFaces(wall);
-        if (faces.isEmpty()) {
-            return;
-        }
-        for (BlockFace face : facing.getAllowedFaces()) {
-            facing.setFace(face, faces.contains(face));
-        }
-    }
-
-    private static List<BlockFace> closeFaces(DungeonWall wall) {
-        if (!wall.closeFaces.isEmpty()) {
-            List<BlockFace> parsed = new ArrayList<>();
-            for (String name : wall.closeFaces) {
-                try {
-                    parsed.add(BlockFace.valueOf(name.toUpperCase(Locale.ROOT)));
-                } catch (IllegalArgumentException ignored) {
-                }
-            }
-            if (!parsed.isEmpty()) {
-                return parsed;
-            }
-        }
-        int spanX = wall.maxX - wall.minX;
-        int spanY = wall.maxY - wall.minY;
-        int spanZ = wall.maxZ - wall.minZ;
-        if (spanZ <= spanX && spanZ <= spanY) {
-            return List.of(BlockFace.EAST, BlockFace.WEST);
-        }
-        if (spanX <= spanY) {
-            return List.of(BlockFace.NORTH, BlockFace.SOUTH);
-        }
-        return List.of(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST);
-    }
-
-    private void openDoor(DungeonInstance instance, DungeonWall wall, World world) {
-        fill(wall, world, wall.setBlock);
-        if (!wall.closes()) {
-            return;
-        }
-        instance.pendingDoors().add(new DungeonPendingDoor(wall));
-        ensureDoorTicker(instance, world);
-    }
-
-    private void ensureDoorTicker(DungeonInstance instance, World world) {
-        if (instance.doorTask() != null) {
-            return;
-        }
-        int ticks = this.catalog.proximityCheckTicks();
-        instance.doorTask(this.plugin.tasks().repeat(
-                () -> tickDoors(instance, world),
-                ticks,
-                ticks
-        ));
-    }
-
-    private void tickDoors(DungeonInstance instance, World world) {
-        var iterator = instance.pendingDoors().iterator();
-        while (iterator.hasNext()) {
-            DungeonPendingDoor door = iterator.next();
-            if (!partyPassed(instance, world, door)) {
-                continue;
-            }
-            if (door.wall.closeDelayTicks > 0) {
-                if (door.closeAtMillis == 0L) {
-                    door.closeAtMillis = System.currentTimeMillis() + door.wall.closeDelayTicks * 50L;
-                }
-                if (System.currentTimeMillis() < door.closeAtMillis) {
-                    continue;
-                }
-            }
-            fill(door.wall, world, door.wall.closeBlock);
-            iterator.remove();
-            if (door.wall.spawnOnClose) {
-                spawnAfterDoor(instance, world);
-            }
-        }
-        if (instance.pendingDoors().isEmpty() && instance.doorTask() != null) {
-            instance.doorTask().cancel();
-            instance.doorTask(null);
-        }
-    }
-
-    private void spawnAfterDoor(DungeonInstance instance, World world) {
-        DungeonDefinition definition = this.catalog.dungeon(instance.dungeonId());
-        if (definition == null) {
-            return;
-        }
-        DungeonRoom room = definition.room(instance.roomIndex());
-        if (room == null) {
-            return;
-        }
-        for (DungeonPack pack : room.packs) {
-            if (pack.trigger == DungeonPackTrigger.DOOR) {
-                fire(instance, pack, world, pack.amount);
-            }
-        }
-        remaining(instance, definition, world);
-    }
-
-    private boolean partyPassed(DungeonInstance instance, World world, DungeonPendingDoor door) {
-        List<Player> living = livingMembers(instance, world);
-        if (living.isEmpty()) {
-            return false;
-        }
-        Set<UUID> alive = new HashSet<>();
-        // Valuta TUTTI i membri ad ogni tick (niente short-circuit): altrimenti chi viene dopo
-        // il primo "non passato" non viene tracciato e il suo lato precedente resta stantio.
-        boolean all = true;
-        for (Player member : living) {
-            alive.add(member.getUniqueId());
-            if (!crossed(member.getLocation(), door, member.getUniqueId())) {
-                all = false;
-            }
-        }
-        door.crossed.retainAll(alive);
-        door.lastPositive.keySet().retainAll(alive);
-        door.origin.keySet().retainAll(alive);
-        return all;
-    }
-
-    /**
-     * Passato = adesso e' fuori dal vano porta (oltre pass-margin) sul lato OPPOSTO a quello da cui
-     * e' arrivato, e il cambio di lato e' avvenuto entro pass-detect dalla porta.
-     * Chi sta nel vano (o torna indietro) NON conta come passato: prima bastava oscillare sul piano
-     * centrale (stare sulla soglia / un passo avanti e indietro) per restare "passato" per sempre,
-     * e la porta si chiudeva a caso, anche addosso o davanti a chi era ancora fuori.
-     */
-    private static boolean crossed(Location loc, DungeonPendingDoor door, UUID id) {
-        DungeonWall wall = door.wall;
-        int axis = thinAxis(wall);
-        double c = coord(loc, axis);
-        if (!door.origin.containsKey(id)) {
-            boolean start = c > axisMid(wall, axis);
-            door.origin.put(id, start);
-            door.lastPositive.put(id, start);
-        }
-        Boolean side = decidedSide(c, wall, axis);
-        if (side == null) {
-            return false;
-        }
-        boolean origin = door.origin.get(id);
-        Boolean previous = door.lastPositive.put(id, side);
-        if (side == origin) {
-            door.crossed.remove(id);
-            return false;
-        }
-        if (previous != null && previous.booleanValue() != side.booleanValue()
-                && aabbDistance(loc, wall) <= wall.passDetect) {
-            door.crossed.add(id);
-        }
-        return door.crossed.contains(id);
-    }
-
-    /** true/false = lato positivo/negativo fuori dal vano porta + pass-margin; null = dentro il vano. */
-    private static Boolean decidedSide(double c, DungeonWall wall, int axis) {
-        double lo;
-        double hi;
-        if (axis == 0) {
-            lo = wall.minX;
-            hi = wall.maxX + 1;
-        } else if (axis == 1) {
-            lo = wall.minY;
-            hi = wall.maxY + 1;
-        } else {
-            lo = wall.minZ;
-            hi = wall.maxZ + 1;
-        }
-        if (c > hi + wall.passMargin) {
-            return Boolean.TRUE;
-        }
-        if (c < lo - wall.passMargin) {
-            return Boolean.FALSE;
-        }
-        return null;
-    }
-
-    private static int thinAxis(DungeonWall wall) {
-        if (wall.passAxis >= 0) {
-            return wall.passAxis;
-        }
-        int spanX = wall.maxX - wall.minX;
-        int spanY = wall.maxY - wall.minY;
-        int spanZ = wall.maxZ - wall.minZ;
-        if (spanZ <= spanX && spanZ <= spanY) {
-            return 2;
-        }
-        if (spanX <= spanY) {
-            return 0;
-        }
-        return 1;
-    }
-
-    private static double axisMid(DungeonWall wall, int axis) {
-        if (axis == 0) {
-            return (wall.minX + wall.maxX + 1) / 2.0;
-        }
-        if (axis == 1) {
-            return (wall.minY + wall.maxY + 1) / 2.0;
-        }
-        return (wall.minZ + wall.maxZ + 1) / 2.0;
-    }
-
-    private static double coord(Location loc, int axis) {
-        if (axis == 0) {
-            return loc.getX();
-        }
-        if (axis == 1) {
-            return loc.getY();
-        }
-        return loc.getZ();
-    }
-
-    private static double aabbDistance(Location loc, DungeonWall wall) {
-        double dx = outside(loc.getX(), wall.minX, wall.maxX + 1);
-        double dy = outside(loc.getY(), wall.minY, wall.maxY + 1);
-        double dz = outside(loc.getZ(), wall.minZ, wall.maxZ + 1);
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
-    }
-
-    private static double outside(double value, double min, double max) {
-        if (value < min) {
-            return min - value;
-        }
-        if (value > max) {
-            return value - max;
-        }
-        return 0D;
-    }
-
-    private List<Player> livingMembers(DungeonInstance instance, World world) {
-        List<Player> living = new ArrayList<>();
-        for (UUID uuid : instance.players()) {
-            if (instance.eliminated().contains(uuid)) {
-                continue;
-            }
-            Player member = Bukkit.getPlayer(uuid);
-            if (member == null || !member.isOnline() || member.isDead()) {
-                continue;
-            }
-            if (world != null && !member.getWorld().equals(world)) {
-                continue;
-            }
-            living.add(member);
-        }
-        return living;
-    }
-
-    private int pruneLiving(DungeonInstance instance, World world) {
-        var iterator = instance.roomLiving().entrySet().iterator();
-        int alive = 0;
-        while (iterator.hasNext()) {
-            var entry = iterator.next();
-            UUID id = entry.getKey();
-            Entity entity = resolve(world, instance, id);
-            // Entity null: se il chunk e' carico e Mythic non ha piu' l'ActiveMob e' un ghost
-            // (Despawn: true / remove senza death). Altrimenti e' unload temporaneo.
-            if (entity == null) {
-                if (isGhostMob(world, instance, id)) {
-                    iterator.remove();
-                    unpin(instance, id);
-                    continue;
-                }
-                alive++;
-                continue;
-            }
-            if (!(entity instanceof LivingEntity living)
-                    || living.isDead()
-                    || (world != null && !living.getWorld().equals(world))) {
-                iterator.remove();
-                unpin(instance, id);
-                continue;
-            }
-            pin(instance, id, living.getLocation().clone());
-            alive++;
-        }
-        instance.waveLiving().removeIf(uuid -> !instance.roomLiving().containsKey(uuid));
-        return alive;
-    }
-
-    /** True se l'UUID tracciato non esiste piu' nel mondo ne' in Mythic (despawn senza death). */
-    private boolean isGhostMob(World world, DungeonInstance instance, UUID id) {
-        Location at = instance.livingAt().get(id);
-        if (at != null && at.getWorld() != null) {
-            World pinned = at.getWorld();
-            int cx = at.getBlockX() >> 4;
-            int cz = at.getBlockZ() >> 4;
-            if (!pinned.isChunkLoaded(cx, cz)) {
-                return false;
-            }
-        }
-        try {
-            ActiveMob mob = MythicBukkit.inst().getMobManager().getActiveMob(id).orElse(null);
-            if (mob != null && !mob.isDead()) {
-                return false;
-            }
-        } catch (Throwable ignored) {
-            // Mythic non pronto: non droppare aggressivamente
-            return false;
-        }
-        if (world != null && world.getEntity(id) != null) {
-            return false;
-        }
-        return Bukkit.getEntity(id) == null;
-    }
-
-    private Entity resolve(World world, DungeonInstance instance, UUID uuid) {
-        Location at = instance.livingAt().get(uuid);
-        ensureChunk(at);
-        Entity entity = world == null ? null : world.getEntity(uuid);
-        if (entity == null) {
-            entity = Bukkit.getEntity(uuid);
-        }
-        return entity;
-    }
-
-    private void ensureChunk(Location at) {
-        if (at == null || at.getWorld() == null) {
-            return;
-        }
-        World world = at.getWorld();
-        int cx = at.getBlockX() >> 4;
-        int cz = at.getBlockZ() >> 4;
-        if (!world.isChunkLoaded(cx, cz)) {
-            world.loadChunk(cx, cz);
-        }
-        world.getChunkAt(cx, cz).addPluginChunkTicket(this.plugin);
-    }
-
-    private void pin(DungeonInstance instance, UUID id, Location now) {
-        Location old = instance.livingAt().put(id, now);
-        ensureChunk(now);
-        if (old != null && old.getWorld() != null && (now == null || !sameChunk(old, now))) {
-            old.getChunk().removePluginChunkTicket(this.plugin);
-        }
-    }
-
-    private void forget(DungeonInstance instance, UUID id) {
-        instance.roomLiving().remove(id);
-        unpin(instance, id);
-    }
-
-    private void unpin(DungeonInstance instance, UUID id) {
-        Location at = instance.livingAt().remove(id);
-        if (at != null && at.getWorld() != null) {
-            at.getChunk().removePluginChunkTicket(this.plugin);
-        }
-        instance.waveLiving().remove(id);
-        instance.leashed().remove(id);
-    }
-
-    private boolean sameChunk(Location a, Location b) {
-        return a.getWorld() != null
-                && a.getWorld().equals(b.getWorld())
-                && (a.getBlockX() >> 4) == (b.getBlockX() >> 4)
-                && (a.getBlockZ() >> 4) == (b.getBlockZ() >> 4);
-    }
-
-    private int livingOf(DungeonInstance instance, World world, String packId) {
-        pruneLiving(instance, world);
-        int count = 0;
-        for (String id : instance.roomLiving().values()) {
-            if (id.equals(packId)) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    private void highlightLast(DungeonInstance instance, DungeonDefinition definition, World world) {
-        pruneLiving(instance, world);
-        if (!this.catalog.waveHighlightLast()) {
-            return;
-        }
-        if (instance.waveLiving().size() != 1) {
-            if (instance.waveLiving().size() > 1) {
-                unglow(instance);
-                instance.lastMinionAnnounced(false);
-            }
-            return;
-        }
-        UUID uuid = instance.waveLiving().iterator().next();
-        Entity entity = resolve(world, instance, uuid);
-        if (entity == null) {
-            if (isGhostMob(world, instance, uuid)) {
-                forget(instance, uuid);
-                tryAdvance(instance, definition, world);
-                remaining(instance, definition, world);
-            }
-            return;
-        }
-        if (!(entity instanceof LivingEntity living) || living.isDead()) {
-            unglow(instance);
-            return;
-        }
-        glow(living);
-        instance.glowing(uuid);
-        if (instance.lastMinionAnnounced()) {
-            return;
-        }
-        instance.lastMinionAnnounced(true);
-        Map<String, String> placeholders = this.service.placeholders(instance, definition);
-        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
-            if (!instance.players().contains(member.getUniqueId())) {
-                continue;
-            }
-            this.plugin.messages().intro(
-                    member,
-                    "",
-                    "",
-                    this.plugin.messages().raw("dungeon.last-minion"),
-                    0,
-                    50,
-                    0,
-                    placeholders
-            );
-            this.plugin.sounds().play(member, "dungeon-last-minion");
-        }
-    }
-
-    private void glow(LivingEntity living) {
-        living.setGlowing(true);
-        living.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                org.bukkit.potion.PotionEffectType.GLOWING,
-                20 * 60 * 30,
-                0,
-                false,
-                false,
-                false
-        ));
-    }
-
-    private void unglow(DungeonInstance instance) {
-        UUID uuid = instance.glowing();
-        if (uuid == null) {
-            return;
-        }
-        Entity entity = Bukkit.getEntity(uuid);
-        if (entity instanceof LivingEntity living) {
-            living.setGlowing(false);
-            living.removePotionEffect(org.bukkit.potion.PotionEffectType.GLOWING);
-        }
-        instance.glowing(null);
-    }
-
-    private void announceWave(DungeonInstance instance, DungeonDefinition definition) {
-        Map<String, String> placeholders = this.service.placeholders(instance, definition);
-        String title = screen("dungeon.wave-title");
-        String subtitle = screen("dungeon.wave-subtitle");
-        String actionbar = screen("dungeon.wave");
-        for (Player member : this.plugin.parties().onlineMembers(instance.party())) {
-            if (!instance.players().contains(member.getUniqueId())) {
-                continue;
-            }
-            this.plugin.messages().intro(
-                    member,
-                    title,
-                    subtitle,
-                    actionbar,
-                    this.catalog.waveAnnounceFadeInTicks(),
-                    this.catalog.waveAnnounceStayTicks(),
-                    this.catalog.waveAnnounceFadeOutTicks(),
-                    placeholders
-            );
-            this.plugin.sounds().play(member, "dungeon-wave");
-        }
-    }
-
-    private String screen(String path) {
-        String value = this.plugin.messages().raw(path);
-        return value == null || value.isBlank() || value.equals(path) ? "" : value;
-    }
+  private String screen(String path) {
+    String value = this.plugin.messages().raw(path);
+    return value == null || value.isBlank() || value.equals(path) ? "" : value;
+  }
 }
