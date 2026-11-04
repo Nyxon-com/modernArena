@@ -1,5 +1,3 @@
-//made with love by nyxon
-
 package com.modern.arena.milestone;
 
 import java.util.List;

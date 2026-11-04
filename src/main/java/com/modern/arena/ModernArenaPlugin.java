@@ -1,5 +1,3 @@
-//made with love by nyxon
-
 package com.modern.arena;
 
 import com.modern.arena.arena.ArenaCatalog;

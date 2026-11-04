@@ -1,5 +1,3 @@
-//made with love by nyxon
-
 package com.modern.arena.dungeon;
 
 import java.util.LinkedHashMap;

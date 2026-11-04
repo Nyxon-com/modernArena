@@ -1,5 +1,3 @@
-//made with love by nyxon
-
 package com.modern.arena.message;
 
 import com.modern.arena.ModernArenaPlugin;

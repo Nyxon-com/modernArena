@@ -1,5 +1,3 @@
-//made with love by nyxon
-
 package com.modern.arena.hud;
 
 import com.modern.arena.ModernArenaPlugin;

@@ -1,5 +1,3 @@
-//made with love by nyxon
-
 package com.modern.arena.storage;
 
 import java.sql.Connection;

@@ -6,7 +6,8 @@ Package `com.modern.arena`. Repo `Nyxon-com/modernArena`.
 
 ## Stack
 
-- Paper 1.21.11, Java 21, Gradle Shadow, MiniMessage, HikariCP (SQLite / MySQL / MariaDB)
+- Paper 1.21.11 (`paper-api` 1.21.11-R0.1-SNAPSHOT, `api-version` 1.21), Java 25, Gradle Shadow, MiniMessage, HikariCP (SQLite / MySQL / MariaDB)
+- Il nome in `plugin.yml` è `ValaryRPG-Arena`. Il repository e il package restano `modernArena` / `com.modern.arena`
 - Dipendenza obbligatoria: MythicMobs
 - Opzionali: modernCore, Vault, PlaceholderAPI, Multiverse-Core, TAB (scoreboard)
 - Hologram: `TextDisplay` Paper (niente plugin extra)
@@ -122,3 +123,7 @@ Heap `-Xmx5G`. Template piccoli. Muri dungeon = cubo stretto. Produzione kill: M
 Editor in-game, shop, wave AMA, spectator, party chat, friendly fire, PAPI expansion, dipendenza Java Core, plugin hologram terzi, editor MythicDungeons.
 
 Guida Cursor (flussi Java, hotspot, convenzioni): `AGENTS.md`.
+
+## Licenza
+
+MIT. Copyright (c) 2026 Nyxon-com. Vedi [LICENSE](LICENSE).
