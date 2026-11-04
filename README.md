@@ -1,77 +1,77 @@
 # modernArena
 
-Arene e dungeon istanziati per Paper, separati da modernCore. Un template unloaded viene copiato in `arena_<boss>_<slot>` o `dungeon_<id>_<slot>`. Poi party, coda, kill e milestone su SQL.
+Instanced arenas and dungeons for Paper, separate from modernCore. An unloaded template is copied to `arena_<boss>_<slot>` or `dungeon_<id>_<slot>`. Then party, queue, kills, and milestones in SQL.
 
-Package `com.modern.arena`. Repo `Nyxon-com/modernArena`.
+Package `com.modern.arena`. Repository `Nyxon-com/modernArena`.
 
 ## Stack
 
 - Paper 1.21.11 (`paper-api` 1.21.11-R0.1-SNAPSHOT, `api-version` 1.21), Java 25, Gradle Shadow, MiniMessage, HikariCP (SQLite / MySQL / MariaDB)
-- Il nome in `plugin.yml` è `ValaryRPG-Arena`. Il repository e il package restano `modernArena` / `com.modern.arena`
-- Dipendenza obbligatoria: MythicMobs
-- Opzionali: modernCore, Vault, PlaceholderAPI, Multiverse-Core, TAB (scoreboard)
-- Hologram: `TextDisplay` Paper (niente plugin extra)
-- Kit/eco Core: `[console] …` in YAML, mai `compileOnly` sul Core
+- The name in `plugin.yml` is still `ValaryRPG-Arena`. The repository and the package stay `modernArena` / `com.modern.arena`
+- Required: MythicMobs
+- Optional: modernCore, Vault, PlaceholderAPI, Multiverse-Core, TAB (scoreboard)
+- Holograms: Paper `TextDisplay` (no extra plugin)
+- Core kits and economy: `[console] …` in YAML, never a `compileOnly` on Core
 
 ## Install
 
-1. Metti `modernArena-1.0.0.jar` in `plugins/` (MythicMobs deve essere presente).
-2. Template mondo **non caricati** nella world container del server.
-3. Sul Core: `worlds.ignore-prefixes: ["arena_", "dungeon_"]`. Multiverse non deve auto-importare quei mondi.
-4. Produzione con tante kill: `storage.yml` → `type: mysql` (o `mariadb`). SQLite solo per test.
+1. Put `modernArena-1.0.0.jar` in `plugins/` (MythicMobs must be present).
+2. World templates stay **unloaded** in the server world container.
+3. On Core: `worlds.ignore-prefixes: ["arena_", "dungeon_"]`. Multiverse must not auto-import those worlds.
+4. Production with a lot of kills: `storage.yml` → `type: mysql` (or `mariadb`). SQLite is for tests.
 
 Build: `gradlew.bat shadowJar` → `build/libs/modernArena-1.0.0.jar`.
 
-## Comandi
+## Commands
 
-| Comando | Cosa fa |
+| Command | What it does |
 |---------|---------|
-| `/arena start <boss>` | Avvia (leader se in party) |
-| `/arena list` | Lista arene |
-| `/arena leave` | Esci |
-| `/arena stats [player] [boss]` | Kill SQL. Altri: `valary.arena.stats.other` |
-| `/arena milestones [player]` | Milestone |
-| `/arena reload` | Ricarica YAML + cataloghi. Non tocca istanze vive né il DB |
-| `/dungeon start <id>` | Avvia dungeon (leader se in party) |
-| `/dungeon list` / `leave` | Lista / esci |
+| `/arena start <boss>` | Starts it (the leader, if you are in a party) |
+| `/arena list` | Lists arenas |
+| `/arena leave` | Leave |
+| `/arena stats [player] [boss]` | SQL kills. Other players: `valary.arena.stats.other` |
+| `/arena milestones [player]` | Milestones |
+| `/arena reload` | Reloads YAML and catalogs. Does not touch live instances or the database |
+| `/dungeon start <id>` | Starts a dungeon (the leader, if you are in a party) |
+| `/dungeon list` / `leave` | List / leave |
 | `/party` | create, invite, accept, leave, kick, disband |
 
-Un player non sta in arena e dungeon insieme. Bypass cooldown: `valary.arena.cooldown.bypass`. Bypass comandi bloccati: `valary.arena.command.bypass`.
+A player is never in an arena and a dungeon at the same time. Cooldown bypass: `valary.arena.cooldown.bypass`. Blocked-command bypass: `valary.arena.command.bypass`.
 
 ## YAML
 
-| File | Ruolo |
+| File | Role |
 |------|--------|
-| `config.yml` | Sottocomandi, permessi, tetto mondi `instances.max-loaded` (default 16) |
-| `lang/messages.yml` | Testi MiniMessage, brand, hologram, `milestone.progress` |
-| `sounds/sounds.yml` | Suoni |
-| `storage.yml` | DB, `table-prefix: valary_arena_` |
-| `modules/arenas.yml` | Boss, spawners Mythic, hologram, cap, cooldown |
-| `modules/dungeons.yml` | Dungeon, stanze, pack, wall, intro/outro, leash, holo porta |
-| `modules/party.yml` | Timeout invite, max size |
-| `modules/milestones.yml` | Soglie per Mythic name o id boss |
+| `config.yml` | Subcommands, permissions, world cap `instances.max-loaded` (default 16) |
+| `lang/messages.yml` | MiniMessage text, brand, holograms, `milestone.progress` |
+| `sounds/sounds.yml` | Sounds |
+| `storage.yml` | Database, `table-prefix: valary_arena_` |
+| `modules/arenas.yml` | Bosses, Mythic spawners, holograms, cap, cooldown |
+| `modules/dungeons.yml` | Dungeons, rooms, packs, walls, intro/outro, leash, door hologram |
+| `modules/party.yml` | Invite timeout, max size |
+| `modules/milestones.yml` | Thresholds by Mythic name or boss id |
 
-Brand (prefix/separator viola `#5F22C3` → `#40099B`) solo in `lang/messages.yml`.
+Brand (purple prefix and separator `#5F22C3` → `#40099B`) lives only in `lang/messages.yml`.
 
 ### Arena
 
-- Spawner: clona Mythic con `source-spawner` + `mob:` per kill/milestone.
-- Cap `max-bosses` → ferma spawner, poi TP fuori.
-- Cooldown rientro stessa arena / altra arena.
-- Hologram: warmup, boss uccisi, top danno del boss precedente.
+- Spawners: clone a Mythic spawner with `source-spawner` plus `mob:` for kills and milestones.
+- Cap `max-bosses` → stop the spawner, then teleport out.
+- Cooldown for re-entering the same arena, and for entering another one.
+- Holograms: warmup, bosses killed, top damage on the previous boss.
 
 ### Dungeon
 
-Stanze in ordine YAML. Stanza 1 = TP spawn. Obiettivo `clear-mobs` o `boss`.
+Rooms follow the YAML order. Room 1 is the teleport spawn. The objective is `clear-mobs` or `boss`.
 
-- Ondate: posizioni `mobs.<id>` con `trigger: wave`, poi `waves:` lista (`gate: 3` = 3 da quel punto). Default in `settings.waves`. Glow ultimo minion. `radius` solo boss.
-- Spawn safe: `settings.spawn-safe-radius` (default 6) intorno allo spawn stanza 1 — i pack non spawnano lì.
-- Clear stanza: pack esausti **e** 0 living. Poi fill `wall` (`open-block`, default air), `outro`, `commands`. `close-block` (default `iron_bars`) si chiude quando tutto il party vivo ha superato la porta (`close-on: pass`). Override per stanza o in `settings.wall`.
-- `start-on: radius` — i minion aspettano che un player sia vicino alla porta/`start-radius`. `immediate` = spawn subito.
-- Hologram: all’ingresso spawn stanza 1 + `spawn-forward`. Poi `follow-door` vola al wall di ogni stanza.
-- Leash / heal-on-leash. Tempo istanza: `duration-seconds` (0 = off); fail senza reward.
-- Scoreboard TAB: `scoreboard.arena` e `scoreboard.dungeon` (`enabled: false` per off). PAPI `%valary_time%` `%valary_remaining%` `%valary_wave%`.
-- Comandi vietati: `config.yml` `blocked-commands`. Bypass `valary.arena.command.bypass`.
+- Waves: positions under `mobs.<id>` with `trigger: wave`, then a `waves:` list (`gate: 3` means 3 from that point). Defaults in `settings.waves`. The last minion glows. `radius` is for the boss only.
+- Safe spawn: `settings.spawn-safe-radius` (default 6) around room 1's spawn. Packs do not spawn there.
+- Room clear: packs exhausted **and** 0 living. Then fill `wall` (`open-block`, default air), `outro`, `commands`. `close-block` (default `iron_bars`) closes once every living party member has passed the door (`close-on: pass`). Override per room or in `settings.wall`.
+- `start-on: radius` — minions wait until a player is near the door / `start-radius`. `immediate` spawns at once.
+- Hologram: at room 1's spawn plus `spawn-forward`. Then `follow-door` flies to each room's wall.
+- Leash / heal-on-leash. Instance time: `duration-seconds` (`0` = off); failure gives no reward.
+- TAB scoreboard: `scoreboard.arena` and `scoreboard.dungeon` (`enabled: false` to turn off). PlaceholderAPI `%valary_time%` `%valary_remaining%` `%valary_wave%`.
+- Forbidden commands: `config.yml` `blocked-commands`. Bypass `valary.arena.command.bypass`.
 
 ```yaml
 settings:
@@ -85,7 +85,7 @@ settings:
     require-clear: true
     highlight-last: true
 rooms:
-  ingresso:
+  entrance:
     wall:
       from: {x: 8, y: 64, z: 4}
       to: {x: 8, y: 66, z: 6}
@@ -112,18 +112,18 @@ rooms:
         left: 1
 ```
 
-## Scala (8 GB, ~20 player)
+## Scale (8 GB, about 20 players)
 
-Tetto totale mondi: `config.yml` → `instances.max-loaded: 16`. 4 slot per boss/dungeon, poi coda. Copy mondo max 1 alla volta.
+Total world cap: `config.yml` → `instances.max-loaded: 16`. 4 slots per boss or dungeon, then a queue. World copy runs one at a time.
 
-Heap `-Xmx5G`. Template piccoli. Muri dungeon = cubo stretto. Produzione kill: MySQL.
+Heap `-Xmx5G`. Keep templates small. Dungeon walls are a tight cuboid. Production kills: MySQL.
 
-## Fuori scope
+## Out of scope
 
-Editor in-game, shop, wave AMA, spectator, party chat, friendly fire, PAPI expansion, dipendenza Java Core, plugin hologram terzi, editor MythicDungeons.
+In-game editor, shop, AMA waves, spectator, party chat, friendly fire, a PlaceholderAPI expansion, a Java dependency on Core, third-party hologram plugins, a MythicDungeons editor.
 
-Guida Cursor (flussi Java, hotspot, convenzioni): `AGENTS.md`.
+Cursor guide (Java flows, hotspots, conventions): `AGENTS.md`.
 
-## Licenza
+## License
 
-MIT. Copyright (c) 2026 Nyxon-com. Vedi [LICENSE](LICENSE).
+MIT. Copyright (c) 2026 Nyxon-com. See [LICENSE](LICENSE).
